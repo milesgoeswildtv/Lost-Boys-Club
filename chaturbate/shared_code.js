@@ -139,6 +139,7 @@ var LBC = (function () {
 
     saveGame(game);
     $callback.create(callbackLabel, GAME_SECONDS);
+    $room.reloadPanel();
 
     notice(
       "🖤 LOST BOYS CLUB GAME TIME 🖤\n" +
@@ -170,9 +171,11 @@ var LBC = (function () {
       records.recentWinners.unshift({ name: winner, at: now() });
       records.recentWinners = records.recentWinners.slice(0, 10);
       saveRecords(records);
+      $room.reloadPanel();
       notice("🏆 CLUBHOUSE WINNER: " + winner + " got it. The number was " + game.secret + ". Enjoy your wildly temporary superiority.");
     } else {
       saveRecords(records);
+      $room.reloadPanel();
       notice(
         (reason === "timeout" ? "⏰ Time's up." : "🛑 Round ended.") +
         " Nobody nailed it. The number was " + game.secret +
@@ -295,8 +298,11 @@ var LBC = (function () {
     var game = getGame();
     var records = getRecords();
     var leaders = getScoreboardLines(records, 1);
+    var guessCount = Object.keys(game.guesses || {}).length;
     return {
-      game: game,
+      active: !!game.active,
+      gameName: game.active ? "GUESS THE NUMBER" : "NO GAME RUNNING",
+      gameStatus: game.active ? (guessCount + " PLAYERS IN · !guess 1-100") : "CLUBHOUSE OPEN",
       rounds: Number(records.rounds) || 0,
       leader: leaders.length ? leaders[0] : "No champion yet"
     };
