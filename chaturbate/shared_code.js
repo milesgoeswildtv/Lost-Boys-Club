@@ -208,7 +208,7 @@ var LBC = (function () {
     } else {
       var hint = guess < Number(game.secret) ? "higher" : "lower";
       notice("Guess locked for " + cleanName(username) + ". Try " + hint + ".", { toUsername: username });
-      try { $room.reloadPanel(); } catch (err) {}
+      $room.reloadPanel();
     }
   }
 
