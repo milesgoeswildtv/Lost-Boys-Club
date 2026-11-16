@@ -1,6 +1,6 @@
 /*
  * LOST BOYS CLUB — Shared Code
- * Version: 0.1.0
+ * Version: 0.2.0
  * Paste into the Chaturbate Developer Portal "Shared Code" editor.
  *
  * Runtime contract verified against the Chaturbate App V2 DevKit type
@@ -309,7 +309,7 @@ var LBC = (function () {
   }
 
   return {
-    version: "0.1.0",
+    version: "0.2.0",
     helpText: helpText,
     statusText: statusText,
     startGuessGame: startGuessGame,
