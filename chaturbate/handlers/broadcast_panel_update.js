@@ -8,8 +8,8 @@ $room.setPanelTemplate({
   template: "3_rows_of_labels",
   row1_label: "LOST BOYS CLUB",
   row1_value: panel.active ? "GUESS THE NUMBER — LIVE" : "CLUBHOUSE OPEN",
-  row2_label: panel.active ? "PLAYERS" : "STATUS",
+  row2_label: panel.active ? "GUESSES" : "STATUS",
   row2_value: panel.active ? panel.gameStatus : "No game running. Questionable decisions.",
   row3_label: "CLUB RECORD",
-  row3_value: panel.leader + " · " + panel.rounds + " rounds"
+  row3_value: panel.leader + " · " + panel.rounds + (panel.rounds === 1 ? " round" : " rounds")
 });
