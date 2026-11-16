@@ -1,2 +1,3 @@
 // LOST BOYS CLUB — App Stop
-try { $callback.cancel("lbc_guess_number_timeout"); } catch (err) {}
+// Chaturbate automatically clears active callbacks when an app stops.
+// No callback-cancel API call is needed here.
