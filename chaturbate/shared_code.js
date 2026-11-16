@@ -302,7 +302,7 @@ var LBC = (function () {
     return {
       active: !!game.active,
       gameName: game.active ? "GUESS THE NUMBER" : "NO GAME RUNNING",
-      gameStatus: game.active ? (guessCount + " PLAYERS IN · !guess 1-100") : "CLUBHOUSE OPEN",
+      gameStatus: game.active ? (guessCount + " GUESSES · !guess 1-100") : "CLUBHOUSE OPEN",
       rounds: Number(records.rounds) || 0,
       leader: leaders.length ? leaders[0] : "No champion yet"
     };
