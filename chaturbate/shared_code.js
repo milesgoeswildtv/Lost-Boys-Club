@@ -238,18 +238,18 @@ var LBC = (function () {
     notice("🖤 " + safe + " wandered into LOST BOYS CLUB. No map, no supervision, questionable decisions. Make yourself comfortable.");
   }
 
-  function onChatMessage() {
-    var body = String($message.body || "").trim();
+  function onChatMessage(rawBody, rawUsername, isOwner) {
+    var body = String(rawBody || "").trim();
     if (!body) return;
 
-    var username = cleanName($user.username);
+    var username = cleanName(rawUsername);
     var lower = body.toLowerCase();
 
-    if ($user.isOwner && lower === "/lbc start") {
+    if (isOwner && lower === "/lbc start") {
       startGuessGame();
       return;
     }
-    if ($user.isOwner && lower === "/lbc stop") {
+    if (isOwner && lower === "/lbc stop") {
       finishGuessGame("manual");
       return;
     }
@@ -274,7 +274,7 @@ var LBC = (function () {
     }
 
     // Broadcaster-only command help. Do not react to ordinary conversation.
-    if ($user.isOwner && lower === "/lbc help") {
+    if (isOwner && lower === "/lbc help") {
       notice(helpText(), { toUsername: username });
     }
   }
