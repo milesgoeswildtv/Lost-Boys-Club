@@ -19,6 +19,7 @@ Paste each file into its identically named event handler:
 | Chat Message | `chaturbate/handlers/chat_message.js` |
 | Callback | `chaturbate/handlers/callback.js` |
 | Tip Received | `chaturbate/handlers/tip_received.js` |
+| Broadcast Panel Update | `chaturbate/handlers/broadcast_panel_update.js` |
 
 Other handlers remain intentionally empty in v0.1.0.
 
@@ -50,9 +51,17 @@ Other handlers remain intentionally empty in v0.1.0.
 - [ ] No viewer needs to tip to play.
 - [ ] No real-money/token prize or paid-entry mechanic exists.
 
-## 5. Known limitations in this slice
+## 5. Native broadcast panel addition (development milestone 0.2.0)
 
-- The broadcast panel and shortcut are not yet implemented.
+- Add `chaturbate/handlers/broadcast_panel_update.js` to the **Broadcast Panel Update** event tab.
+- Grant the app the exclusive **Broadcast panel** permission when prompted. This permission can only be held by one running app at a time.
+- The panel uses Chaturbate's native `3_rows_of_labels` template: club status, current game/player count, and top club record.
+- Shared Code calls `$room.reloadPanel()` when a round starts or ends and when a non-winning guess is recorded. Reload requests are throttled by Chaturbate to once per second.
+- The panel is below the camera in Chaturbate's broadcast panel; it is not a graphic over the video.
+
+## 6. Known limitations
+
+- The panel is intentionally compact and text-based; the native row template does not provide a full custom page or large graphic layout.
 - The first game is text-command driven.
 - Scoreboard records persist by app/broadcaster using Chaturbate KV.
 - The app does not connect to external services or load external scripts.
