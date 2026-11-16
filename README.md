@@ -21,7 +21,7 @@ An interactive Chaturbate room experience built around two adult boyfriends with
 
 ## Current milestone
 
-**M0 — Foundation:** product specification and QA gates established. Next: confirm the exact Chaturbate app type and editor event-handler surface, then implement the first working vertical slice (welcome/room personality + one free interactive game).
+**M1 — Core + native panel implementation:** Shared Code, core event handlers, free Guess the Number game, persistent scoreboard, and the first native Broadcast Panel Update handler are authored in GitHub. The native panel still requires the new handler to be added in the Developer Portal, the exclusive Broadcast Panel permission to be granted, and Testbed/mobile verification before release.
 
 ## Brand
 
