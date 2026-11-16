@@ -53,7 +53,7 @@ Do not split into multiple apps unless a concrete platform limitation requires i
   - Validate input, enforce one guess per user per round, and handle ties/round completion.
   - No paid entry, no tip required, no cash or token prize.
   - Announce winner and reset cleanly.
-- Broadcast Panel: show game status and instructions if the selected app handler supports panel rendering.
+- Broadcast Panel: use the native Broadcast Panel Update handler and a compact three-row status template for club identity, game status/player count, and club records. Refresh the panel only when meaningful game state changes.
 - Persist only small, necessary state; guard against malformed or missing KV values.
 - Add broadcaster settings for welcome enablement, welcome cooldown, game enablement, and message style where supported.
 
