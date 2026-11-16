@@ -125,22 +125,20 @@ var LBC = (function () {
     }
 
     var secret = Math.floor(Math.random() * (MAX_GUESS - MIN_GUESS + 1)) + MIN_GUESS;
+    var started = now();
+    var callbackLabel = GAME_TIMEOUT_LABEL + "_" + started + "_" + Math.floor(Math.random() * 1000000);
     var game = {
       type: "guess_number",
       active: true,
       secret: secret,
       guesses: {},
-      startedAt: now(),
-      endsAt: now() + GAME_SECONDS
+      startedAt: started,
+      endsAt: started + GAME_SECONDS,
+      callbackLabel: callbackLabel
     };
 
     saveGame(game);
-    try {
-      $callback.cancel(GAME_TIMEOUT_LABEL);
-      $callback.create(GAME_TIMEOUT_LABEL, GAME_SECONDS, false);
-    } catch (err) {
-      // The round remains playable; broadcaster can end it manually.
-    }
+    $callback.create(callbackLabel, GAME_SECONDS);
 
     notice(
       "🖤 LOST BOYS CLUB GAME TIME 🖤\n" +
@@ -157,7 +155,6 @@ var LBC = (function () {
 
     game.active = false;
     saveGame(game);
-    try { $callback.cancel(GAME_TIMEOUT_LABEL); } catch (err) {}
 
     var records = getRecords();
     records.rounds = (Number(records.rounds) || 0) + 1;
@@ -280,7 +277,10 @@ var LBC = (function () {
   }
 
   function onCallback(label) {
-    if (label === GAME_TIMEOUT_LABEL) finishGuessGame("timeout");
+    var game = getGame();
+    if (game.active && game.type === "guess_number" && game.callbackLabel === label) {
+      finishGuessGame("timeout");
+    }
   }
 
   function onTip(tokens, isAnon, username) {
