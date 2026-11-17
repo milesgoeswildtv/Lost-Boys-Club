@@ -1,21 +1,16 @@
-# QA Record — Native Broadcast Panel v0.2.0
+# QA Record — Native Broadcast Panel v0.2.1
 
 Date: 2026-11-16
 
-## Local mocked-runtime checks
+## Local source checks
 
-Executed the current Shared Code and Broadcast Panel Update handler in a JavaScript isolate with mocked Chaturbate globals and storage.
-
-- [x] Shared Code parses successfully.
 - [x] Broadcast Panel Update handler parses successfully.
-- [x] Existing Chat Message, Callback, and Tip Received handlers parse successfully.
-- [x] Idle panel returns CLUBHOUSE OPEN state.
-- [x] Starting a round changes panel data to GUESS THE NUMBER — LIVE.
-- [x] Active panel data includes the current submitted-guess count.
-- [x] Correct guess ends the round and records the winner.
-- [x] Round start and completion each request a panel refresh.
-- [x] Broadcast Panel Update handler calls `$room.setPanelTemplate()` with the supported `3_rows_of_labels` template.
-- [x] Mocked panel renderer received the expected row labels and values.
+- [x] Updated Chat Message handler parses successfully.
+- [x] Updated Callback handler parses successfully.
+- [x] Panel handler uses the existing `LBC.panelData()` and does not require a Shared Code replacement.
+- [x] Chat refresh condition matches `/lbc start`, `/lbc stop`, and `!guess <number>`; ordinary chat does not request a refresh.
+- [x] Callback handler requests a panel refresh after the callback.
+- [x] Panel handler calls `$room.setPanelTemplate()` using `3_rows_of_labels`.
 
 ## Not verified
 
@@ -27,6 +22,4 @@ Executed the current Shared Code and Broadcast Panel Update handler in a JavaScr
 
 ## Result
 
-**Local mocked-runtime checks pass. This is not a Chaturbate Testbed pass and does not mean the panel is deployed.**
-
-The new handler must be pasted into the Developer Portal's **Broadcast Panel Update** tab, the updated Shared Code must be pasted, and the app must be granted the exclusive **Broadcast panel** permission. Complete Testbed and iPhone checks before release.
+The mobile-safe implementation avoids replacing Shared Code. The user only needs one complete new handler paste and two small additions to existing event handlers. **Local source checks are not a Chaturbate Testbed pass and do not mean the panel is deployed.**
