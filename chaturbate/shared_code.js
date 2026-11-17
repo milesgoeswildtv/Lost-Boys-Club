@@ -322,3 +322,153 @@ var LBC = (function () {
     notice: notice
   };
 }());
+
+/*
+ * LOST BOYS CLUB — Modular Room Utilities
+ * M2.2 room-goal helpers. Appended after the existing LBC core.
+ * Event handlers call these small public methods; feature logic stays here.
+ */
+(function () {
+  "use strict";
+
+  var GOAL_KEY = "lbc_m2_room_goal";
+  var STATS_KEY = "lbc_m2_tip_stats";
+
+  function readStoredJson(key, fallback) {
+    try {
+      var raw = $kv.get(key, "");
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (err) {
+      return fallback;
+    }
+  }
+
+  function readGoalSnapshot() {
+    var goal = readStoredJson(GOAL_KEY, null);
+    var stats = readStoredJson(STATS_KEY, {});
+    if (!goal || !(Number(goal.target) > 0)) return null;
+
+    var target = Number(goal.target);
+    var total = Number(stats.totalTokens) || 0;
+    var progress = Math.max(0, total - (Number(goal.startTotal) || 0));
+
+    return {
+      goal: goal,
+      target: target,
+      progress: progress,
+      displayedProgress: Math.min(progress, target),
+      percent: Math.min(100, Math.floor(progress / target * 100)),
+      active: goal.active === true,
+      completed: goal.completed === true
+    };
+  }
+
+  LBC.handleRoomGoalCommand = function (rawBody, isOwner) {
+    var body = String(rawBody || "").trim();
+    var lower = body.toLowerCase();
+
+    if (lower === "!clubgoal") {
+      var snapshot = readGoalSnapshot();
+      if (!snapshot) {
+        LBC.notice("No room goal is set right now. The clubhouse is financially irresponsible but emotionally available.");
+        return;
+      }
+
+      LBC.notice(
+        "🏚️ LOST BOYS CLUB — ROOM GOAL\n" +
+        (snapshot.active ? "Progress: " : "Last goal: ") +
+        snapshot.displayedProgress + " / " + snapshot.target +
+        " tokens (" + snapshot.percent + "%)" +
+        (snapshot.active
+          ? "\nVoluntary support only. No perks or game advantage."
+          : (snapshot.completed ? "\nGoal reached. Thanks, troublemakers." : "\nGoal is not currently active."))
+      );
+      return;
+    }
+
+    if (!isOwner || lower.indexOf("/lbc goal") !== 0) return;
+
+    var match = lower.match(/^\/lbc goal (off|[1-9][0-9]{0,6})$/);
+    if (!match) {
+      LBC.notice("Use /lbc goal 500 to set a goal, or /lbc goal off to turn it off.");
+      return;
+    }
+
+    if (match[1] === "off") {
+      $kv.set(GOAL_KEY, JSON.stringify({
+        target: 0, startTotal: 0, active: false, completed: false, milestones: {}
+      }));
+      LBC.notice("Room goal switched off. The clubhouse returns to its regularly scheduled nonsense.");
+    } else {
+      var stats = readStoredJson(STATS_KEY, {});
+      var baseline = Number(stats.totalTokens) || 0;
+      var target = Number(match[1]);
+      $kv.set(GOAL_KEY, JSON.stringify({
+        target: target,
+        startTotal: baseline,
+        active: true,
+        completed: false,
+        milestones: {}
+      }));
+      LBC.notice("🏚️ New clubhouse goal set: " + target + " tokens. Progress starts now. Support is voluntary; nothing is locked behind it.");
+    }
+
+    $room.reloadPanel();
+  };
+
+  LBC.processRoomGoalTip = function (rawTokens) {
+    var tokens = Math.max(0, Math.floor(Number(rawTokens) || 0));
+    if (!tokens) return;
+
+    // The M2.1 Tip Received handler updates aggregate totals before calling this.
+    var snapshot = readGoalSnapshot();
+    if (!snapshot || !snapshot.active) return;
+
+    var goal = snapshot.goal;
+    var milestones = goal.milestones && typeof goal.milestones === "object"
+      ? goal.milestones : {};
+
+    [25, 50, 75, 100].forEach(function (mark) {
+      var key = String(mark);
+      if (snapshot.percent >= mark && !milestones[key]) {
+        milestones[key] = true;
+        LBC.notice(
+          mark === 100
+            ? "🏁 CLUBHOUSE GOAL REACHED. " + snapshot.target + " tokens. You beautiful bunch of questionable decisions. Thank you."
+            : "🏚️ Clubhouse goal update: " + mark + "% reached. " +
+              snapshot.displayedProgress + " / " + snapshot.target +
+              " tokens. Voluntary support, always."
+        );
+      }
+    });
+
+    goal.milestones = milestones;
+    if (snapshot.percent >= 100) {
+      goal.active = false;
+      goal.completed = true;
+    }
+    $kv.set(GOAL_KEY, JSON.stringify(goal));
+    $room.reloadPanel();
+  };
+
+  LBC.updateGoalPanel = function () {
+    var snapshot = readGoalSnapshot();
+    if (!snapshot) return;
+
+    var panel = LBC.panelData();
+    var row2Value = (snapshot.active ? "" : (snapshot.completed ? "REACHED · " : "PAUSED · ")) +
+      snapshot.displayedProgress + "/" + snapshot.target + " TOKENS · " + snapshot.percent + "%";
+
+    $room.setPanelTemplate({
+      template: "3_rows_of_labels",
+      row1_label: "LOST BOYS CLUB",
+      row1_value: panel.active ? "GUESS THE NUMBER — LIVE" : "CLUBHOUSE OPEN",
+      row2_label: "ROOM GOAL",
+      row2_value: row2Value,
+      row3_label: "CLUB RECORD",
+      row3_value: (panel.leader || "No champion yet") + " · " +
+        (Number(panel.rounds) || 0) +
+        ((Number(panel.rounds) || 0) === 1 ? " round" : " rounds")
+    });
+  };
+}());
