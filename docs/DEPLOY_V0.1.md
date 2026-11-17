@@ -1,29 +1,35 @@
-# LOST BOYS CLUB — Deployment Notes (Core v0.1.0 + Native Panel v0.2.0)
-
-The core slice includes app startup, anti-spam welcomes, a free Guess the Number game, scoreboard, and tip acknowledgement. The native Broadcast Panel Update handler is the v0.2.0 development addition and remains subject to Testbed verification.
+# LOST BOYS CLUB — Deployment Notes (Native Panel mobile-safe update)
 
 ## Important
-GitHub is the source of truth, but the Chaturbate Developer Portal does not automatically sync with GitHub. Paste the files below into the matching editor tabs. Do not click Release yet; first validate in Testbed.
 
-## 1. Shared Code
-Paste the complete contents of `chaturbate/shared_code.js` into **Shared Code**.
+**Do not replace Shared Code for this panel update.** The existing Shared Code is left untouched. GitHub does not automatically sync to the Chaturbate Developer Portal, so only the three event tabs listed below need attention.
 
-## 2. Event handlers
-Paste each file into its identically named event handler:
+## Minimal Developer Portal changes
 
-| Developer Portal handler | Repository file |
-|---|---|
-| App Start | `chaturbate/handlers/app_start.js` |
-| App Stop | `chaturbate/handlers/app_stop.js` |
-| User Enter | `chaturbate/handlers/user_enter.js` |
-| Chat Message | `chaturbate/handlers/chat_message.js` |
-| Callback | `chaturbate/handlers/callback.js` |
-| Tip Received | `chaturbate/handlers/tip_received.js` |
-| Broadcast Panel Update | `chaturbate/handlers/broadcast_panel_update.js` |
+1. Paste the complete contents of `chaturbate/handlers/broadcast_panel_update.js` into **Broadcast Panel Update**.
+2. In **Chat Message**, keep the existing line:
+   `LBC.onChatMessage($message.body, $user.username, $user.isOwner);`
+   Immediately below it, add:
+   ```js
+   if (/^\s*(\/lbc\s+(start|stop)|!guess\s+\d{1,3})\s*$/i.test(String($message.body || ""))) {
+     $room.reloadPanel();
+   }
+   ```
+3. In **Callback**, keep the existing line:
+   `LBC.onCallback($callback.label);`
+   Immediately below it, add:
+   `$room.reloadPanel();`
+4. Do not change Shared Code, App Start, Tip Received, or any other handler for this panel update.
+5. Grant LOST BOYS CLUB the exclusive **Broadcast panel** permission. Only one app in the room can hold this permission at a time.
+6. Test in Chaturbate Testbed before release, then verify the display on iPhone.
 
-Other unused handlers remain intentionally empty.
+## Why the two small refresh additions exist
 
-## 3. Commands
+- Chat Message refreshes only after commands that can change game state: `/lbc start`, `/lbc stop`, and `!guess 42`.
+- Callback refreshes after the timed round callback, which may end a round.
+- The panel handler reads the existing `LBC.panelData()` and tolerates both the older data shape and the newer optional fields. It does not require the 0.2 Shared Code replacement.
+
+## Game commands
 
 - Broadcaster: `/lbc start` — starts a 90-second free round.
 - Broadcaster: `/lbc stop` — ends the active round.
@@ -33,36 +39,18 @@ Other unused handlers remain intentionally empty.
 - Viewer: `!scoreboard` — displays the top winner.
 - Viewer: `!lbc` — privately receives instructions.
 
-## 4. Testbed acceptance checklist
+## Testbed acceptance checklist
 
-- [ ] App starts without an error.
-- [ ] Owner receives the startup notice.
-- [ ] New viewer receives a welcome.
-- [ ] Re-entering viewer within six hours is not greeted again.
-- [ ] Owner starts a round with `/lbc start`.
-- [ ] Viewer can submit a valid guess.
-- [ ] Invalid guesses are rejected privately.
-- [ ] A second guess from the same viewer is rejected.
-- [ ] Correct guess ends the round exactly once and records a win.
-- [ ] Timeout ends the round and reveals the number.
-- [ ] Owner can manually stop a round.
-- [ ] `!scoreboard` displays persisted records.
-- [ ] Anonymous tip acknowledgment does not reveal the tipper's username.
-- [ ] No viewer needs to tip to play.
-- [ ] No real-money/token prize or paid-entry mechanic exists.
+- [ ] App saves and starts without errors.
+- [ ] Idle panel shows LOST BOYS CLUB and the club record.
+- [ ] `/lbc start` changes the panel to live status.
+- [ ] A valid non-winning `!guess` causes a panel refresh.
+- [ ] Correct guess updates the record and returns the panel to idle.
+- [ ] Timeout refreshes the panel.
+- [ ] `/lbc stop` returns the panel to idle.
+- [ ] Existing welcome, tip acknowledgement, chat, and callback behavior still works.
+- [ ] Panel is readable on iPhone.
 
-## 5. Native broadcast panel addition (development milestone 0.2.0)
+## Known limitations
 
-- Add `chaturbate/handlers/broadcast_panel_update.js` to the **Broadcast Panel Update** event tab.
-- Grant the app the exclusive **Broadcast panel** permission when prompted. This permission can only be held by one running app at a time.
-- The panel uses Chaturbate's native `3_rows_of_labels` template: club status, current game/guess count, and top club record.
-- Shared Code calls `$room.reloadPanel()` when a round starts or ends and when a non-winning guess is recorded. Reload requests are throttled by Chaturbate to once per second.
-- The panel is below the camera in Chaturbate's broadcast panel; it is not a graphic over the video.
-
-## 6. Known limitations
-
-- The panel is intentionally compact and text-based; the native row template does not provide a full custom page or large graphic layout.
-- The first game is text-command driven.
-- Scoreboard records persist by app/broadcaster using Chaturbate KV.
-- The app does not connect to external services or load external scripts.
-- The game uses a 90-second round timer; if the callback is unavailable in a test environment, the broadcaster can use `/lbc stop`.
+The panel is a compact native Chaturbate broadcast panel below the camera, not a graphic composited over the video. It uses the native three-row label template and is text-only.
