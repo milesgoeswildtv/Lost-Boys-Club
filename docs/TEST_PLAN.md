@@ -52,3 +52,16 @@
 
 ## Release gate
 Do not release to the public App Directory or live room until all applicable checks pass and the broadcaster approves the exact version.
+
+
+## M2.4: Rotating room announcements
+- [ ] Announcements are disabled by default on a fresh install.
+- [ ] Non-owner commands cannot enable, disable, or inspect broadcaster controls.
+- [ ] Broadcaster can enable announcements; first notice is delayed 15 minutes.
+- [ ] Exactly one announcement is emitted per scheduled interval.
+- [ ] Messages rotate in order and wrap to the first message.
+- [ ] Broadcaster can disable announcements before the next callback.
+- [ ] A stale callback after disable or re-enable is ignored.
+- [ ] App restart reschedules one callback when announcements were enabled.
+- [ ] Ordinary chat does not trigger announcements.
+- [ ] Announcement copy contains no tipping pressure or paid-entry language.

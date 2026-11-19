@@ -37,3 +37,6 @@ LBC.handleRoomGoalCommand($message.body, $user.isOwner);
 
 // M2.3: configurable informational tip menu.
 LBC.handleTipMenuCommand($message.body, $user.isOwner);
+
+// M2.4: broadcaster-controlled rotating room announcements.
+LBC.handleAnnouncementCommand($message.body, $user.isOwner);
