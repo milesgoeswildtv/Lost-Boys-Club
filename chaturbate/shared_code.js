@@ -597,3 +597,103 @@ var LBC = (function () {
     );
   };
 }());
+
+
+/*
+ * LOST BOYS CLUB — Rotating Room Announcements
+ * Broadcaster-controlled, low-frequency informational notices.
+ * Starts disabled; one notice every 15 minutes while enabled.
+ */
+(function () {
+  "use strict";
+
+  var STATE_KEY = "lbc_m2_announcements";
+  var CALLBACK_PREFIX = "lbc_m2_announce_";
+  var INTERVAL_SECONDS = 900;
+  var MESSAGES = [
+    "🖤 Welcome to LOST BOYS CLUB. No map. No supervision. Questionable decisions. Type !lbc for the clubhouse guide.",
+    "🎮 The clubhouse game is free to join. Type !game to see whether a round is running.",
+    "🏚️ New around here? Type !lbc for the room guide, or !scoreboard to see the clubhouse records.",
+    "🖤 Curious what's on the informational tip menu? Type !tipmenu. Requests are voluntary and aren't guaranteed.",
+    "Make yourself comfortable, say hello, and enjoy the chaos. No purchase or tip is needed to join the games."
+  ];
+
+  function readState() {
+    try {
+      var raw = $kv.get(STATE_KEY, "");
+      var state = raw ? JSON.parse(raw) : {};
+      return {
+        enabled: state.enabled === true,
+        index: Math.max(0, Number(state.index) || 0),
+        callbackLabel: String(state.callbackLabel || "")
+      };
+    } catch (err) {
+      return { enabled: false, index: 0, callbackLabel: "" };
+    }
+  }
+
+  function saveState(state) {
+    $kv.set(STATE_KEY, JSON.stringify(state));
+  }
+
+  function scheduleNext(state) {
+    var label = CALLBACK_PREFIX + Date.now() + "_" + Math.floor(Math.random() * 1000000);
+    state.callbackLabel = label;
+    saveState(state);
+    $callback.create(label, INTERVAL_SECONDS);
+  }
+
+  LBC.startAnnouncements = function (restart) {
+    var state = readState();
+    if (!state.enabled) return;
+    if (!restart && state.callbackLabel) return;
+    scheduleNext(state);
+  };
+
+  LBC.handleAnnouncementCommand = function (rawBody, isOwner) {
+    var body = String(rawBody || "").trim().toLowerCase();
+    if (!isOwner || body.indexOf("/lbc announcements") !== 0) return;
+
+    var state = readState();
+    if (body === "/lbc announcements on") {
+      if (state.enabled) {
+        LBC.notice("Rotating announcements are already on. One short notice every 15 minutes.");
+        return;
+      }
+      state.enabled = true;
+      state.index = 0;
+      state.callbackLabel = "";
+      saveState(state);
+      scheduleNext(state);
+      LBC.notice("Rotating announcements enabled. The first short room notice will appear in 15 minutes.");
+      return;
+    }
+
+    if (body === "/lbc announcements off") {
+      state.enabled = false;
+      state.callbackLabel = "";
+      saveState(state);
+      LBC.notice("Rotating announcements disabled.");
+      return;
+    }
+
+    if (body === "/lbc announcements status") {
+      LBC.notice("Rotating announcements are " + (state.enabled ? "ON" : "OFF") + ". Cadence: one notice every 15 minutes.");
+      return;
+    }
+
+    LBC.notice("Announcement controls: /lbc announcements on · /lbc announcements off · /lbc announcements status. Default: off.");
+  };
+
+  LBC.onAnnouncementsCallback = function (label) {
+    var state = readState();
+    if (!state.enabled || !label || label !== state.callbackLabel) return;
+
+    var message = MESSAGES[state.index % MESSAGES.length];
+    state.index = (state.index + 1) % MESSAGES.length;
+    state.callbackLabel = "";
+    saveState(state);
+    LBC.notice(message);
+    scheduleNext(state);
+  };
+}());
