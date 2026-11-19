@@ -787,3 +787,201 @@ var LBC = (function () {
     );
   };
 }());
+
+
+/*
+ * LOST BOYS CLUB — Higher or Lower
+ * Free prediction game. One prediction per viewer; no voting or paid entry.
+ */
+(function () {
+  "use strict";
+
+  var STATE_KEY = "lbc_m3_higher_lower";
+  var ROUND_SECONDS = 90;
+  var CALLBACK_PREFIX = "lbc_m3_hl_timeout_";
+
+  function readState() {
+    try {
+      var raw = $kv.get(STATE_KEY, "");
+      var state = raw ? JSON.parse(raw) : {};
+      return {
+        active: state.active === true,
+        current: Number(state.current) || 0,
+        target: Number(state.target) || 0,
+        guesses: state.guesses && typeof state.guesses === "object" ? state.guesses : {},
+        endsAt: Number(state.endsAt) || 0,
+        callbackLabel: String(state.callbackLabel || "")
+      };
+    } catch (err) {
+      return { active: false, current: 0, target: 0, guesses: {}, endsAt: 0, callbackLabel: "" };
+    }
+  }
+
+  function saveState(state) {
+    $kv.set(STATE_KEY, JSON.stringify(state));
+  }
+
+  function cleanName(value) {
+    return String(value || "someone").replace(/[^a-zA-Z0-9_\-]/g, "").slice(0, 25) || "someone";
+  }
+
+  function coreGameIsActive() {
+    try {
+      var raw = $kv.get("lbc_v1_game", "");
+      var game = raw ? JSON.parse(raw) : null;
+      return !!(game && game.active === true);
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function schedule(state, seconds) {
+    var label = CALLBACK_PREFIX + Date.now() + "_" + Math.floor(Math.random() * 1000000);
+    state.callbackLabel = label;
+    saveState(state);
+    $callback.create(label, Math.max(1, seconds));
+  }
+
+  function finish(reason, expectedLabel) {
+    var state = readState();
+    if (!state.active) return;
+    if (expectedLabel && expectedLabel !== state.callbackLabel) return;
+
+    state.active = false;
+    state.callbackLabel = "";
+    saveState(state);
+
+    var correctDirection = state.target > state.current ? "higher" : "lower";
+    var winners = [];
+    var players = Object.keys(state.guesses);
+    players.forEach(function (name) {
+      if (state.guesses[name] === correctDirection) winners.push(name);
+    });
+
+    var outcome = "The next number was " + state.target + " — " + correctDirection.toUpperCase() + ". ";
+    if (winners.length) {
+      LBC.notice(
+        "🏆 HIGHER OR LOWER — " + outcome +
+        "Correct call" + (winners.length === 1 ? "" : "s") + ": " + winners.join(", ") +
+        ". Apparently someone here can read numbers. 🖤"
+      );
+    } else {
+      LBC.notice(
+        (reason === "timeout" ? "⏰ Time's up. " : "🛑 Round stopped. ") +
+        "HIGHER OR LOWER — " + outcome +
+        "No correct calls. " + players.length + " prediction" +
+        (players.length === 1 ? "" : "s") + " locked in."
+      );
+    }
+  }
+
+  function startRound() {
+    var state = readState();
+    if (state.active) {
+      LBC.notice("Higher or Lower is already running. One clubhouse disaster at a time.");
+      return;
+    }
+    if (coreGameIsActive()) {
+      LBC.notice("Guess the Number is already running. Finish that round before starting another game.");
+      return;
+    }
+
+    var current = Math.floor(Math.random() * 99) + 1;
+    var target = Math.floor(Math.random() * 100) + 1;
+    while (target === current) target = Math.floor(Math.random() * 100) + 1;
+
+    state = {
+      active: true,
+      current: current,
+      target: target,
+      guesses: {},
+      endsAt: Math.floor(Date.now() / 1000) + ROUND_SECONDS,
+      callbackLabel: ""
+    };
+    schedule(state, ROUND_SECONDS);
+
+    LBC.notice(
+      "🎲 LOST BOYS CLUB — HIGHER OR LOWER\n" +
+      "The number is " + current + ". The next number is hidden.\n" +
+      "Will it be HIGHER or LOWER? Type !higher or !lower.\n" +
+      "One prediction per person. " + ROUND_SECONDS + " seconds. Free to play — no tips or purchases."
+    );
+  }
+
+  LBC.handleHigherLowerCommand = function (rawBody, isOwner, username) {
+    var body = String(rawBody || "").trim().toLowerCase();
+    var name = cleanName(username);
+    var state = readState();
+
+    if (body === "!higherhelp") {
+      LBC.notice(
+        "🎲 HIGHER OR LOWER: When a round is live, look at the displayed number and predict the next one. " +
+        "Type !higher or !lower. One free prediction per round. No tip required.",
+        { toUsername: name }
+      );
+      return;
+    }
+
+    if (body === "!higherstatus") {
+      LBC.notice(
+        state.active
+          ? "HIGHER OR LOWER is live. Current number: " + state.current + ". " +
+            Object.keys(state.guesses).length + " prediction" +
+            (Object.keys(state.guesses).length === 1 ? "" : "s") + " locked. Use !higher or !lower."
+          : "Higher or Lower is not running. Type !higherhelp for the rules.",
+        { toUsername: name }
+      );
+      return;
+    }
+
+    if (isOwner && body === "/lbc higher start") {
+      startRound();
+      return;
+    }
+
+    if (isOwner && body === "/lbc higher stop") {
+      finish("manual");
+      return;
+    }
+
+    if (isOwner && body === "/lbc higher status") {
+      LBC.notice("Higher or Lower is " + (state.active ? "ON" : "OFF") + ".");
+      return;
+    }
+
+    if (body !== "!higher" && body !== "!lower") return;
+
+    if (!state.active) {
+      LBC.notice("No Higher or Lower round is running. Type !higherhelp for the rules.", { toUsername: name });
+      return;
+    }
+
+    var key = name.toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(state.guesses, key)) {
+      LBC.notice("Your prediction is already locked for this round. One shot, troublemaker.", { toUsername: name });
+      return;
+    }
+
+    state.guesses[key] = body === "!higher" ? "higher" : "lower";
+    saveState(state);
+    LBC.notice("Your " + (body === "!higher" ? "HIGHER" : "LOWER") + " prediction is locked in. 🖤", { toUsername: name });
+  };
+
+  LBC.onHigherLowerCallback = function (label) {
+    finish("timeout", String(label || ""));
+  };
+
+  LBC.resumeHigherLower = function () {
+    var state = readState();
+    if (!state.active) return;
+
+    var remaining = state.endsAt - Math.floor(Date.now() / 1000);
+    if (remaining <= 0) {
+      finish("timeout");
+      return;
+    }
+
+    // Rotate the callback label so any pre-restart callback becomes stale.
+    schedule(state, remaining);
+  };
+}());
