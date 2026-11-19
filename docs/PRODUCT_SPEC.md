@@ -139,3 +139,12 @@ A feature is not complete because code was drafted. It is complete only when:
 - Predictions are private acknowledgements; the result and correct callers are announced when the round ends.
 - No voting, paid entry, tipping requirement, or prize mechanic is used.
 - The games cannot overlap: Higher or Lower refuses to start during Guess the Number, and starting Guess the Number closes an active Higher or Lower round first. Stale callbacks are ignored and active rounds recover safely after app restart.
+
+
+### M3.2 — Couple Trivia
+- Broadcaster manages a persistent question deck with add, list, remove, and clear commands.
+- Each round selects one saved question and gives viewers 120 seconds to submit one answer with !answer.
+- The first correct answer wins; if nobody answers correctly, the answer is revealed at timeout or manual stop.
+- Question and answer text are bounded and normalized; answers are compared case-insensitively with punctuation/spacing ignored.
+- Trivia is free to join, has no tip requirement or paid-entry mechanic, and cannot overlap with the other clubhouse games.
+- Active rounds recover their timeout after app restart; stale callbacks are ignored.

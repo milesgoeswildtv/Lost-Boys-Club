@@ -992,3 +992,339 @@ var LBC = (function () {
     schedule(state, remaining);
   };
 }());
+
+
+/*
+ * LOST BOYS CLUB — Couple Trivia
+ * Broadcaster-managed questions; free, first-correct-answer wins.
+ */
+(function () {
+  "use strict";
+
+  var QUESTIONS_KEY = "lbc_m3_trivia_questions";
+  var STATE_KEY = "lbc_m3_trivia_state";
+  var LAST_KEY = "lbc_m3_trivia_last_question";
+  var ROUND_SECONDS = 120;
+  var CALLBACK_PREFIX = "lbc_m3_trivia_timeout_";
+  var MAX_QUESTIONS = 50;
+  var MAX_QUESTION_LENGTH = 140;
+  var MAX_ANSWER_LENGTH = 80;
+
+  function cleanText(value) {
+    return String(value || "")
+      .replace(/[\r\n\t]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function normalizeAnswer(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function readQuestions() {
+    try {
+      var raw = $kv.get(QUESTIONS_KEY, "");
+      var list = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(list)) return [];
+      return list.filter(function (item) {
+        return item && cleanText(item.question) && cleanText(item.answer) &&
+          cleanText(item.question).length <= MAX_QUESTION_LENGTH &&
+          cleanText(item.answer).length <= MAX_ANSWER_LENGTH;
+      }).slice(0, MAX_QUESTIONS);
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function saveQuestions(list) {
+    $kv.set(QUESTIONS_KEY, JSON.stringify(list));
+  }
+
+  function readState() {
+    try {
+      var raw = $kv.get(STATE_KEY, "");
+      var state = raw ? JSON.parse(raw) : {};
+      return {
+        active: state.active === true,
+        question: String(state.question || ""),
+        answer: String(state.answer || ""),
+        guesses: state.guesses && typeof state.guesses === "object" ? state.guesses : {},
+        endsAt: Number(state.endsAt) || 0,
+        callbackLabel: String(state.callbackLabel || "")
+      };
+    } catch (err) {
+      return { active: false, question: "", answer: "", guesses: {}, endsAt: 0, callbackLabel: "" };
+    }
+  }
+
+  function saveState(state) {
+    $kv.set(STATE_KEY, JSON.stringify(state));
+  }
+
+  function cleanName(value) {
+    return String(value || "someone").replace(/[^a-zA-Z0-9_\-]/g, "").slice(0, 25) || "someone";
+  }
+
+  function otherGameIsActive() {
+    try {
+      var coreRaw = $kv.get("lbc_v1_game", "");
+      var core = coreRaw ? JSON.parse(coreRaw) : null;
+      if (core && core.active === true) return true;
+
+      var higherRaw = $kv.get("lbc_m3_higher_lower", "");
+      var higher = higherRaw ? JSON.parse(higherRaw) : null;
+      return !!(higher && higher.active === true);
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function schedule(state, seconds) {
+    var label = CALLBACK_PREFIX + Date.now() + "_" + Math.floor(Math.random() * 1000000);
+    state.callbackLabel = label;
+    saveState(state);
+    $callback.create(label, Math.max(1, seconds));
+  }
+
+  function finish(reason, expectedLabel, winner) {
+    var state = readState();
+    if (!state.active) return;
+    if (expectedLabel && expectedLabel !== state.callbackLabel) return;
+
+    state.active = false;
+    state.callbackLabel = "";
+    saveState(state);
+
+    if (winner) {
+      LBC.notice(
+        "🏆 COUPLE TRIVIA — " + cleanName(winner) + " got it first!\n" +
+        "Answer: " + state.answer + ". Apparently somebody was paying attention. 🖤"
+      );
+      return;
+    }
+
+    LBC.notice(
+      (reason === "timeout" ? "⏰ Time's up. " : "🛑 Trivia round stopped. ") +
+      "COUPLE TRIVIA — The answer was: " + state.answer + ". " +
+      Object.keys(state.guesses).length + " answer" +
+      (Object.keys(state.guesses).length === 1 ? "" : "s") + " submitted."
+    );
+  }
+
+  function startRound() {
+    var state = readState();
+    if (state.active) {
+      LBC.notice("Couple Trivia is already running. One clubhouse disaster at a time.");
+      return;
+    }
+    if (otherGameIsActive()) {
+      LBC.notice("Another clubhouse game is already running. Finish it before starting Couple Trivia.");
+      return;
+    }
+
+    var questions = readQuestions();
+    if (!questions.length) {
+      LBC.notice("The trivia deck is empty. Add a question first: /lbc trivia add Question :: Answer");
+      return;
+    }
+
+    var last = Number($kv.get(LAST_KEY, "-1"));
+    var index = Math.floor(Math.random() * questions.length);
+    if (questions.length > 1 && index === last) index = (index + 1) % questions.length;
+    $kv.set(LAST_KEY, String(index));
+
+    var selected = questions[index];
+    state = {
+      active: true,
+      question: selected.question,
+      answer: selected.answer,
+      guesses: {},
+      endsAt: Math.floor(Date.now() / 1000) + ROUND_SECONDS,
+      callbackLabel: ""
+    };
+    schedule(state, ROUND_SECONDS);
+
+    LBC.notice(
+      "🧠 LOST BOYS CLUB — COUPLE TRIVIA\n" +
+      selected.question + "\n" +
+      "Type !answer followed by your answer. One attempt each. " +
+      ROUND_SECONDS + " seconds. Free to play — no tips or purchases."
+    );
+  }
+
+  LBC.handleCoupleTriviaCommand = function (rawBody, isOwner, username) {
+    var body = String(rawBody || "").trim();
+    var lower = body.toLowerCase();
+    var name = cleanName(username);
+    var state = readState();
+
+    // Other game-start handlers run before this appended module.
+    if (isOwner && (lower === "/lbc start" || lower === "/lbc higher start") && state.active) {
+      finish("manual");
+      return;
+    }
+
+    if (lower === "!triviahelp") {
+      LBC.notice(
+        "🧠 COUPLE TRIVIA: When a round is live, read the question and send !answer followed by your answer. " +
+        "One attempt per person. First correct answer wins. Free to play; no tip required.",
+        { toUsername: name }
+      );
+      return;
+    }
+
+    if (lower === "!triviastatus") {
+      LBC.notice(
+        state.active
+          ? "Couple Trivia is live. " + Object.keys(state.guesses).length +
+            " answer" + (Object.keys(state.guesses).length === 1 ? "" : "s") +
+            " submitted. Send !answer <your answer>."
+          : "Couple Trivia is not running. Type !triviahelp for the rules.",
+        { toUsername: name }
+      );
+      return;
+    }
+
+    if (isOwner && lower === "/lbc trivia start") {
+      startRound();
+      return;
+    }
+
+    if (isOwner && lower === "/lbc trivia stop") {
+      finish("manual");
+      return;
+    }
+
+    if (isOwner && lower === "/lbc trivia status") {
+      LBC.notice("Couple Trivia is " + (state.active ? "ON" : "OFF") + ". " +
+        readQuestions().length + " question(s) saved.");
+      return;
+    }
+
+    if (isOwner && lower === "/lbc trivia list") {
+      var listed = readQuestions();
+      if (!listed.length) {
+        LBC.notice("No trivia questions saved yet.");
+      } else {
+        LBC.notice("COUPLE TRIVIA QUESTIONS (answers hidden):\n" +
+          listed.map(function (item, index) {
+            return (index + 1) + ". " + item.question;
+          }).join("\n"), { toUsername: name });
+      }
+      return;
+    }
+
+    if (isOwner && lower === "/lbc trivia clear") {
+      if (state.active) {
+        LBC.notice("Stop the active trivia round before clearing the question deck.");
+        return;
+      }
+      saveQuestions([]);
+      LBC.notice("Couple Trivia question deck cleared.");
+      return;
+    }
+
+    if (isOwner && lower.indexOf("/lbc trivia add") === 0) {
+      var addMatch = body.match(/^\/lbc trivia add\s+([\s\S]+?)\s+::\s+([\s\S]+)$/i);
+      if (!addMatch) {
+        LBC.notice("Use: /lbc trivia add Your question? :: Correct answer");
+        return;
+      }
+      var question = cleanText(addMatch[1]);
+      var answer = cleanText(addMatch[2]);
+      if (!question || !answer || question.length > MAX_QUESTION_LENGTH || answer.length > MAX_ANSWER_LENGTH) {
+        LBC.notice("Question limit: " + MAX_QUESTION_LENGTH + " characters. Answer limit: " +
+          MAX_ANSWER_LENGTH + " characters. Both are required.");
+        return;
+      }
+      var deck = readQuestions();
+      if (deck.length >= MAX_QUESTIONS) {
+        LBC.notice("The trivia deck is full (" + MAX_QUESTIONS + " questions). Remove one before adding another.");
+        return;
+      }
+      deck.push({ question: question, answer: answer });
+      saveQuestions(deck);
+      LBC.notice("Trivia question added (" + deck.length + "/" + MAX_QUESTIONS + "). Use /lbc trivia list to review the deck.");
+      return;
+    }
+
+    if (isOwner && lower.indexOf("/lbc trivia remove") === 0) {
+      var removeMatch = lower.match(/^\/lbc trivia remove ([1-9][0-9]?)$/);
+      if (!removeMatch) {
+        LBC.notice("Use /lbc trivia remove <number>. Check positions with /lbc trivia list.");
+        return;
+      }
+      if (state.active) {
+        LBC.notice("Stop the active trivia round before editing the question deck.");
+        return;
+      }
+      var removeIndex = Number(removeMatch[1]) - 1;
+      var currentDeck = readQuestions();
+      if (removeIndex < 0 || removeIndex >= currentDeck.length) {
+        LBC.notice("That question number does not exist.");
+        return;
+      }
+      currentDeck.splice(removeIndex, 1);
+      saveQuestions(currentDeck);
+      LBC.notice("Trivia question removed. " + currentDeck.length + " question(s) remain.");
+      return;
+    }
+
+    if (isOwner && lower.indexOf("/lbc trivia") === 0) {
+      LBC.notice(
+        "TRIVIA CONTROLS: /lbc trivia add Question :: Answer · " +
+        "/lbc trivia remove 1 · /lbc trivia list · /lbc trivia clear · " +
+        "/lbc trivia start · /lbc trivia stop · /lbc trivia status"
+      );
+      return;
+    }
+
+    var answerMatch = body.match(/^!answer\s+([\s\S]+)$/i);
+    if (!answerMatch) return;
+
+    if (!state.active) {
+      LBC.notice("No Couple Trivia round is running. Type !triviahelp for the rules.", { toUsername: name });
+      return;
+    }
+
+    var key = name.toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(state.guesses, key)) {
+      LBC.notice("Your answer is already locked for this round. One attempt each.", { toUsername: name });
+      return;
+    }
+
+    var submitted = cleanText(answerMatch[1]);
+    if (!submitted || submitted.length > MAX_ANSWER_LENGTH) {
+      LBC.notice("Keep your answer to " + MAX_ANSWER_LENGTH + " characters or fewer.", { toUsername: name });
+      return;
+    }
+    state.guesses[key] = submitted;
+    saveState(state);
+
+    if (normalizeAnswer(submitted) === normalizeAnswer(state.answer)) {
+      finish("winner", "", name);
+    } else {
+      LBC.notice("Your answer is locked in. We'll reveal the answer when the round ends. 🖤", { toUsername: name });
+    }
+  };
+
+  LBC.onCoupleTriviaCallback = function (label) {
+    finish("timeout", String(label || ""));
+  };
+
+  LBC.resumeCoupleTrivia = function () {
+    var state = readState();
+    if (!state.active) return;
+
+    var remaining = state.endsAt - Math.floor(Date.now() / 1000);
+    if (remaining <= 0) {
+      finish("timeout");
+      return;
+    }
+    schedule(state, remaining);
+  };
+}());

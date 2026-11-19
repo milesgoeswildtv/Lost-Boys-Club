@@ -49,3 +49,7 @@ LBC.handleGuessNumberGuidance($message.body, $user.username);
 
 // M3.1: free Higher or Lower prediction game.
 LBC.handleHigherLowerCommand($message.body, $user.isOwner, $user.username);
+
+
+// M3.2: broadcaster-managed Couple Trivia and viewer answers.
+LBC.handleCoupleTriviaCommand($message.body, $user.isOwner, $user.username);
