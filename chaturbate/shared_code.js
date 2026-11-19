@@ -774,11 +774,11 @@ var LBC = (function () {
       return;
     }
 
-    if (!/^!guess(?:\\s+.*)?$/i.test(body)) return;
+    if (!/^!guess(?:\s+.*)?$/i.test(body)) return;
 
     // The core already handles every one-to-three-digit numeric guess,
     // including out-of-range values. Do not duplicate its response.
-    if (/^!guess\\s+[0-9]{1,3}$/i.test(body)) return;
+    if (/^!guess\s+[0-9]{1,3}$/i.test(body)) return;
 
     LBC.notice(
       "Try !guess followed by one whole number from 1 to 100. Example: !guess 42. " +
