@@ -115,3 +115,11 @@ A feature is not complete because code was drafted. It is complete only when:
 - Announcements are disabled by default and rotate at a conservative 15-minute cadence.
 - Messages are informational, short, and never imply that tipping is required.
 - Stale callbacks are ignored; disabling announcements prevents further rotations.
+
+
+### M2.5 — Custom broadcaster announcements
+- Broadcaster can post a one-off room announcement with `/lbc say <message>`.
+- Announcement text is normalized to one line and limited to 200 characters.
+- Blank and overlong messages are rejected with a private broadcaster notice.
+- Viewers cannot invoke the broadcaster command.
+- Messages are posted once and are never scheduled or repeated automatically.

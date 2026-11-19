@@ -65,3 +65,15 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] App restart reschedules one callback when announcements were enabled.
 - [ ] Ordinary chat does not trigger announcements.
 - [ ] Announcement copy contains no tipping pressure or paid-entry language.
+
+
+## M2.5: Custom broadcaster announcements
+- [ ] Broadcaster can post a one-off announcement with /lbc say.
+- [ ] Announcement appears once in the public room.
+- [ ] Broadcaster receives a private confirmation.
+- [ ] Blank /lbc say command returns private usage guidance and posts nothing publicly.
+- [ ] Messages longer than 200 characters are rejected without truncation or public output.
+- [ ] Newlines and tabs are normalized to spaces so the announcement remains one line.
+- [ ] Non-owner use of /lbc say produces no public announcement.
+- [ ] Unrelated chat beginning with similar text does not trigger an announcement.
+- [ ] No callback, timer, or recurring schedule is created.

@@ -697,3 +697,50 @@ var LBC = (function () {
     scheduleNext(state);
   };
 }());
+
+
+/*
+ * LOST BOYS CLUB — Custom Broadcaster Announcements
+ * One-off broadcaster message; no scheduling or automatic repetition.
+ * Message text is normalized to one line and limited to 200 characters.
+ */
+(function () {
+  "use strict";
+
+  var MAX_MESSAGE_LENGTH = 200;
+
+  function cleanAnnouncement(value) {
+    return String(value || "")
+      .replace(/[\r\n\t]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  LBC.handleCustomAnnouncementCommand = function (rawBody, isOwner, username) {
+    if (!isOwner) return;
+
+    var body = String(rawBody || "").trim();
+    var match = body.match(/^\/lbc\s+say(?:\s+([\s\S]*))?$/i);
+    if (!match) return;
+
+    var message = cleanAnnouncement(match[1] || "");
+    if (!message) {
+      LBC.notice("Usage: /lbc say Your announcement goes here.", {
+        toUsername: String(username || "")
+      });
+      return;
+    }
+
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      LBC.notice("That announcement is too long. Keep it to " + MAX_MESSAGE_LENGTH + " characters or fewer.", {
+        toUsername: String(username || "")
+      });
+      return;
+    }
+
+    LBC.notice("📣 LOST BOYS CLUB — " + message);
+    LBC.notice("Your announcement was posted.", {
+      toUsername: String(username || "")
+    });
+  };
+}());
