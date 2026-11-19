@@ -96,6 +96,7 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] Broadcaster can start with /lbc higher start and stop with /lbc higher stop.
 - [ ] A second game cannot start while Higher or Lower is already active.
 - [ ] Higher or Lower cannot start while Guess the Number is active.
+- [ ] Starting Guess the Number during Higher or Lower closes the prediction round before the core round proceeds.
 - [ ] Starting number is shown; hidden next number is not exposed before round end.
 - [ ] !higher and !lower are accepted only during an active round.
 - [ ] Each viewer can lock exactly one prediction per round.
