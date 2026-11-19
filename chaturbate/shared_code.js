@@ -505,9 +505,9 @@ var LBC = (function () {
 
   function cleanLabel(value) {
     return String(value || "")
-      .replace(/[\\r\\n\\t]/g, " ")
-      .replace(/[\\x00-\\x1F\\x7F]/g, "")
-      .replace(/\\s+/g, " ")
+      .replace(/[\r\n\t]/g, " ")
+      .replace(/[\x00-\x1F\x7F]/g, "")
+      .replace(/\s+/g, " ")
       .trim()
       .slice(0, MAX_LABEL_LENGTH);
   }
@@ -541,7 +541,7 @@ var LBC = (function () {
 
     if (!isOwner || lower.indexOf("/lbc menu") !== 0) return;
 
-    var addMatch = body.match(/^\\/lbc menu add ([1-9][0-9]{0,4}) (.{1,200})$/i);
+    var addMatch = body.match(/^\/lbc menu add ([1-9][0-9]{0,4}) (.{1,200})$/i);
     if (addMatch) {
       var amount = Number(addMatch[1]);
       var label = cleanLabel(addMatch[2]);
@@ -565,7 +565,7 @@ var LBC = (function () {
       return;
     }
 
-    var removeMatch = lower.match(/^\\/lbc menu remove ([1-9][0-9]?)$/);
+    var removeMatch = lower.match(/^\/lbc menu remove ([1-9][0-9]?)$/);
     if (removeMatch) {
       var removeIndex = Number(removeMatch[1]) - 1;
       var current = readMenu();
