@@ -53,3 +53,7 @@ LBC.handleHigherLowerCommand($message.body, $user.isOwner, $user.username);
 
 // M3.2: broadcaster-managed Couple Trivia and viewer answers.
 LBC.handleCoupleTriviaCommand($message.body, $user.isOwner, $user.username);
+
+
+// M3.3: optional broadcaster-controlled room prompt button.
+LBC.handleChaosButtonCommand($message.body, $user.isOwner, $user.username);
