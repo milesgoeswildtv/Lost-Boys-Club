@@ -58,6 +58,8 @@ Do not split into multiple apps unless a concrete platform limitation requires i
 - Add broadcaster settings for welcome enablement, welcome cooldown, game enablement, and message style where supported.
 
 ### M2 — Room utilities
+- Configurable informational tip menu, managed by broadcaster chat commands and requested by viewers with !tipmenu.
+- Tip menu entries are display-only requests; no automatic action is triggered by a matching tip.
 - Configurable tip menu display (informational only).
 - Broadcaster-controlled room goal display and milestone notices.
 - Tip acknowledgement with throttling and no pressure language.
