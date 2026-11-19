@@ -913,6 +913,13 @@ var LBC = (function () {
     var name = cleanName(username);
     var state = readState();
 
+    // If the broadcaster starts the core game, close this round first.
+    // Chat Message invokes the core handler before this additive module.
+    if (isOwner && body === "/lbc start" && state.active) {
+      finish("manual");
+      return;
+    }
+
     if (body === "!higherhelp") {
       LBC.notice(
         "🎲 HIGHER OR LOWER: When a round is live, look at the displayed number and predict the next one. " +
