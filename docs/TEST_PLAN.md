@@ -128,3 +128,18 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] Trivia refuses to start while Guess the Number or Higher or Lower is active.
 - [ ] Starting either other game closes an active trivia round before the handler sequence completes.
 - [ ] No tip, purchase, paid entry, or prize is required or implied.
+
+
+## M3.3: The Chaos Button
+- [ ] Chaos Button is disabled by default on a fresh install.
+- [ ] Broadcaster can enable, disable, spin, and inspect status.
+- [ ] Non-owner commands cannot change broadcaster settings or manually spin.
+- [ ] !chaoshelp returns private guidance without triggering a prompt.
+- [ ] !chaos while disabled returns private status and posts no public prompt.
+- [ ] !chaos while enabled posts exactly one room-wide prompt.
+- [ ] A second viewer request during the 10-minute cooldown is privately rejected.
+- [ ] Broadcaster manual spin works during viewer cooldown and restarts the cooldown.
+- [ ] Prompt selection does not repeat the immediately previous prompt when multiple prompts exist.
+- [ ] Enabled state and cooldown survive app restart.
+- [ ] Prompts do not request performer actions, tips, purchases, paid entry, or prizes.
+- [ ] Ordinary chat does not trigger the feature.
