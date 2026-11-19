@@ -90,3 +90,19 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] Out-of-range numeric guesses continue to receive the existing core validation response only.
 - [ ] Ordinary chat does not trigger guidance.
 - [ ] Existing round start, end, timer, winner, records, and panel behavior remain unchanged.
+
+
+## M3.1: Higher or Lower
+- [ ] Broadcaster can start with /lbc higher start and stop with /lbc higher stop.
+- [ ] A second game cannot start while Higher or Lower is already active.
+- [ ] Higher or Lower cannot start while Guess the Number is active.
+- [ ] Starting number is shown; hidden next number is not exposed before round end.
+- [ ] !higher and !lower are accepted only during an active round.
+- [ ] Each viewer can lock exactly one prediction per round.
+- [ ] Prediction acknowledgement is private; other viewers cannot see a user's choice.
+- [ ] Correct direction and all correct callers are announced at round end.
+- [ ] Timeout and broadcaster stop both close the round exactly once.
+- [ ] Stale callbacks after stop or restart are ignored.
+- [ ] App restart restores one valid callback for an active round.
+- [ ] !higherhelp and !higherstatus return private guidance/status.
+- [ ] No tip, purchase, paid entry, or prize is required or implied.
