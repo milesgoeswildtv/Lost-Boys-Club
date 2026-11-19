@@ -138,4 +138,4 @@ A feature is not complete because code was drafted. It is complete only when:
 - Each viewer may submit one prediction per round with !higher or !lower.
 - Predictions are private acknowledgements; the result and correct callers are announced when the round ends.
 - No voting, paid entry, tipping requirement, or prize mechanic is used.
-- The game cannot start while Guess the Number is active; stale callbacks are ignored and active rounds recover safely after app restart.
+- The games cannot overlap: Higher or Lower refuses to start during Guess the Number, and starting Guess the Number closes an active Higher or Lower round first. Stale callbacks are ignored and active rounds recover safely after app restart.
