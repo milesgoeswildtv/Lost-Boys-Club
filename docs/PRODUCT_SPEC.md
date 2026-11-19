@@ -123,3 +123,19 @@ A feature is not complete because code was drafted. It is complete only when:
 - Blank and overlong messages are rejected with a private broadcaster notice.
 - Viewers cannot invoke the broadcaster command.
 - Messages are posted once and are never scheduled or repeated automatically.
+
+
+### M3.0 — Guess the Number player guidance
+- Viewers can request clear private instructions with `!howtoplay` or `!gamehelp`.
+- The guide explains the free-to-play rules, valid guess range, one-guess limit, private higher/lower hints, and live-round status command.
+- Malformed `!guess` commands receive private syntax guidance.
+- Existing valid-guess handling, game engine, round timer, scoring, and public start/end announcements remain unchanged.
+
+
+### M3.1 — Higher or Lower
+- Broadcaster starts and stops a free 90-second prediction round.
+- The room sees a starting number and predicts whether the hidden next number is higher or lower.
+- Each viewer may submit one prediction per round with !higher or !lower.
+- Predictions are private acknowledgements; the result and correct callers are announced when the round ends.
+- No voting, paid entry, tipping requirement, or prize mechanic is used.
+- The games cannot overlap: Higher or Lower refuses to start during Guess the Number, and starting Guess the Number closes an active Higher or Lower round first. Stale callbacks are ignored and active rounds recover safely after app restart.

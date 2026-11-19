@@ -77,3 +77,33 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] Non-owner use of /lbc say produces no public announcement.
 - [ ] Unrelated chat beginning with similar text does not trigger an announcement.
 - [ ] No callback, timer, or recurring schedule is created.
+
+
+## M3.0: Guess the Number player guidance
+- [ ] !howtoplay returns the full guide privately to the requesting viewer.
+- [ ] !gamehelp returns the same guide.
+- [ ] Guide clearly states the game is free and no tip or purchase is required.
+- [ ] Guide explains 1–100, one guess per round, private higher/lower hints, and !game.
+- [ ] Bare !guess returns private syntax guidance.
+- [ ] !guess abc and malformed multi-value guesses return private syntax guidance.
+- [ ] Valid one-to-three-digit guesses are not given duplicate guidance.
+- [ ] Out-of-range numeric guesses continue to receive the existing core validation response only.
+- [ ] Ordinary chat does not trigger guidance.
+- [ ] Existing round start, end, timer, winner, records, and panel behavior remain unchanged.
+
+
+## M3.1: Higher or Lower
+- [ ] Broadcaster can start with /lbc higher start and stop with /lbc higher stop.
+- [ ] A second game cannot start while Higher or Lower is already active.
+- [ ] Higher or Lower cannot start while Guess the Number is active.
+- [ ] Starting Guess the Number during Higher or Lower closes the prediction round before the core round proceeds.
+- [ ] Starting number is shown; hidden next number is not exposed before round end.
+- [ ] !higher and !lower are accepted only during an active round.
+- [ ] Each viewer can lock exactly one prediction per round.
+- [ ] Prediction acknowledgement is private; other viewers cannot see a user's choice.
+- [ ] Correct direction and all correct callers are announced at round end.
+- [ ] Timeout and broadcaster stop both close the round exactly once.
+- [ ] Stale callbacks after stop or restart are ignored.
+- [ ] App restart restores one valid callback for an active round.
+- [ ] !higherhelp and !higherstatus return private guidance/status.
+- [ ] No tip, purchase, paid entry, or prize is required or implied.

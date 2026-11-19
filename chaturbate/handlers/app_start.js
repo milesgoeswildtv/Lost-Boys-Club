@@ -8,3 +8,6 @@ $room.sendNotice("🖤 LOST BOYS CLUB clubhouse manager online. No map. No super
 
 // M2.4: resume the announcement schedule after app startup when enabled.
 LBC.startAnnouncements(true);
+
+// M3.1: recover an active Higher or Lower round after app restart.
+LBC.resumeHigherLower();
