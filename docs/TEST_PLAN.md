@@ -77,3 +77,16 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] Non-owner use of /lbc say produces no public announcement.
 - [ ] Unrelated chat beginning with similar text does not trigger an announcement.
 - [ ] No callback, timer, or recurring schedule is created.
+
+
+## M3.0: Guess the Number player guidance
+- [ ] !howtoplay returns the full guide privately to the requesting viewer.
+- [ ] !gamehelp returns the same guide.
+- [ ] Guide clearly states the game is free and no tip or purchase is required.
+- [ ] Guide explains 1–100, one guess per round, private higher/lower hints, and !game.
+- [ ] Bare !guess returns private syntax guidance.
+- [ ] !guess abc and malformed multi-value guesses return private syntax guidance.
+- [ ] Valid one-to-three-digit guesses are not given duplicate guidance.
+- [ ] Out-of-range numeric guesses continue to receive the existing core validation response only.
+- [ ] Ordinary chat does not trigger guidance.
+- [ ] Existing round start, end, timer, winner, records, and panel behavior remain unchanged.
