@@ -11,3 +11,7 @@ LBC.startAnnouncements(true);
 
 // M3.1: recover an active Higher or Lower round after app restart.
 LBC.resumeHigherLower();
+
+
+// M3.2: recover an active Couple Trivia round after app restart.
+LBC.resumeCoupleTrivia();
