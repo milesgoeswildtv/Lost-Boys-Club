@@ -148,3 +148,11 @@ A feature is not complete because code was drafted. It is complete only when:
 - Question and answer text are bounded and normalized; answers are compared case-insensitively with punctuation/spacing ignored.
 - Trivia is free to join, has no tip requirement or paid-entry mechanic, and cannot overlap with the other clubhouse games.
 - Active rounds recover their timeout after app restart; stale callbacks are ignored.
+
+
+### M3.3 — The Chaos Button
+- Broadcaster can enable or disable viewer-triggered harmless room prompts.
+- Viewers can request a prompt with !chaos; one room-wide prompt can be triggered every 10 minutes.
+- Broadcaster can trigger a prompt immediately with /lbc chaos spin and inspect status.
+- Prompts are conversational and do not instruct performers to do anything or involve tips, purchases, prizes, or paid entry.
+- The feature is disabled by default, persists its enabled state and cooldown, and avoids repeating the same prompt consecutively.
