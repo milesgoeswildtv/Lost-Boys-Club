@@ -1328,3 +1328,121 @@ var LBC = (function () {
     schedule(state, remaining);
   };
 }());
+
+
+/*
+ * LOST BOYS CLUB — The Chaos Button
+ * Optional, harmless room prompts. Broadcaster-controlled; no performer challenges.
+ */
+(function () {
+  "use strict";
+
+  var STATE_KEY = "lbc_m3_chaos_button";
+  var VIEWER_COOLDOWN_SECONDS = 600;
+  var PROMPTS = [
+    "ROOM CHAOS: If tonight had a movie title, what would it be?",
+    "SOUNDTRACK CHECK: Name one song that belongs in the LOST BOYS CLUB after midnight.",
+    "IMPORTANT DEBATE: Is a late-night snack a meal, a side quest, or a personality trait?",
+    "THE VIBE TEST: Describe tonight's energy using exactly three words.",
+    "HOT TAKE: What's a completely harmless hill you'll defend forever?",
+    "TIME MACHINE: Pick one decade for the clubhouse soundtrack. What's your choice?",
+    "THE CLUBHOUSE MENU: Invent a ridiculous name for the snack you'd serve here.",
+    "WOULD YOU RATHER: Have a perfect playlist or an unlimited supply of your favorite snack?",
+    "MOVIE NIGHT: Name a film that is objectively better after midnight.",
+    "TINY CONFESSION: What's a song you know every word to, whether you admit it or not?",
+    "THE GROUP CHAT: Give tonight a fake episode title.",
+    "FINAL BOSS: What's the most elite comfort food combination?"
+  ];
+
+  function readState() {
+    try {
+      var raw = $kv.get(STATE_KEY, "");
+      var state = raw ? JSON.parse(raw) : {};
+      return {
+        enabled: state.enabled === true,
+        lastTriggeredAt: Math.max(0, Number(state.lastTriggeredAt) || 0),
+        lastPromptIndex: Number.isInteger(Number(state.lastPromptIndex)) ? Number(state.lastPromptIndex) : -1
+      };
+    } catch (err) {
+      return { enabled: false, lastTriggeredAt: 0, lastPromptIndex: -1 };
+    }
+  }
+
+  function saveState(state) {
+    $kv.set(STATE_KEY, JSON.stringify(state));
+  }
+
+  function cleanName(value) {
+    return String(value || "someone").replace(/[^a-zA-Z0-9_\-]/g, "").slice(0, 25) || "someone";
+  }
+
+  function triggerPrompt(state) {
+    var index = Math.floor(Math.random() * PROMPTS.length);
+    if (PROMPTS.length > 1 && index === state.lastPromptIndex) {
+      index = (index + 1) % PROMPTS.length;
+    }
+    state.lastPromptIndex = index;
+    state.lastTriggeredAt = Math.floor(Date.now() / 1000);
+    saveState(state);
+    LBC.notice("🎲 THE CHAOS BUTTON — " + PROMPTS[index]);
+  }
+
+  LBC.handleChaosButtonCommand = function (rawBody, isOwner, username) {
+    var body = String(rawBody || "").trim().toLowerCase();
+    var name = cleanName(username);
+    var state = readState();
+
+    if (isOwner && body === "/lbc chaos on") {
+      state.enabled = true;
+      saveState(state);
+      LBC.notice("🎲 The Chaos Button is ON. Viewers can summon one harmless room prompt every 10 minutes with !chaos.");
+      return;
+    }
+
+    if (isOwner && body === "/lbc chaos off") {
+      state.enabled = false;
+      saveState(state);
+      LBC.notice("The Chaos Button is OFF. No viewer-triggered prompts until you turn it back on.");
+      return;
+    }
+
+    if (isOwner && body === "/lbc chaos status") {
+      var remaining = Math.max(0, VIEWER_COOLDOWN_SECONDS - (Math.floor(Date.now() / 1000) - state.lastTriggeredAt));
+      LBC.notice("The Chaos Button is " + (state.enabled ? "ON" : "OFF") +
+        ". Viewer cooldown: " + (remaining ? remaining + " seconds remaining." : "ready.") +
+        " Commands: /lbc chaos on · /lbc chaos off · /lbc chaos spin · /lbc chaos status.");
+      return;
+    }
+
+    if (isOwner && body === "/lbc chaos spin") {
+      triggerPrompt(state);
+      return;
+    }
+
+    if (body === "!chaoshelp") {
+      LBC.notice(
+        state.enabled
+          ? "🎲 The Chaos Button drops a harmless room prompt. Type !chaos to summon one when it's ready."
+          : "🎲 The Chaos Button is taking a nap right now. Check back later.",
+        { toUsername: name }
+      );
+      return;
+    }
+
+    if (body !== "!chaos") return;
+
+    if (!state.enabled) {
+      LBC.notice("The Chaos Button is currently off. Type !chaoshelp for details.", { toUsername: name });
+      return;
+    }
+
+    var now = Math.floor(Date.now() / 1000);
+    var remaining = VIEWER_COOLDOWN_SECONDS - (now - state.lastTriggeredAt);
+    if (remaining > 0) {
+      LBC.notice("The Chaos Button is recharging. Try again in " + remaining + " seconds. 🎲", { toUsername: name });
+      return;
+    }
+
+    triggerPrompt(state);
+  };
+}());
