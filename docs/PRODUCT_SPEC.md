@@ -130,3 +130,12 @@ A feature is not complete because code was drafted. It is complete only when:
 - The guide explains the free-to-play rules, valid guess range, one-guess limit, private higher/lower hints, and live-round status command.
 - Malformed `!guess` commands receive private syntax guidance.
 - Existing valid-guess handling, game engine, round timer, scoring, and public start/end announcements remain unchanged.
+
+
+### M3.1 — Higher or Lower
+- Broadcaster starts and stops a free 90-second prediction round.
+- The room sees a starting number and predicts whether the hidden next number is higher or lower.
+- Each viewer may submit one prediction per round with !higher or !lower.
+- Predictions are private acknowledgements; the result and correct callers are announced when the round ends.
+- No voting, paid entry, tipping requirement, or prize mechanic is used.
+- The game cannot start while Guess the Number is active; stale callbacks are ignored and active rounds recover safely after app restart.
