@@ -744,3 +744,46 @@ var LBC = (function () {
     });
   };
 }());
+
+
+/*
+ * LOST BOYS CLUB — Guess the Number Player Guidance
+ * Clear private instructions and recovery guidance for malformed commands.
+ * Existing game engine, round timing, scoring, and valid-guess handling stay untouched.
+ */
+(function () {
+  "use strict";
+
+  function sendPrivateGuide(username) {
+    LBC.notice(
+      "🎯 GUESS THE NUMBER — QUICK GUIDE\n" +
+      "The game is free. No tip or purchase is needed.\n" +
+      "When a round is live, send one whole number from 1 to 100.\n" +
+      "Example: !guess 42\n" +
+      "You get one guess per round. Your higher/lower hint is sent privately.\n" +
+      "A correct guess wins the round. Type !game to check whether a round is live.",
+      { toUsername: String(username || "") }
+    );
+  }
+
+  LBC.handleGuessNumberGuidance = function (rawBody, username) {
+    var body = String(rawBody || "").trim();
+
+    if (/^!(howtoplay|gamehelp)$/i.test(body)) {
+      sendPrivateGuide(username);
+      return;
+    }
+
+    if (!/^!guess(?:\\s+.*)?$/i.test(body)) return;
+
+    // The core already handles every one-to-three-digit numeric guess,
+    // including out-of-range values. Do not duplicate its response.
+    if (/^!guess\\s+[0-9]{1,3}$/i.test(body)) return;
+
+    LBC.notice(
+      "Try !guess followed by one whole number from 1 to 100. Example: !guess 42. " +
+      "Type !howtoplay for the full game guide.",
+      { toUsername: String(username || "") }
+    );
+  };
+}());
