@@ -46,3 +46,6 @@ LBC.handleCustomAnnouncementCommand($message.body, $user.isOwner, $user.username
 
 // M3.0: private instructions and malformed-guess recovery for viewers.
 LBC.handleGuessNumberGuidance($message.body, $user.username);
+
+// M3.1: free Higher or Lower prediction game.
+LBC.handleHigherLowerCommand($message.body, $user.isOwner, $user.username);
