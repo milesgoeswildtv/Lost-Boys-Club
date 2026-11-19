@@ -107,3 +107,24 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] App restart restores one valid callback for an active round.
 - [ ] !higherhelp and !higherstatus return private guidance/status.
 - [ ] No tip, purchase, paid entry, or prize is required or implied.
+
+
+## M3.2: Couple Trivia
+- [ ] Broadcaster can add a question using /lbc trivia add Question :: Answer.
+- [ ] Question and answer are persisted and survive app restart.
+- [ ] Missing delimiter, blank fields, and overlong text are rejected.
+- [ ] Deck limit is enforced; duplicate questions are allowed as separate entries.
+- [ ] Broadcaster can privately list questions without exposing answers.
+- [ ] Broadcaster can remove a listed question by number.
+- [ ] Broadcaster can clear the deck only when no round is active.
+- [ ] Starting with an empty deck returns setup guidance and creates no callback.
+- [ ] Starting a round selects one saved question and does not reveal its answer.
+- [ ] !answer accepts one attempt per viewer; duplicate attempts are rejected privately.
+- [ ] Correct answer ends the round once and announces the first correct viewer.
+- [ ] Incorrect answers are acknowledged privately and do not reveal correctness publicly.
+- [ ] Timeout and broadcaster stop reveal the answer exactly once.
+- [ ] Stale callbacks after stop/restart are ignored.
+- [ ] App restart restores one valid callback for an active round.
+- [ ] Trivia refuses to start while Guess the Number or Higher or Lower is active.
+- [ ] Starting either other game closes an active trivia round before the handler sequence completes.
+- [ ] No tip, purchase, paid entry, or prize is required or implied.
