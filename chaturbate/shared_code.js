@@ -472,3 +472,128 @@ var LBC = (function () {
     });
   };
 }());
+
+
+/*
+ * LOST BOYS CLUB — Configurable Tip Menu
+ * Informational display only. Menu entries are not automated actions,
+ * paid game access, guarantees, or promises of performance.
+ */
+(function () {
+  "use strict";
+
+  var MENU_KEY = "lbc_m2_tip_menu";
+  var MAX_ITEMS = 12;
+  var MAX_LABEL_LENGTH = 70;
+
+  function readMenu() {
+    try {
+      var raw = $kv.get(MENU_KEY, "");
+      var parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(function (item) {
+        return item && Number(item.amount) > 0 && String(item.label || "").trim();
+      }).slice(0, MAX_ITEMS);
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function saveMenu(items) {
+    $kv.set(MENU_KEY, JSON.stringify(items));
+  }
+
+  function cleanLabel(value) {
+    return String(value || "")
+      .replace(/[\r\n\t]/g, " ")
+      .replace(/[\x00-\x1F\x7F]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, MAX_LABEL_LENGTH);
+  }
+
+  function showMenu() {
+    var items = readMenu();
+    if (!items.length) {
+      LBC.notice("🏚️ The LOST BOYS CLUB tip menu is empty. The boys are taking suggestions from the management department.");
+      return;
+    }
+
+    var lines = items.map(function (item, index) {
+      return (index + 1) + ". " + Number(item.amount) + " tokens — " + cleanLabel(item.label);
+    });
+
+    LBC.notice(
+      "🖤 LOST BOYS CLUB — TIP MENU\n" +
+      lines.join("\n") +
+      "\n\nTips are voluntary. Menu items are requests, not guaranteed outcomes. No game access or advantage is tied to tipping."
+    );
+  }
+
+  LBC.handleTipMenuCommand = function (rawBody, isOwner) {
+    var body = String(rawBody || "").trim();
+    var lower = body.toLowerCase();
+
+    if (lower === "!tipmenu" || lower === "!menu") {
+      showMenu();
+      return;
+    }
+
+    if (!isOwner || lower.indexOf("/lbc menu") !== 0) return;
+
+    var addMatch = body.match(/^\/lbc menu add ([1-9][0-9]{0,4}) (.{1,200})$/i);
+    if (addMatch) {
+      var amount = Number(addMatch[1]);
+      var label = cleanLabel(addMatch[2]);
+      if (!label) {
+        LBC.notice("Give the menu item a short label. Example: /lbc menu add 50 Song request");
+        return;
+      }
+      var items = readMenu();
+      if (items.length >= MAX_ITEMS) {
+        LBC.notice("The tip menu is full (" + MAX_ITEMS + " items). Remove one before adding another.");
+        return;
+      }
+      if (items.some(function (item) { return Number(item.amount) === amount; })) {
+        LBC.notice("That token amount is already in the menu. Use a different amount so each item is clear.");
+        return;
+      }
+      items.push({ amount: amount, label: label });
+      items.sort(function (a, b) { return a.amount - b.amount; });
+      saveMenu(items);
+      LBC.notice("Added to the tip menu: " + amount + " tokens — " + label + ". View it with !tipmenu.");
+      return;
+    }
+
+    var removeMatch = lower.match(/^\/lbc menu remove ([1-9][0-9]?)$/);
+    if (removeMatch) {
+      var removeIndex = Number(removeMatch[1]) - 1;
+      var current = readMenu();
+      if (removeIndex < 0 || removeIndex >= current.length) {
+        LBC.notice("That menu item number doesn't exist. Use !tipmenu to see the current list.");
+        return;
+      }
+      var removed = current.splice(removeIndex, 1)[0];
+      saveMenu(current);
+      LBC.notice("Removed: " + removed.amount + " tokens — " + cleanLabel(removed.label) + ".");
+      return;
+    }
+
+    if (lower === "/lbc menu clear") {
+      saveMenu([]);
+      LBC.notice("Tip menu cleared. !tipmenu will show an empty menu until new items are added.");
+      return;
+    }
+
+    if (lower === "/lbc menu" || lower === "/lbc menu show") {
+      showMenu();
+      return;
+    }
+
+    LBC.notice(
+      "Tip menu controls: /lbc menu add 50 Song request · " +
+      "/lbc menu remove 1 · /lbc menu clear · /lbc menu show. " +
+      "Viewers use !tipmenu. Maximum " + MAX_ITEMS + " items."
+    );
+  };
+}());

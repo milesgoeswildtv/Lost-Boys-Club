@@ -30,6 +30,19 @@
 - [ ] Notices are throttled and do not flood chat.
 - [ ] Panel accurately reflects idle / active / completed state.
 
+## M2.3: Configurable informational tip menu
+- [ ] Empty menu responds clearly to !tipmenu.
+- [ ] Broadcaster can add a valid amount and label.
+- [ ] Items persist after app restart and display sorted by amount.
+- [ ] Duplicate token amounts are rejected.
+- [ ] Invalid amounts, missing labels, and overlong labels are handled safely.
+- [ ] Broadcaster can remove an item by its displayed index.
+- [ ] Broadcaster can clear the menu.
+- [ ] Viewers cannot add, remove, or clear menu entries.
+- [ ] Ordinary chat does not trigger menu output.
+- [ ] Display clearly states that tips are voluntary and requests are not guaranteed.
+- [ ] Tip events do not automatically execute menu actions or grant game advantages.
+
 ## Mobile checks
 - [ ] Testbed opens and remains usable in iPhone Safari.
 - [ ] Instructions are readable at phone width.

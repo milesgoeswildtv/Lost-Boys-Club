@@ -34,3 +34,6 @@ if (/^\s*(\/lbc\s+(start|stop)|!guess\s+\d{1,3})\s*$/i.test(rawBody)) {
 
 // M2.2 modular extension: room-goal commands are handled in Shared Code.
 LBC.handleRoomGoalCommand($message.body, $user.isOwner);
+
+// M2.3: configurable informational tip menu.
+LBC.handleTipMenuCommand($message.body, $user.isOwner);
