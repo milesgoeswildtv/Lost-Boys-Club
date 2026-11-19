@@ -40,3 +40,6 @@ LBC.handleTipMenuCommand($message.body, $user.isOwner);
 
 // M2.4: broadcaster-controlled rotating room announcements.
 LBC.handleAnnouncementCommand($message.body, $user.isOwner);
+
+// M2.5: broadcaster-only one-off announcement command.
+LBC.handleCustomAnnouncementCommand($message.body, $user.isOwner, $user.username);
