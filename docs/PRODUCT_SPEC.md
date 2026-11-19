@@ -123,3 +123,10 @@ A feature is not complete because code was drafted. It is complete only when:
 - Blank and overlong messages are rejected with a private broadcaster notice.
 - Viewers cannot invoke the broadcaster command.
 - Messages are posted once and are never scheduled or repeated automatically.
+
+
+### M3.0 — Guess the Number player guidance
+- Viewers can request clear private instructions with `!howtoplay` or `!gamehelp`.
+- The guide explains the free-to-play rules, valid guess range, one-guess limit, private higher/lower hints, and live-round status command.
+- Malformed `!guess` commands receive private syntax guidance.
+- Existing valid-guess handling, game engine, round timer, scoring, and public start/end announcements remain unchanged.
