@@ -108,3 +108,10 @@ A feature is not complete because code was drafted. It is complete only when:
 - Mobile Testbed behavior is checked on iPhone.
 - No duplicate timers, repeated notices, or runaway event loops occur.
 - The result is documented in this repository.
+
+
+### M2.4 — Rotating room announcements
+- Broadcaster can enable, disable, and inspect announcement status with chat commands.
+- Announcements are disabled by default and rotate at a conservative 15-minute cadence.
+- Messages are informational, short, and never imply that tipping is required.
+- Stale callbacks are ignored; disabling announcements prevents further rotations.
