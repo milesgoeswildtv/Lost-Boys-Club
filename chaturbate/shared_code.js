@@ -3245,9 +3245,9 @@ var LBC = (function () {
   }
   function write(key, value) { try { return LBC.runtime.kvSet(key,JSON.stringify(value)); } catch(e) { return false; } }
   function activity() {
-    var s=read(LOYALTY_KEY,{chat:{},daily:{}});
+    var s=read(LOYALTY_KEY,{chat:{},daily:{},sessions:[]});
     if(!s||typeof s!=="object") s={chat:{},daily:{}};
-    if(!s.chat) s.chat={}; if(!s.daily) s.daily={}; return s;
+    if(!s.chat) s.chat={}; if(!s.daily) s.daily={}; if(!Array.isArray(s.sessions)) s.sessions=[]; return s;
   }
   function award(name, points, reason, id) {
     return !!(LBC.rewards && LBC.rewards.award && LBC.rewards.award(name,points,reason,id));
@@ -3258,8 +3258,9 @@ var LBC = (function () {
     if(!name || k===keyName(LBC.runtime.kvGet("lbc_room_owner",""))) return;
     var sessionKey=SESSION_PREFIX+k;
     var existing=Number(LBC.runtime.kvGet(sessionKey,"0"))||0;
-    if(!existing) LBC.runtime.kvSet(sessionKey,String(now));
-    var s=activity(), today=dayKey();
+    var s=activity();
+    if(!existing) { LBC.runtime.kvSet(sessionKey,String(now)); if(s.sessions.indexOf(k)<0) s.sessions.push(k); write(LOYALTY_KEY,s); }
+    var today=dayKey();
     if(s.daily[k]!==today) {
       if(award(name,DAILY_VISIT_POINTS,"Daily room visit","loyalty:daily:"+k+":"+today)) {
         s.daily[k]=today; write(LOYALTY_KEY,s);
@@ -3273,12 +3274,18 @@ var LBC = (function () {
     var started=Number(LBC.runtime.kvGet(sessionKey,"0"))||0;
     if(!started) return;
     LBC.runtime.kvSet(sessionKey,"");
+    var sessionState=activity(); sessionState.sessions=sessionState.sessions.filter(function(x){return x!==k;}); write(LOYALTY_KEY,sessionState);
     var elapsed=Math.max(0,Math.min(86400,Math.floor(Date.now()/1000)-started));
     var intervals=Math.floor(elapsed/WATCH_INTERVAL_SECONDS);
     if(intervals>0) {
       var points=Math.min(288,intervals*WATCH_POINTS_PER_INTERVAL);
       award(name,points,"Verified room viewing time","loyalty:watch:"+k+":"+started);
     }
+  }
+  function resetSessions() {
+    var s=activity();
+    s.sessions.forEach(function(k){ LBC.runtime.kvSet(SESSION_PREFIX+k,""); });
+    s.sessions=[]; write(LOYALTY_KEY,s);
   }
   function chat(username, body) {
     var name=clean(username), k=keyName(username), text=String(body||"").trim();
@@ -3332,7 +3339,7 @@ var LBC = (function () {
     if((m=lower.match(/^!vip(?:\s+@?([a-z0-9_-]{1,25}))?$/))) { showVip(m[1]||username,username); return; }
     if(!isOwner && !/^\//.test(text)) chat(username,text);
   }
-  LBC.loyalty={version:"2.0",enter:enter,exit:exit,chat:chat,settings:{
+  LBC.loyalty={version:"2.0",enter:enter,exit:exit,chat:chat,resetSessions:resetSessions,settings:{
     watchPointsPerFiveMinutes:WATCH_POINTS_PER_INTERVAL,chatPoints:CHAT_POINTS,chatCooldownSeconds:CHAT_COOLDOWN_SECONDS,dailyVisitPoints:DAILY_VISIT_POINTS
   }};
   LBC.vip={version:"1.0",summary:summary,recordTip:recordTip,tiers:function(){return TIERS.slice();},adminStatus:adminStatus};
