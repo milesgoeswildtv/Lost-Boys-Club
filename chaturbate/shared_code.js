@@ -2604,7 +2604,7 @@ var LBC = (function () {
       "Tip menu: " + (Array.isArray(menu) ? menu.length : 0) + " items\n" +
       "Rotating announcements: " + (announcements.enabled === true ? "ON" : "OFF") + "\n" +
       "Giveaway: " + (function () { var g = readJson("lbc_ab_giveaway_current", null); return g && g.status === "open" ? "OPEN · " + Object.keys(g.entries || {}).length + " entered" : g && g.status === "closed" ? "CLOSED · awaiting draw" : "not running"; }()) + "\n" +
-      "Team Wars: " + (function () { var t = readJson("lbc_ab_teams_state", {}); return (Array.isArray(t.teams) ? t.teams.length : 0) + " teams · " + String(t.seasonName || "No season"); }()) + "\n" +
+      "Team Wars: " + (function () { var t = readJson("lbc_ab_teams_state", {}); return (Array.isArray(t.teams) ? t.teams.length : 0) + " teams · " + String(t.seasonName || "No season"); }()) + "\n" +"Viewer queue: " + (function () { var q = readJson("lbc_ab_viewer_queue_v1", {}); return (q.current && q.current.user ? "active: " + q.current.user + " · " : "") + (Array.isArray(q.waiting) ? q.waiting.length : 0) + "/" + (Number(q.limit) || 50) + " waiting"; }()) + "\n" +
       "Brotherhood Vault: " + (LBC.vault ? LBC.vault.status().totalGamePoints + " shared points" : "offline") + "\n" +
       "Hall of Fame: " + (LBC.hallOfFame ? LBC.hallOfFame.records().membersTracked + " members tracked" : "offline") + "\n" +
       "Game modules: " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + "\n" +
@@ -2682,6 +2682,16 @@ var LBC = (function () {
         "\nCommands: /ab teams create Name · delete Name · reset · season start Name.");
       return;
     }
+    if (value === "queue") {
+      var queue = readJson("lbc_ab_viewer_queue_v1", {});
+      LBC.notice("🎤 VIEWER QUEUE CONTROL\\n" +
+        "Status: " + (queue.paused ? "PAUSED" : "OPEN") +
+        "\\nActive: " + (queue.current && queue.current.user ? queue.current.user : "none") +
+        "\\nWaiting: " + (Array.isArray(queue.waiting) ? queue.waiting.length : 0) + " / " + (Number(queue.limit) || 50) +
+        "\\nBooked slots: " + (Array.isArray(queue.slots) ? queue.slots.filter(function (x) { return x && x.user; }).length : 0) +
+        "\\nCommands: /ab queue next · done · skip · pause · resume · clear · limit · slot add/list/remove.");
+      return;
+    }
     if (value === "announcements") {
       var state = readJson("lbc_m2_announcements", {});
       LBC.notice("📣 ANNOUNCEMENTS\nRotating notices: " + (state.enabled === true ? "ON" : "OFF") +
@@ -2695,7 +2705,7 @@ var LBC = (function () {
     LBC.notice(
       "🖤 AFTERDARK BROTHERHOOD — ADMIN CONTROL MAP\n" +
       "/ab admin — dashboard · /ab admin status — refresh dashboard\n" +
-      "/ab admin games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame — subsystem status\n" +
+      "/ab admin games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue — subsystem status\n" +
       "/ab admin members — member tracking summary\n" +
       "GOALS: /ab goal set 1000 Title · /ab goal queue 1500 Next\n" +
       "REWARDS: /ab rewards add 100 Reward · pending · approve 1 · deny 1\n" +
