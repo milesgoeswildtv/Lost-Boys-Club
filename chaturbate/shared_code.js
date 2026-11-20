@@ -680,6 +680,7 @@ var LBC = (function () {
   }
 
   function showMenu() {
+    if (LBC.getSetting("tipMenuDisplayEnabled", true) === false) { LBC.notice("The informational tip menu is currently disabled."); return; }
     var items = readMenu();
 
     if (!items.length) {
@@ -692,11 +693,9 @@ var LBC = (function () {
         " tokens — " + cleanLabel(item.label);
     });
 
-    LBC.notice(
-      "🖤 AFTERDARK BROTHERHOOD — TIP MENU\n" +
-      lines.join("\n") +
-      "\n\nTips are voluntary. Menu items are requests, not guaranteed outcomes. No game access or advantage is tied to tipping."
-    );
+    var menuTitle = String(LBC.getSetting("tipMenuTitle", "AFTERDARK BROTHERHOOD — TIP MENU") || "AFTERDARK BROTHERHOOD — TIP MENU").replace(/[\r\n]/g, " ").slice(0, 70);
+    var menuFooter = String(LBC.getSetting("tipMenuFooter", "Tips are voluntary. Menu items are requests, not guaranteed outcomes. No game access or advantage is tied to tipping.") || "").replace(/[\r\n]/g, " ").slice(0, 180);
+    LBC.notice("🖤 " + menuTitle + "\n" + lines.join("\n") + (menuFooter ? "\n\n" + menuFooter : ""));
   }
 
   LBC.handleTipMenuCommand = function (rawBody, isOwner) {
@@ -791,7 +790,7 @@ var LBC = (function () {
 
   var STATE_KEY = "lbc_m2_announcements";
   var CALLBACK_PREFIX = "lbc_m2_announce_";
-  var INTERVAL_SECONDS = 900;
+  function intervalSeconds() { return Math.max(300, Math.min(86400, Math.floor(Number(LBC.getSetting("announcementIntervalMinutes", 15)) || 15) * 60)); }
   var MESSAGES = [
     "🖤 Welcome to AFTERDARK BROTHERHOOD. No map. No supervision. Questionable decisions. Type !ab for the brotherhood guide.",
     "🎮 The brotherhood game is free to join. Type !game to see whether a round is running.",
@@ -822,7 +821,7 @@ var LBC = (function () {
     var label = CALLBACK_PREFIX + Date.now() + "_" + Math.floor(Math.random() * 1000000);
     state.callbackLabel = label;
     saveState(state);
-    LBC.runtime.createCallback(label, INTERVAL_SECONDS);
+    LBC.runtime.createCallback(label, intervalSeconds());
   }
 
   LBC.startAnnouncements = function (restart) {
@@ -840,7 +839,7 @@ var LBC = (function () {
 
     if (body === "/ab announcements on") {
       if (state.enabled) {
-        LBC.notice("Rotating announcements are already on. One short notice every 15 minutes.");
+        LBC.notice("Rotating announcements are already on. Current cadence: every " + Math.round(intervalSeconds() / 60) + " minutes.");
         return;
       }
       state.enabled = true;
@@ -848,7 +847,7 @@ var LBC = (function () {
       state.callbackLabel = "";
       saveState(state);
       scheduleNext(state);
-      LBC.notice("Rotating announcements enabled. The first short room notice will appear in 15 minutes.");
+      LBC.notice("Rotating announcements enabled. The first short room notice will appear in " + Math.round(intervalSeconds() / 60) + " minutes.");
       return;
     }
 
@@ -861,7 +860,7 @@ var LBC = (function () {
     }
 
     if (body === "/ab announcements status") {
-      LBC.notice("Rotating announcements are " + (state.enabled ? "ON" : "OFF") + ". Cadence: one notice every 15 minutes.");
+      LBC.notice("Rotating announcements are " + (state.enabled ? "ON" : "OFF") + ". Cadence: one notice every " + Math.round(intervalSeconds() / 60) + " minutes.");
       return;
     }
 
@@ -3325,6 +3324,7 @@ var LBC = (function () {
     var raw = String(body || "").trim();
     var lower = raw.toLowerCase();
     var match;
+    if (!isOwner && LBC.getSetting("giveawayEnabled", true) === false) { LBC.notice("Free giveaways are currently disabled.", { toUsername: cleanName(username) }); return; }
     if (lower === "!giveaway") {
       showStatus(username);
       return;
@@ -3479,7 +3479,7 @@ var LBC = (function () {
       return {
         version: 1,
         paused: s.paused === true,
-        limit: Math.max(1, Math.min(MAX_WAIT, Number(s.limit) || MAX_WAIT)),
+        limit: Math.max(1, Math.min(MAX_WAIT, Math.floor(Number(LBC.getSetting("viewerQueueMaxWaitlist", MAX_WAIT)) || MAX_WAIT), Number(s.limit) || MAX_WAIT)),
         nextId: Math.max(1, Number(s.nextId) || 1),
         waiting: Array.isArray(s.waiting) ? s.waiting.slice(0, MAX_WAIT) : [],
         current: s.current && typeof s.current === "object" ? s.current : null,
@@ -3654,6 +3654,7 @@ var LBC = (function () {
   function onChatMessage(body, username, isOwner) {
     var text = String(body || "").trim(), low = text.toLowerCase(), m;
     if (isOwner && low.indexOf("/ab queue") === 0) { adminCommand(text); return; }
+    if (LBC.getSetting("viewerQueueEnabled", true) === false) { if (/^(!queue|!joinqueue|!leavequeue|!slots|!book\s|!cancelbooking)/i.test(low)) LBC.notice("The viewer queue is currently disabled.", { toUsername: cleanName(username) }); return; }
     if (low === "!queue") { publicStatus(); return; }
     if (low === "!joinqueue") { join(username); return; }
     if (low === "!leavequeue") { leave(username); return; }
