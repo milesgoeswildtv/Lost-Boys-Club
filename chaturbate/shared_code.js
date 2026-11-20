@@ -1537,6 +1537,13 @@ var LBC = (function () {
   var modules = {};
   var activeDispatch = "";
   var activeGameKey = "lbc_game_library_active";
+  var viewerGameSettings = {
+    "codebreaker": "gameCodebreakerEnabled",
+    "word-scramble": "gameWordScrambleEnabled",
+    "would-you-rather": "gameWouldYouRatherEnabled",
+    "position-impossible": "gamePositionImpossibleEnabled",
+    "dirty-charades": "gameDirtyCharadesEnabled"
+  };
 
   function safeCall(fn, args, label) {
     if (typeof fn !== "function") return;
@@ -1554,6 +1561,8 @@ var LBC = (function () {
   function runModules(eventName, args) {
     Object.keys(modules).forEach(function (name) {
       var module = modules[name];
+      var viewerSetting = viewerGameSettings[name];
+      if (eventName === "onChatMessage" && viewerSetting && args && args[2] !== true && LBC.getSetting(viewerSetting, true) === false) return;
 
       if (module && typeof module[eventName] === "function") {
         safeCall(module[eventName], args, name);
