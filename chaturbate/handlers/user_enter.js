@@ -15,3 +15,4 @@ LBC.setRuntime({
 
 // AFTERDARK BROTHERHOOD — User Enter
 LBC.onUserEnter($user.username);
+if (LBC.loyalty) LBC.loyalty.enter($user.username);
