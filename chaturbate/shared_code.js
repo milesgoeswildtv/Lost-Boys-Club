@@ -106,6 +106,7 @@ var LBC = (function () {
       "!profile — view your profile, game stats, loyalty balance, and VIP tier",
       "!vip — view your permanent room VIP tier",
       "!story — check the live One Word Story round; contribute with !addword <one word>",
+      "!dare — view the live Afterdark Dare Deck prompt; respond with !dareanswer <your response>",
       "!leaderboard wins|games|points — room leaderboards",
       "!queue / !joinqueue / !leavequeue — view and join the viewer waitlist",
       "!slots / !book 1 / !cancelbooking — scheduled viewer slots",
@@ -1544,7 +1545,8 @@ var LBC = (function () {
     "would-you-rather": "gameWouldYouRatherEnabled",
     "position-impossible": "gamePositionImpossibleEnabled",
     "dirty-charades": "gameDirtyCharadesEnabled",
-    "one-word-story": "gameOneWordStoryEnabled"
+    "one-word-story": "gameOneWordStoryEnabled",
+    "afterdark-dare-deck": "gameAfterdarkDareDeckEnabled"
   };
 
   function safeCall(fn, args, label) {
@@ -3096,7 +3098,7 @@ var LBC = (function () {
       var activeGame = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
       var baseGame = readJson("lbc_v1_game", {});
       say("GAMES" + (activeGame && activeGame.active ? "\\nActive: " + activeGame.name : baseGame && baseGame.active ? "\\nActive: Guess the Number" : "\\nNo game running") +
-        "\\n1. Codebreaker\\n2. Word Scramble\\n3. Dirty Would You Rather\\n4. Position Impossible\\n5. Dirty Charades\\n6. Guess the Number\\n7. One Word Story\\n8. Stop active game\\n9. Return to main menu");
+        "\\n1. Codebreaker\\n2. Word Scramble\\n3. Dirty Would You Rather\\n4. Position Impossible\\n5. Dirty Charades\\n6. Guess the Number\\n7. One Word Story\\n8. Afterdark Dare Deck\\n9. Stop active game\\n10. Return to main menu");
     } else if (name === "goals") {
       if (LBC.controlCenter) LBC.controlCenter.detail("goal");
       say("GOALS — choose an action\n1. View goal status\n2. Create an untimed goal\n3. Create a timed goal\n4. Queue a goal stage\n5. Pause / resume current goal\n6. View goal queue\n7. Return to main menu");
@@ -3138,17 +3140,17 @@ var LBC = (function () {
       if (sections[number]) { section(state, sections[number]); return { handled: true }; }
     }
     if (s === "games") {
-      var gameCommands = {1:"/ab codebreaker start",2:"/ab scramble start",3:"/ab wyr start",4:"/ab position start",5:"/ab charades start",6:"/ab start",7:"/ab story start"};
+      var gameCommands = {1:"/ab codebreaker start",2:"/ab scramble start",3:"/ab wyr start",4:"/ab position start",5:"/ab charades start",6:"/ab start",7:"/ab story start",8:"/ab dare start"};
       if (gameCommands[number]) return {handled:true,command:gameCommands[number]};
-      if (number === 7) {
+      if (number === 9) {
         var running = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
-        var stops = {"codebreaker":"/ab codebreaker stop","word-scramble":"/ab scramble stop","would-you-rather":"/ab wyr stop","position-impossible":"/ab position stop","dirty-charades":"/ab charades stop","one-word-story":"/ab story stop"};
+        var stops = {"codebreaker":"/ab codebreaker stop","word-scramble":"/ab scramble stop","would-you-rather":"/ab wyr stop","position-impossible":"/ab position stop","dirty-charades":"/ab charades stop","one-word-story":"/ab story stop","afterdark-dare-deck":"/ab dare stop"};
         if (running && running.active && stops[running.id]) return {handled:true,command:stops[running.id]};
         var base = readJson("lbc_v1_game",{});
         if (base && base.active) return {handled:true,command:"/ab stop"};
         say("There is no active game to stop."); return {handled:true};
       }
-      if (number === 9) { home(state); return {handled:true}; }
+      if (number === 10) { home(state); return {handled:true}; }
     }
     if (s === "goals") {
       if (number === 1) return {handled:true,command:"/ab goal status"};
@@ -4045,7 +4047,7 @@ var LBC = (function () {
   function contribute(username, raw) {
     if (!state || !state.active) { LBC.notice("There isn't a One Word Story round running.",{toUsername:cleanName(username)}); return; }
     var word=cleanWord(raw), name=cleanName(username), key=name.toLowerCase();
-    if (!addword) { LBC.notice("Use one word containing letters only (up to 20 characters).",{toUsername:name}); return; }
+    if (!word) { LBC.notice("Use one word containing letters only (up to 20 characters).",{toUsername:name}); return; }
     if (state.contributors[key]) { LBC.notice("You already added your word. Let someone else steer this disaster.",{toUsername:name}); return; }
     state.contributors[key]=true; state.words.push({username:name,word:word}); save();
     if (LBC.rewards) LBC.rewards.award(name,1,"One Word Story participation","play:one-word-story:"+state.startedAt+":"+key);
@@ -4075,4 +4077,103 @@ var LBC = (function () {
   }
   LBC.gameLibrary.register("one-word-story",{onChatMessage:onChatMessage,onCallback:onCallback,onAppStart:onAppStart});
   LBC.oneWordStory={version:"1.0",status:function(){return state||read();}};
+}());
+
+
+/* AFTERDARK BROTHERHOOD — AFTERDARK DARE DECK
+ * Opt-in room prompt activity. One short response per viewer, timed reveal.
+ * No paid entry, tips, or purchases; existing game lock prevents overlap.
+ */
+(function () {
+  "use strict";
+  if (!LBC.gameLibrary || LBC.__afterdarkDareDeckInstalled) return;
+  LBC.__afterdarkDareDeckInstalled = true;
+  var KEY="lbc_ab_afterdark_dare_deck_v1";
+  var TIMER="lbc_ab_afterdark_dare_deck_timeout";
+  var DURATION=75, MAX_ENTRIES=12, MAX_RESPONSE=120, state=null;
+  var PROMPTS=[
+    "Give the room your best dangerously charming one-line introduction.",
+    "Describe your most questionable green flag in one sentence.",
+    "Write a six-word scene that belongs in a very bad decision.",
+    "What tiny thing instantly makes someone more attractive?",
+    "Give us the title of your imaginary after-hours memoir.",
+    "Describe your ideal troublemaker in three words.",
+    "What's the smoothest terrible pickup line you can invent?",
+    "Name a song that would play during your dramatic entrance.",
+    "Confess a harmless guilty pleasure in one sentence.",
+    "Give the room a fictional warning label for your personality.",
+    "What is your most impressive useless talent?",
+    "Write the opening line of a scandalous fictional mystery."
+  ];
+  function cleanName(v){return String(v||"someone").replace(/[^A-Za-z0-9_-]/g,"").slice(0,25)||"someone";}
+  function cleanResponse(v){return String(v||"").replace(/[\r\n\t]/g," ").replace(/\s+/g," ").trim().slice(0,MAX_RESPONSE);}
+  function read(){
+    try{var raw=LBC.runtime.kvGet(KEY,""),p=raw?JSON.parse(raw):null;return p&&p.active===true&&Array.isArray(p.entries)?p:null;}
+    catch(err){return null;}
+  }
+  function save(){LBC.runtime.kvSet(KEY,JSON.stringify(state));}
+  function legacyBusy(){
+    var keys=["lbc_v1_game","lbc_m3_higher_lower","lbc_m3_trivia_state","lbc_ab_one_word_story_v1","lbc_afterhours_game_state"];
+    for(var i=0;i<keys.length;i++){
+      try{var raw=LBC.runtime.kvGet(keys[i],"");if(raw&&JSON.parse(raw).active===true)return true;}
+      catch(err){/* Ignore malformed legacy state. */}
+    }
+    return false;
+  }
+  function finish(reason){
+    if(!state||!state.active)return;
+    var done=state;done.active=false;save();
+    LBC.runtime.cancelCallback(TIMER);
+    LBC.gameLibrary.release("afterdark-dare-deck");
+    var lines=done.entries.map(function(e,i){return (i+1)+". "+e.username+": "+e.response;});
+    LBC.notice("🖤 AFTERDARK DARE DECK — THE ROOM ANSWERED\n"+
+      done.prompt+"\n\n"+(lines.length?lines.join("\n"):"Nobody took the dare this round.")+
+      "\n\n"+lines.length+"/"+MAX_ENTRIES+" responses"+
+      (reason==="full"?" · Deck filled":reason==="timeout"?" · Time's up":" · Round closed"));
+    state=null;LBC.runtime.kvSet(KEY,"");LBC.runtime.reloadPanel();
+  }
+  function start(){
+    if(LBC.gameLibrary.isBusy()||legacyBusy()){LBC.notice("Another game is already running. Finish that round before opening the Dare Deck.");return;}
+    if(!LBC.gameLibrary.claim("afterdark-dare-deck","Afterdark Dare Deck"))return;
+    state={active:true,prompt:PROMPTS[Math.floor(Math.random()*PROMPTS.length)],entries:[],players:{},startedAt:Math.floor(Date.now()/1000),endsAt:0};
+    state.endsAt=Math.floor(Date.now()/1000)+DURATION;save();
+    LBC.runtime.cancelCallback(TIMER);LBC.runtime.createCallback(TIMER,DURATION,false);
+    LBC.notice("🖤 AFTERDARK DARE DECK IS OPEN\n"+state.prompt+
+      "\nYou have 75 seconds. Drop one short response with !dareanswer <your response>. One entry per viewer, first 12 only. Participation is free.");
+    LBC.runtime.reloadPanel();
+  }
+  function submit(username,raw){
+    if(!state||!state.active){LBC.notice("The Dare Deck isn't open right now. Type !dare to check.",{toUsername:cleanName(username)});return;}
+    var name=cleanName(username),key=name.toLowerCase(),response=cleanResponse(raw);
+    if(!response){LBC.notice("Add a response after !dareanswer.",{toUsername:name});return;}
+    if(state.players[key]){LBC.notice("You've already taken this dare. Let someone else have the spotlight.",{toUsername:name});return;}
+    if(state.entries.length>=MAX_ENTRIES){LBC.notice("This round has reached its 12-response limit.",{toUsername:name});return;}
+    state.players[key]=true;state.entries.push({username:name,response:response});save();
+    if(LBC.rewards)LBC.rewards.award(name,1,"Afterdark Dare Deck participation","play:afterdark-dare:"+state.startedAt+":"+key);
+    LBC.notice("🖤 "+name+" took the dare · "+state.entries.length+"/"+MAX_ENTRIES+".");
+    if(state.entries.length>=MAX_ENTRIES)finish("full");else LBC.runtime.reloadPanel();
+  }
+  function onChatMessage(body,username,isOwner){
+    var t=String(body||"").trim(),low=t.toLowerCase(),m;
+    if(isOwner&&low==="/ab dare start"){start();return;}
+    if(isOwner&&low==="/ab dare stop"){if(state&&state.active)finish("manual");else LBC.notice("The Dare Deck isn't running.");return;}
+    if(low==="!dare"){
+      var current=state||read();
+      if(!current)LBC.notice("The Afterdark Dare Deck is closed. Wait for the next round.",{toUsername:cleanName(username)});
+      else LBC.notice("🖤 AFTERDARK DARE DECK · "+current.entries.length+"/"+MAX_ENTRIES+" responses · "+Math.max(0,current.endsAt-Math.floor(Date.now()/1000))+"s left\n"+current.prompt+"\nRespond with !dareanswer <your response>.",{toUsername:cleanName(username)});
+      return;
+    }
+    if((m=t.match(/^!dareanswer\s+(.+)$/i))){if(!state)state=read();submit(username,m[1]);}
+  }
+  function onCallback(label){if(label!==TIMER)return;if(!state)state=read();if(state&&state.active)finish("timeout");}
+  var recovered=false;
+  function onAppStart(){
+    if(recovered)return;recovered=true;state=read();if(!state)return;
+    var remaining=state.endsAt-Math.floor(Date.now()/1000);
+    if(remaining<=0){finish("timeout");return;}
+    if(!LBC.gameLibrary.claim("afterdark-dare-deck","Afterdark Dare Deck")){finish("manual");return;}
+    LBC.runtime.cancelCallback(TIMER);LBC.runtime.createCallback(TIMER,remaining,false);
+  }
+  LBC.afterdarkDareDeck={version:"1.0",status:function(){return state||read();},prompts:PROMPTS.slice()};
+  LBC.gameLibrary.register("afterdark-dare-deck",{onChatMessage:onChatMessage,onCallback:onCallback,onAppStart:onAppStart});
 }());
