@@ -247,7 +247,9 @@ var LBC = (function () {
     if (current - last < 21600) return;
     LBC.runtime.kvSet(PREFIX + key, String(current), 86400);
 
-    notice("🖤 " + safe + " wandered into AFTERDARK BROTHERHOOD. No map, no supervision, questionable decisions. Make yourself comfortable.");
+    var tagline = String(LBC.getSetting("roomTagline", "No map. No supervision. Questionable decisions.") || "No map. No supervision. Questionable decisions.").slice(0, 80);
+    var welcomeMessage = String(LBC.getSetting("roomWelcomeMessage", "Make yourself comfortable.") || "Make yourself comfortable.").slice(0, 160);
+    notice("🖤 " + safe + " wandered into AFTERDARK BROTHERHOOD. " + tagline + " " + welcomeMessage);
   }
 
   function onChatMessage(rawBody, rawUsername, isOwner) {
@@ -339,6 +341,12 @@ var LBC = (function () {
   var runtime = {};
   LBC.setRuntime = function (api) { runtime = api || {}; };
   var CONTROL_SETTINGS_KEY = "lbc_ab_panel_control_settings_v1";
+  var CUSTOMIZATION_KEY = "lbc_ab_customization_v1";
+  var CUSTOMIZATION_LIMITS = { roomTagline: 80, roomWelcomeMessage: 160, tipMenuTitle: 70, tipMenuFooter: 180, profileHeading: 40 };
+  function readCustomizations() {
+    try { var raw = LBC.runtime.kvGet(CUSTOMIZATION_KEY, ""); var data = raw ? JSON.parse(raw) : {}; return data && typeof data === "object" && !Array.isArray(data) ? data : {}; }
+    catch (err) { return {}; }
+  }
   var CONTROL_SETTING_ALLOWLIST = {
     retentionEnabled: true, retentionPublicRecognition: true,
     retentionFirstVisitMessage: true, retentionReturnRecognition: true,
@@ -353,6 +361,8 @@ var LBC = (function () {
     } catch (err) { return {}; }
   }
   LBC.getSetting = function (name, fallback) {
+    var custom = readCustomizations();
+    if (Object.prototype.hasOwnProperty.call(CUSTOMIZATION_LIMITS, name) && Object.prototype.hasOwnProperty.call(custom, name)) return custom[name];
     var overrides = readControlSettings();
     if (Object.prototype.hasOwnProperty.call(overrides, name)) return overrides[name];
     return LBC.runtime.getSetting(name, fallback);
@@ -365,6 +375,16 @@ var LBC = (function () {
     LBC.runtime.reloadPanel();
     return true;
   };
+  LBC.setCustomization = function (name, value) {
+    if (!Object.prototype.hasOwnProperty.call(CUSTOMIZATION_LIMITS, name) || typeof value !== "string") return false;
+    var clean = value.replace(/[\\r\\n\\t]/g, " ").replace(/\\s+/g, " ").trim();
+    if (clean.length > CUSTOMIZATION_LIMITS[name]) return false;
+    var data = readCustomizations(); data[name] = clean;
+    if (LBC.runtime.kvSet(CUSTOMIZATION_KEY, JSON.stringify(data)) === false) return false;
+    LBC.runtime.reloadPanel();
+    return true;
+  };
+  LBC.getCustomizations = readCustomizations;
   LBC.getControlSettings = readControlSettings;
   LBC.runtime = {
     kvGet: function (key, fallback) { try { return typeof runtime.kvGet === "function" ? runtime.kvGet(key, fallback) : fallback; } catch (err) { return fallback; } },
@@ -2844,7 +2864,7 @@ var LBC = (function () {
       return;
     }
     LBC.notice(
-      "🖤 BROTHERHOOD PROFILE — " + p.username + "\n" +
+      "🖤 " + String(LBC.getSetting("profileHeading", "BROTHERHOOD PROFILE") || "BROTHERHOOD PROFILE").slice(0, 40) + " — " + p.username + "\n" +
       "Points: " + balance + " · Earned: " + p.pointsEarned + "\n" +
       "Games entered: " + p.gamesPlayed + " · Wins: " + p.wins + "\n" +
       "Win rate: " + (p.gamesPlayed ? Math.floor((p.wins / p.gamesPlayed) * 100) + "%" : "—") +
@@ -3114,7 +3134,7 @@ var LBC = (function () {
     say("🖤 AFTERDARK BROTHERHOOD — CONTROL CENTER\n" +
       "Choose a section by sending /ab followed by its number.\n" +
       "1. Games\n2. Goals\n3. Tip Menu\n4. Rewards\n5. Brotherhood / VIP\n" +
-      "6. Giveaways\n7. Viewer Queue\n8. Announcements\n9. Live Dashboard\n10. Settings\n11. Engagement Controls\n\n" +
+      "6. Giveaways\n7. Viewer Queue\n8. Announcements\n9. Live Dashboard\n10. Settings\n11. Engagement Controls\n12. Customization\n\n" +
       "Use /ab anytime to return here. /ab back returns one level.");
   }
   function section(state, name) {
@@ -3152,6 +3172,15 @@ var LBC = (function () {
       say("Live room overview refreshed. Send /ab 0 to return.");
     } else if (name === "settings") {
       say("ROOM SETTINGS\n1. Refresh native room panel\n2. Return to main menu\nThe native Chaturbate panel is a status display, not an interactive button menu.");
+    } else if (name === "customization") {
+      var c = LBC.getCustomizations ? LBC.getCustomizations() : {};
+      say("CUSTOMIZATION CENTER\\nEdit room and profile text. Changes save immediately.\\n" +
+        "1. Room tagline: " + (c.roomTagline || "Default") + "\\n" +
+        "2. Welcome message: " + (c.roomWelcomeMessage || "Default") + "\\n" +
+        "3. Tip-menu heading: " + (c.tipMenuTitle || "Default") + "\\n" +
+        "4. Tip-menu footer: " + (c.tipMenuFooter || "Default") + "\\n" +
+        "5. Member-profile heading: " + (c.profileHeading || "Default") + "\\n" +
+        "6. Reset all customization text\\n7. Return to main menu");
     } else if (name === "engagement") {
       var retentionOn = LBC.getSetting("retentionEnabled", true) !== false;
       var publicRecognition = LBC.getSetting("retentionPublicRecognition", false) === true;
@@ -3187,7 +3216,7 @@ var LBC = (function () {
     var s = state.section;
     if (number === 0) { home(state); return { handled: true }; }
     if (s === "home") {
-      var sections = {1:"games",2:"goals",3:"menu",4:"rewards",5:"brotherhood",6:"giveaway",7:"queue",8:"announcements",9:"dashboard",10:"settings",11:"engagement"};
+      var sections = {1:"games",2:"goals",3:"menu",4:"rewards",5:"brotherhood",6:"giveaway",7:"queue",8:"announcements",9:"dashboard",10:"settings",11:"engagement",12:"customization"};
       if (sections[number]) { section(state, sections[number]); return { handled: true }; }
     }
     if (s === "games") {
@@ -3202,6 +3231,21 @@ var LBC = (function () {
         say("There is no active game to stop."); return {handled:true};
       }
       if (number === 10) { home(state); return {handled:true}; }
+    }
+    if (s === "customization") {
+      var fields = {1:["roomTagline","Room tagline",80],2:["roomWelcomeMessage","Welcome message",160],3:["tipMenuTitle","Tip-menu heading",70],4:["tipMenuFooter","Tip-menu footer",180],5:["profileHeading","Member-profile heading",40]};
+      if (fields[number]) {
+        var field = fields[number];
+        prompt(state, "custom_" + field[0], "Enter the new " + field[1].toLowerCase() + " (maximum " + field[2] + " characters).");
+        return {handled:true};
+      }
+      if (number === 6) {
+        ["roomTagline","roomWelcomeMessage","tipMenuTitle","tipMenuFooter","profileHeading"].forEach(function(k){LBC.setCustomization(k,"");});
+        say("Customization text reset to defaults.");
+        section(state,"customization");
+        return {handled:true};
+      }
+      if (number === 7) { home(state); return {handled:true}; }
     }
     if (s === "engagement") {
       var settingMap = {
@@ -3291,7 +3335,21 @@ var LBC = (function () {
   function value(state, raw) {
     var v=String(raw||"").replace(/^\/ab value\s*/i,"").trim(), cmd="";
     if (!v) { say("Please include a value after /ab value."); return {handled:true}; }
-    if (state.wizard === "goal_set" && /^[1-9][0-9]{0,6}\s+.{1,48}$/.test(v)) cmd="/ab goal set " + v;
+    if (state.wizard.indexOf("custom_") === 0) {
+      var customName = state.wizard.slice(7);
+      var limits = {roomTagline:80,roomWelcomeMessage:160,tipMenuTitle:70,tipMenuFooter:180,profileHeading:40};
+      if (!Object.prototype.hasOwnProperty.call(limits,customName) || v.length > limits[customName]) {
+        say("That text is too long or this field is unavailable. Maximum: " + (limits[customName] || 0) + " characters.");
+        return {handled:true};
+      }
+      if (!LBC.setCustomization(customName, v)) { say("Couldn't save that customization. No change was made."); return {handled:true}; }
+      state.wizard="";
+      saveState(state);
+      say("Saved " + customName + ". The updated text will be used automatically.");
+      section(state,"customization");
+      return {handled:true};
+    }
+    if (state.wizard === "goal_set" && /^[1-9][0-9]{0,6}\\s+.{1,48}$/.test(v)) cmd="/ab goal set " + v;
     else if (state.wizard === "goal_timed" && /^[1-9][0-9]{0,6}\s+[1-9][0-9]{0,3}\s+.{1,48}$/.test(v)) cmd="/ab goal timed " + v;
     else if (state.wizard === "goal_queue" && /^[1-9][0-9]{0,6}\s+.{1,48}$/.test(v)) cmd="/ab goal queue " + v;
     else if (state.wizard === "menu_add" && /^[1-9][0-9]{0,5}\s+.{1,60}$/.test(v)) cmd="/ab menu add " + v;
@@ -3316,7 +3374,7 @@ var LBC = (function () {
       if (!state.wizard) { say("No guided action is waiting. Open /ab and choose an action first."); return {handled:true}; }
       return value(state, raw);
     }
-    if ((m=lower.match(/^\/ab\s+(11|10|[1-9])$/))) return action(state,Number(m[1]));
+    if ((m=lower.match(/^\/ab\s+(12|11|10|[1-9])$/))) return action(state,Number(m[1]));
     return null;
   }
   LBC.controlMenu = { version:"1.0", route:route, open:function(){home(readState());} };
