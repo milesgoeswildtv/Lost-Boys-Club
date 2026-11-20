@@ -3121,7 +3121,8 @@ var LBC = (function () {
       if (number === 4) { prompt(state,"goal_queue","Queue a goal. Enter target and title, for example: 1500 Next Stage."); return {handled:true}; }
       if (number === 5) {
         var g=readJson("lbc_m2_room_goal",{});
-        return {handled:true,command:g.active && !g.paused ? "/ab goal pause" : "/ab goal resume"};
+        if (!g.active) { say("There is no active goal. Choose 2 to create an untimed goal or 3 to create a timed goal."); return {handled:true}; }
+        return {handled:true,command:g.paused ? "/ab goal resume" : "/ab goal pause"};
       }
       if (number === 6) return {handled:true,command:"/ab goal queue list"};
       if (number === 7) { home(state); return {handled:true}; }
