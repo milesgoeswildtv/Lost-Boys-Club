@@ -3529,7 +3529,10 @@ var LBC = (function () {
     try {
       if (slotTickNeeded(s)) LBC.runtime.createCallback(TICK, 60, true);
       else LBC.runtime.cancelCallback(TICK);
-    } catch (err) {}
+    } catch (err) {
+      // Callback scheduling is best-effort; queue state remains saved.
+      return;
+    }
   }
   function position(name, s) {
     var key = cleanName(name).toLowerCase();
