@@ -62,3 +62,7 @@ Existing game, tip-stat, and LBC compatibility keys remain unchanged.
 ## Deployment and QA status
 
 GitHub does not sync to the Chaturbate Developer Portal. The Shared Code and handlers in this repository are source artifacts only until pasted/saved in the portal. The new implementation requires editor validation, Testbed event checks, persistence checks, and mobile panel QA before live use.
+
+
+## Integration note
+The Shared Code central chat dispatcher routes loyalty commands together with the other room systems. The Chat Message event handler must call LBC.onChatMessage exactly once and must not separately call the individual room-system handlers. The Callback event handler likewise calls LBC.onCallback once; callback modules are dispatched centrally. This avoids skipped or duplicate command processing.
