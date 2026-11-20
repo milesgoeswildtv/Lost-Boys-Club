@@ -346,10 +346,10 @@ var LBC = (function () {
   function json(k,d){try{var r=LBC.runtime.kvGet(k,"");return r?JSON.parse(r):d;}catch(e){return d;}}
   function total(){return Math.max(0,Number(json(STATS,{}).totalTokens)||0);}
   function cleanTitle(v){return String(v||"Brotherhood Goal").replace(/[\r\n\t]/g," ").replace(/\s+/g," ").trim().slice(0,48)||"Brotherhood Goal";}
-  function read(){var g=json(KEY,{});return {version:2,target:Math.max(0,Number(g.target)||0),title:cleanTitle(g.title),startTotal:Math.max(0,Number(g.startTotal)||0),active:g.active===true,paused:g.paused===true,completed:g.completed===true,milestones:Array.isArray(g.milestones)&&g.milestones.length?g.milestones:DEFAULTS.slice(),reached:g.reached&&typeof g.reached==="object"?g.reached:{},queue:Array.isArray(g.queue)?g.queue.slice(0,10):[],lastCompleted:g.lastCompleted||null};}
+  function read(){var g=json(KEY,{});return {version:2,target:Math.max(0,Number(g.target)||0),title:cleanTitle(g.title),startTotal:Math.max(0,Number(g.startTotal)||0),active:g.active===true,paused:g.paused===true,pausedTotal:Math.max(0,Number(g.pausedTotal)||0),completed:g.completed===true,milestones:Array.isArray(g.milestones)&&g.milestones.length?g.milestones:DEFAULTS.slice(),reached:g.reached&&typeof g.reached==="object"?g.reached:{},queue:Array.isArray(g.queue)?g.queue.slice(0,10):[],lastCompleted:g.lastCompleted||null};}
   function save(g){LBC.runtime.kvSet(KEY,JSON.stringify(g));LBC.runtime.reloadPanel();}
   function snap(g){if(!g||!g.target)return null;var p=Math.max(0,total()-g.startTotal);return {shown:Math.min(p,g.target),percent:Math.min(100,Math.floor(p/g.target*100))};}
-  function activate(g,t,n){g.target=t;g.title=cleanTitle(n);g.startTotal=total();g.active=true;g.paused=false;g.completed=false;g.reached={};}
+  function activate(g,t,n){g.target=t;g.title=cleanTitle(n);g.startTotal=total();g.active=true;g.paused=false;g.pausedTotal=0;g.completed=false;g.reached={};}
   function status(){var g=read(),s=snap(g);if(!s){LBC.notice("No room goal is active. Use /ab goal set 1000 Title to launch one.");return;}LBC.notice("🏁 "+g.title.toUpperCase()+"\n"+(g.paused?"PAUSED":g.active?"LIVE":g.completed?"REACHED":"OFF")+" · "+s.shown+" / "+g.target+" tokens · "+s.percent+"%"+(g.queue.length?"\nQueued goals: "+g.queue.length:"")+"\nSupport is voluntary. Tipping does not award points or game advantages.");}
   LBC.handleRoomGoalCommand=function(raw,isOwner){
     var body=String(raw||"").trim(),low=body.toLowerCase(),m,g=read();
@@ -361,10 +361,10 @@ var LBC = (function () {
     if(low==="/ab goal queue clear"){g.queue=[];save(g);LBC.notice("Goal queue cleared.");return;}
     if((m=low.match(/^\/ab goal milestones\s+(.+)$/))){var p=m[1].split(/[,\s]+/),marks=[];for(var i=0;i<p.length;i++){var n=Number(p[i]);if(!Number.isInteger(n)||n<1||n>100){LBC.notice("Use whole percentages from 1 to 100.");return;}if(marks.indexOf(n)<0)marks.push(n);}if(marks.indexOf(100)<0)marks.push(100);marks.sort(function(a,b){return a-b;});g.milestones=marks.slice(0,10);g.reached={};save(g);LBC.notice("Milestones set: "+g.milestones.join("%, ")+"%.");return;}
     if((m=low.match(/^\/ab goal extend\s+([1-9][0-9]{0,6})$/))){if(!g.active){LBC.notice("No active goal to extend.");return;}g.target+=Number(m[1]);g.paused=false;g.completed=false;save(g);LBC.notice("Goal extended. New target: "+g.target+" tokens.");return;}
-    if(low==="/ab goal pause"){if(!g.active){LBC.notice("No active goal to pause.");return;}g.paused=true;save(g);LBC.notice("Goal paused. Tips received while paused will not count.");return;}
-    if(low==="/ab goal resume"){if(!g.active){LBC.notice("No active goal to resume.");return;}g.paused=false;save(g);LBC.notice("Goal resumed.");return;}
-    if(low==="/ab goal reset"){if(!g.target){LBC.notice("Set a goal first.");return;}g.startTotal=total();g.active=true;g.paused=false;g.completed=false;g.reached={};save(g);LBC.notice("Goal reset to 0 / "+g.target+".");return;}
-    if(low==="/ab goal off"){g.active=false;g.paused=false;g.completed=false;save(g);LBC.notice("Current goal switched off. Queue preserved.");return;}
+    if(low==="/ab goal pause"){if(!g.active){LBC.notice("No active goal to pause.");return;}g.paused=true;g.pausedTotal=total();save(g);LBC.notice("Goal paused. Tips received while paused will not count.");return;}
+    if(low==="/ab goal resume"){if(!g.active){LBC.notice("No active goal to resume.");return;}g.startTotal+=Math.max(0,total()-g.pausedTotal);g.pausedTotal=0;g.paused=false;save(g);LBC.notice("Goal resumed. Tips received during the pause were excluded.");return;}
+    if(low==="/ab goal reset"){if(!g.target){LBC.notice("Set a goal first.");return;}g.startTotal=total();g.active=true;g.paused=false;g.pausedTotal=0;g.completed=false;g.reached={};save(g);LBC.notice("Goal reset to 0 / "+g.target+".");return;}
+    if(low==="/ab goal off"){g.active=false;g.paused=false;g.pausedTotal=0;g.completed=false;save(g);LBC.notice("Current goal switched off. Queue preserved.");return;}
     if(low==="/ab goal status"){status();return;}
     LBC.notice("GOAL: /ab goal set 1000 Title · queue 1500 Next Goal · pause · resume · reset · extend 250 · milestones 10 25 50 75 100 · queue list · queue clear · off. Viewers: !goal.");
   };
