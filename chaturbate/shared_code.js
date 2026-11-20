@@ -3383,7 +3383,7 @@ var LBC = (function () {
       if (!state.wizard) { say("No guided action is waiting. Open /ab and choose an action first."); return {handled:true}; }
       return value(state, raw);
     }
-    if ((m=lower.match(/^\/ab\s+(12|11|10|[1-9])$/))) return action(state,Number(m[1]));
+    if ((m=lower.match(/^\/ab\s+(13|12|11|10|[1-9])$/))) return action(state,Number(m[1]));
     return null;
   }
   LBC.controlMenu = { version:"1.0", route:route, open:function(){home(readState());} };
