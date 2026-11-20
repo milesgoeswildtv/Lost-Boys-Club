@@ -377,7 +377,7 @@ var LBC = (function () {
   };
   LBC.setCustomization = function (name, value) {
     if (!Object.prototype.hasOwnProperty.call(CUSTOMIZATION_LIMITS, name) || typeof value !== "string") return false;
-    var clean = value.replace(/[\\r\\n\\t]/g, " ").replace(/\\s+/g, " ").trim();
+    var clean = value.replace(/[\r\n\t]/g, " ").replace(/\s+/g, " ").trim();
     if (clean.length > CUSTOMIZATION_LIMITS[name]) return false;
     var data = readCustomizations(); data[name] = clean;
     if (LBC.runtime.kvSet(CUSTOMIZATION_KEY, JSON.stringify(data)) === false) return false;
@@ -2962,12 +2962,12 @@ var LBC = (function () {
       var progress = Math.max(0, (Number(stats.totalTokens) || 0) - (Number(g.startTotal) || 0));
       var timerText = Number(g.durationMinutes) > 0 ?
         (g.paused ? " · timer paused" : g.deadlineAt ? " · " + Math.max(0, Math.ceil((Number(g.deadlineAt) - Date.now()) / 60000)) + "m left" : "") : " · untimed";
-      LBC.notice("🏁 GOAL CONTROL\\n" + (target ? String(g.title || "Room Goal") + " · " +
+      LBC.notice("🏁 GOAL CONTROL\n" + (target ? String(g.title || "Room Goal") + " · " +
         (g.paused ? "PAUSED" : g.active ? "LIVE" : g.completed ? "REACHED" : "OFF") +
         " · " + Math.min(progress, target) + "/" + target + timerText + " · queue " +
         (Array.isArray(g.queue) ? g.queue.length : 0) + " · carryover " + (g.carryover === false ? "OFF" : "ON") +
         " · repeat " + (g.repeat === true ? "ON" : "OFF") : "No goal configured.") +
-        "\\nCommands: /ab admin goal timed 1000 30 Title · queue timed 2000 20 Next · milestones · pause · resume · extend · carryover on|off · repeat on|off · reset · off.");
+        "\nCommands: /ab admin goal timed 1000 30 Title · queue timed 2000 20 Next · milestones · pause · resume · extend · carryover on|off · repeat on|off · reset · off.");
       return;
     }
     if (value === "rewards") {
@@ -2997,17 +2997,17 @@ var LBC = (function () {
     }
     if (value === "queue") {
       var queue = readJson("lbc_ab_viewer_queue_v1", {});
-      LBC.notice("🎤 VIEWER QUEUE CONTROL\\n" +
+      LBC.notice("🎤 VIEWER QUEUE CONTROL\n" +
         "Status: " + (queue.paused ? "PAUSED" : "OPEN") +
-        "\\nActive: " + (queue.current && queue.current.user ? queue.current.user : "none") +
-        "\\nWaiting: " + (Array.isArray(queue.waiting) ? queue.waiting.length : 0) + " / " + (Number(queue.limit) || 50) +
-        "\\nBooked slots: " + (Array.isArray(queue.slots) ? queue.slots.filter(function (x) { return x && x.user; }).length : 0) +
-        "\\nCommands: /ab queue next · done · skip · pause · resume · clear · limit · slot add/list/remove.");
+        "\nActive: " + (queue.current && queue.current.user ? queue.current.user : "none") +
+        "\nWaiting: " + (Array.isArray(queue.waiting) ? queue.waiting.length : 0) + " / " + (Number(queue.limit) || 50) +
+        "\nBooked slots: " + (Array.isArray(queue.slots) ? queue.slots.filter(function (x) { return x && x.user; }).length : 0) +
+        "\nCommands: /ab queue next · done · skip · pause · resume · clear · limit · slot add/list/remove.");
       return;
     }
     if (value === "vip") {
       var vipStats = LBC.vip ? LBC.vip.adminStatus() : { members: 0, totalUsd: 0 };
-      LBC.notice("🖤 VIP STATUS\\nMembers: " + vipStats.members + "\\nCumulative room tips: $" + vipStats.totalUsd.toFixed(2) + "\\nThresholds are permanent and count only direct room tips.");
+      LBC.notice("🖤 VIP STATUS\nMembers: " + vipStats.members + "\nCumulative room tips: $" + vipStats.totalUsd.toFixed(2) + "\nThresholds are permanent and count only direct room tips.");
       return;
     }
     if (value === "announcements") {
@@ -3026,8 +3026,8 @@ var LBC = (function () {
       "/ab admin games|goal|rewards|menu|announcements|giveaway|queue|vip — subsystem status\n" +
       "/ab admin panel — refresh the native room panel · /ab admin members — member summary\n" +
       "QUICK CONTROL: /ab admin goal pause|resume|status · /ab admin queue next|pause|resume\n" +
-      "GOALS: set 1000 Title · timed 1000 30 Title · queue 1500 Next · queue timed 2000 20 Final\\n" +
-      "GOAL TOOLS: milestones 10 25 50 75 100 · pause · resume · extend 250 · carryover on|off · repeat on|off · time · reset · off · queue list|clear\\n" +
+      "GOALS: set 1000 Title · timed 1000 30 Title · queue 1500 Next · queue timed 2000 20 Final\n" +
+      "GOAL TOOLS: milestones 10 25 50 75 100 · pause · resume · extend 250 · carryover on|off · repeat on|off · time · reset · off · queue list|clear\n" +
       "REWARDS: /ab admin rewards add 100 Reward · pending · approve 1 · deny 1\n" +
       "TIP MENU: /ab admin menu add 50 Request · remove 1 · clear · show\n" +
       "ANNOUNCEMENTS: /ab admin announcements on|off\n" +
@@ -3174,13 +3174,13 @@ var LBC = (function () {
       say("ROOM SETTINGS\n1. Refresh native room panel\n2. Return to main menu\nThe native Chaturbate panel is a status display, not an interactive button menu.");
     } else if (name === "customization") {
       var c = LBC.getCustomizations ? LBC.getCustomizations() : {};
-      say("CUSTOMIZATION CENTER\\nEdit room and profile text. Changes save immediately.\\n" +
-        "1. Room tagline: " + (c.roomTagline || "Default") + "\\n" +
-        "2. Welcome message: " + (c.roomWelcomeMessage || "Default") + "\\n" +
-        "3. Tip-menu heading: " + (c.tipMenuTitle || "Default") + "\\n" +
-        "4. Tip-menu footer: " + (c.tipMenuFooter || "Default") + "\\n" +
-        "5. Member-profile heading: " + (c.profileHeading || "Default") + "\\n" +
-        "6. Reset all customization text\\n7. Return to main menu");
+      say("CUSTOMIZATION CENTER\nEdit room and profile text. Changes save immediately.\n" +
+        "1. Room tagline: " + (c.roomTagline || "Default") + "\n" +
+        "2. Welcome message: " + (c.roomWelcomeMessage || "Default") + "\n" +
+        "3. Tip-menu heading: " + (c.tipMenuTitle || "Default") + "\n" +
+        "4. Tip-menu footer: " + (c.tipMenuFooter || "Default") + "\n" +
+        "5. Member-profile heading: " + (c.profileHeading || "Default") + "\n" +
+        "6. Reset all customization text\n7. Return to main menu");
     } else if (name === "engagement") {
       var retentionOn = LBC.getSetting("retentionEnabled", true) !== false;
       var publicRecognition = LBC.getSetting("retentionPublicRecognition", false) === true;
@@ -3984,7 +3984,7 @@ var LBC = (function () {
   }
   function showVip(username,viewer) {
     var s=summary(username);
-    LBC.notice("🖤 ROOM VIP — "+s.username+"\\nTier: "+s.tier+"\\nLifetime room tips: $"+s.usd.toFixed(2)+" ("+s.tokens+" tokens)\\nVIP status is permanent.",{toUsername:clean(viewer)});
+    LBC.notice("🖤 ROOM VIP — "+s.username+"\nTier: "+s.tier+"\nLifetime room tips: $"+s.usd.toFixed(2)+" ("+s.tokens+" tokens)\nVIP status is permanent.",{toUsername:clean(viewer)});
   }
   function adminStatus() {
     var v=vipState(), names=Object.keys(v.members), total=0;
