@@ -162,3 +162,35 @@ Broadcaster status: `/ab admin vault`.
 - `/ab admin halloffame` — broadcaster overview.
 
 Personal achievements currently recognize first game, 10 and 25 games, first win, 5 and 25 wins, and 10, 50, and 100 free-game points. Hall of Fame and Vault point totals exclude manual bonus grants. These systems record successful loyalty awards and do not change the underlying reward balance.
+
+
+## Advanced Viewer Queue — Waitlist & Scheduled Slots
+
+The viewer queue is a free, persistent room coordination feature. It is separate from the room-goal queue and does not award or spend loyalty points.
+
+Viewer commands:
+
+- `!queue` — show the active turn, waitlist, and queue capacity.
+- `!joinqueue` — join the FIFO waitlist.
+- `!leavequeue` — leave the waitlist.
+- `!slots` — view future scheduled slots.
+- `!book 1` — book an available slot by its displayed ID.
+- `!cancelbooking` — cancel your scheduled booking.
+
+Broadcaster commands:
+
+- `/ab queue status` or `/ab queue` — show queue status.
+- `/ab queue next` — call the next viewer into the active turn.
+- `/ab queue done` — complete the active turn.
+- `/ab queue skip` — move the active viewer to the back of the waitlist.
+- `/ab queue pause` / `/ab queue resume` — pause or reopen waitlist entry.
+- `/ab queue clear` — clear the waitlist and active turn; scheduled bookings are preserved.
+- `/ab queue limit 25` — set capacity (maximum 50).
+- `/ab queue announce` — announce current queue state.
+- `/ab queue slot add 2026-11-21T20:30:00-05:00 Label` — create a future slot using an ISO date/time with an explicit timezone.
+- `/ab queue slot list` — show upcoming slots.
+- `/ab queue slot remove 1` — remove a slot by ID.
+
+The waitlist is first-in, first-out. Each viewer may hold one scheduled slot at a time. Bookings are free; one slot cannot be booked twice. The app announces a booked slot five minutes before its scheduled time when its callback is running. Queue and booking state persist in Chaturbate KV. The queue holds up to 50 waiting viewers and 30 scheduled slots. The broadcaster manually calls and closes each live turn; scheduled bookings do not automatically interrupt an active game or viewer turn.
+
+Storage key: `lbc_ab_viewer_queue_v1`.
