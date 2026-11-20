@@ -3157,9 +3157,17 @@ var LBC = (function () {
       var publicRecognition = LBC.getSetting("retentionPublicRecognition", false) === true;
       var storyOn = LBC.getSetting("gameOneWordStoryEnabled", true) !== false;
       var dareOn = LBC.getSetting("gameAfterdarkDareDeckEnabled", true) !== false;
+      var firstGreeting = LBC.getSetting("retentionFirstVisitMessage", true) !== false;
+      var returnGreeting = LBC.getSetting("retentionReturnRecognition", true) !== false;
+      var milestones = LBC.getSetting("retentionMilestoneRecognition", true) !== false;
+      var anniversaries = LBC.getSetting("retentionAnniversaryRecognition", true) !== false;
       say("ENGAGEMENT CONTROLS\n" +
         "Viewer Retention: " + (retentionOn ? "ON" : "OFF") + "\n" +
         "Recognition: " + (publicRecognition ? "PUBLIC" : "PRIVATE") + "\n" +
+        "First-visit greeting: " + (firstGreeting ? "ON" : "OFF") + "\n" +
+        "Return recognition: " + (returnGreeting ? "ON" : "OFF") + "\n" +
+        "Visit milestones: " + (milestones ? "ON" : "OFF") + "\n" +
+        "Anniversary recognition: " + (anniversaries ? "ON" : "OFF") + "\n" +
         "One Word Story: " + (storyOn ? "ENABLED" : "DISABLED") + "\n" +
         "Afterdark Dare Deck: " + (dareOn ? "ENABLED" : "DISABLED") + "\n\n" +
         "1. Toggle Viewer Retention\n2. Toggle Public / Private Recognition\n" +
