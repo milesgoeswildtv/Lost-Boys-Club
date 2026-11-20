@@ -96,3 +96,24 @@ Broadcaster-only overview and subsystem status commands:
 - `/ab admin members` — member tracking count.
 
 The control center is a read-only status console. Existing subsystem commands continue to perform changes; this avoids duplicating business logic or bypassing subsystem validation. Only the broadcaster receives admin status output.
+
+
+## Free-Entry Giveaways
+
+The giveaway engine is a free-entry room feature. Tips, purchases, and loyalty points never create or improve an entry.
+
+Viewer commands:
+
+- `!giveaway` — view the active giveaway.
+- `!enter` — enter once while entries are open.
+
+Broadcaster commands:
+
+- `/ab giveaway start Prize description` — open a giveaway.
+- `/ab giveaway status` — display current status publicly.
+- `/ab giveaway end` — close entries.
+- `/ab giveaway draw` — randomly select one winner after entries close.
+- `/ab giveaway cancel` — cancel without selecting a winner.
+- `/ab giveaway history` — show recent winners.
+
+The engine allows one active giveaway at a time, one entry per username, up to 500 entries, and stores up to 20 completed results. Prize fulfillment is handled manually by the broadcaster. Keep prize descriptions and fulfillment within Chaturbate rules and applicable law.
