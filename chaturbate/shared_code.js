@@ -99,7 +99,9 @@ var LBC = (function () {
       "!ab — show this help",
       "!game — show the current game",
       "!scoreboard — show brotherhood records",
+      "!supportstats — show room support totals",
       "!points / !rewards — free-play loyalty points and reward shelf",
+      "!redeem 1 — request a reward using points",
       "",
       "Broadcaster controls:",
       "/ab start — start a 90-second round",
@@ -353,7 +355,7 @@ var LBC = (function () {
   function status(){var g=read(),s=snap(g);if(!s){LBC.notice("No room goal is active. Use /ab goal set 1000 Title to launch one.");return;}LBC.notice("🏁 "+g.title.toUpperCase()+"\n"+(g.paused?"PAUSED":g.active?"LIVE":g.completed?"REACHED":"OFF")+" · "+s.shown+" / "+g.target+" tokens · "+s.percent+"%"+(g.queue.length?"\nQueued goals: "+g.queue.length:"")+"\nSupport is voluntary. Tipping does not award points or game advantages.");}
   LBC.handleRoomGoalCommand=function(raw,isOwner){
     var body=String(raw||"").trim(),low=body.toLowerCase(),m,g=read();
-    if(low==="!goal"||low==="!clubgoal"){status();return;}
+    if(low==="!goal"){status();return;}
     if(!isOwner||low.indexOf("/ab goal")!==0)return;
     if((m=body.match(/^\/ab goal(?:\s+set)?\s+([1-9][0-9]{0,6})(?:\s+(.+))?$/i))){activate(g,Number(m[1]),m[2]);save(g);LBC.notice("🏁 Goal started: "+g.title+" · "+g.target+" tokens.");return;}
     if((m=body.match(/^\/ab goal queue\s+([1-9][0-9]{0,6})(?:\s+(.+))?$/i))){if(g.queue.length>=10){LBC.notice("Goal queue is full (10).");return;}g.queue.push({target:Number(m[1]),title:cleanTitle(m[2])});save(g);LBC.notice("Queued goal #"+g.queue.length+": "+g.queue[g.queue.length-1].title+".");return;}
@@ -1385,6 +1387,7 @@ var LBC = (function () {
 
     // All future registered games.
     runModules("onChatMessage", args);
+    activeDispatch = "";
   }
 
   function dispatchCallback(label) {
@@ -1396,6 +1399,7 @@ var LBC = (function () {
     safeCall(originals.triviaCallback, [label], "Couple Trivia");
 
     runModules("onCallback", [label]);
+    activeDispatch = "";
   }
 
   function dispatchAppStart() {
@@ -1406,6 +1410,7 @@ var LBC = (function () {
     safeCall(originals.resumeTrivia, [], "Couple Trivia Recovery");
 
     runModules("onAppStart", []);
+    activeDispatch = "";
   }
 
   /*
@@ -1945,7 +1950,7 @@ var LBC = (function () {
     { word: "DANGEROUS", hint: "Proceed at your own risk." },
     { word: "CHEMISTRY", hint: "You either have it or you don't." },
     { word: "TEASE", hint: "A little anticipation never hurt." },
-    { word: "AFTERHOURS", hint: "The club doesn't close." },
+    { word: "AFTERHOURS", hint: "The night doesn't end." },
     { word: "MYSTERY", hint: "Nobody knows what's coming." },
     { word: "TEMPTATION", hint: "The questionable decision." },
     { word: "SECRET", hint: "Keep this between us." },
