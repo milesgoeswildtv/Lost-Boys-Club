@@ -19,7 +19,7 @@ var LBC = (function () {
 
   function readJson(key, fallback) {
     try {
-      var raw = $kv.get(PREFIX + key, "");
+      var raw = LBC.runtime.kvGet(PREFIX + key, "");
       if (!raw) return fallback;
       return JSON.parse(raw);
     } catch (err) {
@@ -29,7 +29,7 @@ var LBC = (function () {
 
   function writeJson(key, value) {
     try {
-      return $kv.set(PREFIX + key, JSON.stringify(value));
+      return LBC.runtime.kvSet(PREFIX + key, JSON.stringify(value));
     } catch (err) {
       return false;
     }
@@ -45,7 +45,7 @@ var LBC = (function () {
 
   function notice(text, options) {
     try {
-      $room.sendNotice(String(text), options || {});
+      LBC.runtime.sendNotice(String(text), options || {});
     } catch (err) {
       // A notice failure must never crash the app's event handler.
     }
@@ -138,8 +138,8 @@ var LBC = (function () {
     };
 
     saveGame(game);
-    $callback.create(callbackLabel, GAME_SECONDS);
-    $room.reloadPanel();
+    LBC.runtime.createCallback(callbackLabel, GAME_SECONDS);
+    LBC.runtime.reloadPanel();
 
     notice(
       "🖤 LOST BOYS CLUB GAME TIME 🖤\n" +
@@ -171,11 +171,11 @@ var LBC = (function () {
       records.recentWinners.unshift({ name: winner, at: now() });
       records.recentWinners = records.recentWinners.slice(0, 10);
       saveRecords(records);
-      $room.reloadPanel();
+      LBC.runtime.reloadPanel();
       notice("🏆 CLUBHOUSE WINNER: " + winner + " got it. The number was " + game.secret + ". Enjoy your wildly temporary superiority.");
     } else {
       saveRecords(records);
-      $room.reloadPanel();
+      LBC.runtime.reloadPanel();
       notice(
         (reason === "timeout" ? "⏰ Time's up." : "🛑 Round ended.") +
         " Nobody nailed it. The number was " + game.secret +
@@ -211,7 +211,7 @@ var LBC = (function () {
     } else {
       var hint = guess < Number(game.secret) ? "higher" : "lower";
       notice("Guess locked for " + cleanName(username) + ". Try " + hint + ".", { toUsername: username });
-      $room.reloadPanel();
+      LBC.runtime.reloadPanel();
     }
   }
 
@@ -228,12 +228,12 @@ var LBC = (function () {
   function welcome(username) {
     var safe = cleanName(username);
     var key = "welcome_" + safe.toLowerCase();
-    var last = Number($kv.get(PREFIX + key, "0")) || 0;
+    var last = Number(LBC.runtime.kvGet(PREFIX + key, "0")) || 0;
     var current = now();
 
     // One welcome per user per 6 hours, avoiding noisy repeat greetings.
     if (current - last < 21600) return;
-    $kv.set(PREFIX + key, String(current), 86400);
+    LBC.runtime.kvSet(PREFIX + key, String(current), 86400);
 
     notice("🖤 " + safe + " wandered into LOST BOYS CLUB. No map, no supervision, questionable decisions. Make yourself comfortable.");
   }
@@ -324,6 +324,46 @@ var LBC = (function () {
 }());
 
 /*
+ * LOST BOYS CLUB — Chaturbate Runtime Bridge
+ * SDK access is supplied by event handlers, never called directly by Shared Code.
+ */
+(function () {
+  "use strict";
+  var platform = {};
+
+  LBC.setRuntime = function (bridge) {
+    platform = bridge || {};
+  };
+
+  LBC.runtime = {
+    kvGet: function (key, fallback) {
+      try { return typeof platform.kvGet === "function" ? platform.kvGet(key, fallback) : fallback; }
+      catch (err) { return fallback; }
+    },
+    kvSet: function (key, value, ttlSeconds) {
+      try { return typeof platform.kvSet === "function" ? platform.kvSet(key, value, ttlSeconds) : false; }
+      catch (err) { return false; }
+    },
+    sendNotice: function (message, options) {
+      try { if (typeof platform.sendNotice === "function") return platform.sendNotice(String(message), options || {}); }
+      catch (err) {}
+    },
+    createCallback: function (label, seconds, repeat) {
+      try { if (typeof platform.createCallback === "function") return platform.createCallback(label, seconds, repeat); }
+      catch (err) {}
+    },
+    reloadPanel: function () {
+      try { if (typeof platform.reloadPanel === "function") return platform.reloadPanel(); }
+      catch (err) {}
+    },
+    setPanelTemplate: function (template) {
+      try { if (typeof platform.setPanelTemplate === "function") return platform.setPanelTemplate(template); }
+      catch (err) {}
+    }
+  };
+}());
+
+/*
  * LOST BOYS CLUB — Modular Room Utilities
  * M2.2 room-goal helpers. Appended after the existing LBC core.
  * Event handlers call these small public methods; feature logic stays here.
@@ -336,7 +376,7 @@ var LBC = (function () {
 
   function readStoredJson(key, fallback) {
     try {
-      var raw = $kv.get(key, "");
+      var raw = LBC.runtime.kvGet(key, "");
       return raw ? JSON.parse(raw) : fallback;
     } catch (err) {
       return fallback;
@@ -395,7 +435,7 @@ var LBC = (function () {
     }
 
     if (match[1] === "off") {
-      $kv.set(GOAL_KEY, JSON.stringify({
+      LBC.runtime.kvSet(GOAL_KEY, JSON.stringify({
         target: 0, startTotal: 0, active: false, completed: false, milestones: {}
       }));
       LBC.notice("Room goal switched off. The clubhouse returns to its regularly scheduled nonsense.");
@@ -403,7 +443,7 @@ var LBC = (function () {
       var stats = readStoredJson(STATS_KEY, {});
       var baseline = Number(stats.totalTokens) || 0;
       var target = Number(match[1]);
-      $kv.set(GOAL_KEY, JSON.stringify({
+      LBC.runtime.kvSet(GOAL_KEY, JSON.stringify({
         target: target,
         startTotal: baseline,
         active: true,
@@ -413,7 +453,7 @@ var LBC = (function () {
       LBC.notice("🏚️ New clubhouse goal set: " + target + " tokens. Progress starts now. Support is voluntary; nothing is locked behind it.");
     }
 
-    $room.reloadPanel();
+    LBC.runtime.reloadPanel();
   };
 
   LBC.processRoomGoalTip = function (rawTokens) {
@@ -447,8 +487,8 @@ var LBC = (function () {
       goal.active = false;
       goal.completed = true;
     }
-    $kv.set(GOAL_KEY, JSON.stringify(goal));
-    $room.reloadPanel();
+    LBC.runtime.kvSet(GOAL_KEY, JSON.stringify(goal));
+    LBC.runtime.reloadPanel();
   };
 
   LBC.updateGoalPanel = function () {
@@ -459,7 +499,7 @@ var LBC = (function () {
     var row2Value = (snapshot.active ? "" : (snapshot.completed ? "REACHED · " : "PAUSED · ")) +
       snapshot.displayedProgress + "/" + snapshot.target + " TOKENS · " + snapshot.percent + "%";
 
-    $room.setPanelTemplate({
+    LBC.runtime.setPanelTemplate({
       template: "3_rows_of_labels",
       row1_label: "LOST BOYS CLUB",
       row1_value: panel.active ? "GUESS THE NUMBER — LIVE" : "CLUBHOUSE OPEN",
@@ -488,7 +528,7 @@ var LBC = (function () {
 
   function readMenu() {
     try {
-      var raw = $kv.get(MENU_KEY, "");
+      var raw = LBC.runtime.kvGet(MENU_KEY, "");
       var parsed = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(parsed)) return [];
       return parsed.filter(function (item) {
@@ -500,7 +540,7 @@ var LBC = (function () {
   }
 
   function saveMenu(items) {
-    $kv.set(MENU_KEY, JSON.stringify(items));
+    LBC.runtime.kvSet(MENU_KEY, JSON.stringify(items));
   }
 
   function cleanLabel(value) {
@@ -620,7 +660,7 @@ var LBC = (function () {
 
   function readState() {
     try {
-      var raw = $kv.get(STATE_KEY, "");
+      var raw = LBC.runtime.kvGet(STATE_KEY, "");
       var state = raw ? JSON.parse(raw) : {};
       return {
         enabled: state.enabled === true,
@@ -633,14 +673,14 @@ var LBC = (function () {
   }
 
   function saveState(state) {
-    $kv.set(STATE_KEY, JSON.stringify(state));
+    LBC.runtime.kvSet(STATE_KEY, JSON.stringify(state));
   }
 
   function scheduleNext(state) {
     var label = CALLBACK_PREFIX + Date.now() + "_" + Math.floor(Math.random() * 1000000);
     state.callbackLabel = label;
     saveState(state);
-    $callback.create(label, INTERVAL_SECONDS);
+    LBC.runtime.createCallback(label, INTERVAL_SECONDS);
   }
 
   LBC.startAnnouncements = function (restart) {
