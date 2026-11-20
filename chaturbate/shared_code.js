@@ -2942,7 +2942,8 @@ var LBC = (function () {
       "/ab admin games|goal|rewards|menu|announcements|giveaway|queue|vip — subsystem status\n" +
       "/ab admin panel — refresh the native room panel · /ab admin members — member summary\n" +
       "QUICK CONTROL: /ab admin goal pause|resume|status · /ab admin queue next|pause|resume\n" +
-      "GOALS: /ab admin goal set 1000 Title · queue 1500 Next · extend 250 · reset · off\n" +
+      "GOALS: set 1000 Title · timed 1000 30 Title · queue 1500 Next · queue timed 2000 20 Final\\n" +
+      "GOAL TOOLS: milestones 10 25 50 75 100 · pause · resume · extend 250 · carryover on|off · repeat on|off · time · reset · off · queue list|clear\\n" +
       "REWARDS: /ab admin rewards add 100 Reward · pending · approve 1 · deny 1\n" +
       "TIP MENU: /ab admin menu add 50 Request · remove 1 · clear · show\n" +
       "ANNOUNCEMENTS: /ab admin announcements on|off\n" +
