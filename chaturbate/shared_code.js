@@ -2818,6 +2818,7 @@ var LBC = (function () {
       "Games entered: " + p.gamesPlayed + " · Wins: " + p.wins + "\n" +
       "Win rate: " + (p.gamesPlayed ? Math.floor((p.wins / p.gamesPlayed) * 100) + "%" : "—") +
       (LBC.vip ? "\nVIP: " + LBC.vip.summary(target).tier + " · Room tips: $" + LBC.vip.summary(target).usd.toFixed(2) : ""),
+      (LBC.retention ? "\nVisits: " + LBC.retention.summary(target).visits + " · Member since: " + LBC.retention.summary(target).memberSince : ""),
       { toUsername: cleanName(viewerName) }
     );
   }
@@ -3863,4 +3864,127 @@ var LBC = (function () {
   }};
   LBC.vip={version:"1.0",summary:summary,recordTip:recordTip,tiers:function(){return tiers();},adminStatus:adminStatus};
   LBC.gameLibrary.register("unified-loyalty-vip",{onChatMessage:onChatMessage});
+}());
+
+
+/*
+ * AFTERDARK BROTHERHOOD — VIEWER RETENTION
+ * Persistent visit recognition, milestone notices, and membership anniversaries.
+ * Uses a separate KV namespace; does not alter loyalty points or VIP totals.
+ */
+(function () {
+  "use strict";
+  var PREFIX = "lbc_ab_retention_v1_";
+  var MILESTONES = [5, 10, 25, 50, 100];
+  var REJOIN_COOLDOWN = 1800;
+  function clean(value) {
+    return String(value || "").replace(/^@/, "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25);
+  }
+  function key(value) { return PREFIX + clean(value).toLowerCase(); }
+  function read(value) {
+    try {
+      var raw = LBC.runtime.kvGet(key(value), "");
+      var p = raw ? JSON.parse(raw) : {};
+      return {
+        username: clean(value),
+        visits: Math.max(0, Math.floor(Number(p.visits) || 0)),
+        firstVisitAt: Math.max(0, Math.floor(Number(p.firstVisitAt) || 0)),
+        lastVisitAt: Math.max(0, Math.floor(Number(p.lastVisitAt) || 0)),
+        lastMilestone: Math.max(0, Math.floor(Number(p.lastMilestone) || 0)),
+        lastAnniversaryYear: Math.max(0, Math.floor(Number(p.lastAnniversaryYear) || 0))
+      };
+    } catch (err) {
+      return { username: clean(value), visits: 0, firstVisitAt: 0, lastVisitAt: 0, lastMilestone: 0, lastAnniversaryYear: 0 };
+    }
+  }
+  function save(p) {
+    try { return LBC.runtime.kvSet(key(p.username), JSON.stringify(p)) !== false; }
+    catch (err) { return false; }
+  }
+  function dateLabel(timestamp) {
+    if (!timestamp) return "Unknown";
+    return new Date(timestamp * 1000).toISOString().slice(0, 10);
+  }
+  function notify(message, username) {
+    var publicMode = LBC.getSetting("retentionPublicRecognition", false) === true;
+    if (publicMode) LBC.notice(message);
+    else LBC.notice(message, { toUsername: clean(username) });
+  }
+  function enter(username) {
+    if (LBC.getSetting("retentionEnabled", true) === false) return;
+    var name = clean(username);
+    if (!name || name.toLowerCase() === clean(LBC.runtime.kvGet("lbc_room_owner", "")).toLowerCase()) return;
+    var now = Math.floor(Date.now() / 1000);
+    var p = read(name);
+    if (p.lastVisitAt && now - p.lastVisitAt < REJOIN_COOLDOWN) return;
+    var isFirst = p.visits === 0;
+    var gapDays = p.lastVisitAt ? Math.floor((now - p.lastVisitAt) / 86400) : 0;
+    p.visits += 1;
+    if (!p.firstVisitAt) p.firstVisitAt = now;
+    p.lastVisitAt = now;
+    save(p);
+
+    if (isFirst && LBC.getSetting("retentionFirstVisitMessage", true) !== false) {
+      notify("🖤 First time in the AFTERDARK BROTHERHOOD, " + name + "? Welcome in. Make yourself comfortable.", name);
+    } else if (!isFirst && gapDays >= 7 && LBC.getSetting("retentionReturnRecognition", true) !== false) {
+      notify("🖤 Look who crawled back in. Welcome home, " + name + ".", name);
+    }
+
+    if (MILESTONES.indexOf(p.visits) >= 0 && p.lastMilestone < p.visits &&
+        LBC.getSetting("retentionMilestoneRecognition", true) !== false) {
+      p.lastMilestone = p.visits;
+      save(p);
+      notify("🖤 " + name + " just hit " + p.visits + " visits with the AFTERDARK BROTHERHOOD. A familiar face.", name);
+    }
+
+    if (p.firstVisitAt && !isFirst && LBC.getSetting("retentionAnniversaryRecognition", true) !== false) {
+      var first = new Date(p.firstVisitAt * 1000);
+      var today = new Date(now * 1000);
+      var anniversary = first.getUTCMonth() === today.getUTCMonth() && first.getUTCDate() === today.getUTCDate();
+      var year = today.getUTCFullYear();
+      if (anniversary && year > p.lastAnniversaryYear) {
+        p.lastAnniversaryYear = year;
+        save(p);
+        notify("🖤 " + name + " has been part of the AFTERDARK BROTHERHOOD for another year. Respect.", name);
+      }
+    }
+  }
+  function summary(username) {
+    var p = read(username);
+    return {
+      username: p.username,
+      visits: p.visits,
+      firstVisitAt: p.firstVisitAt,
+      lastVisitAt: p.lastVisitAt,
+      memberSince: dateLabel(p.firstVisitAt),
+      daysSinceLastVisit: p.lastVisitAt ? Math.max(0, Math.floor((Date.now() / 1000 - p.lastVisitAt) / 86400)) : null
+    };
+  }
+  function onChatMessage(body, username, isOwner) {
+    var text = String(body || "").trim().toLowerCase();
+    var match = text.match(/^!visits(?:\s+@?([a-z0-9_-]{1,25}))?$/);
+    if (match) {
+      var target = clean(match[1] || username);
+      var s = summary(target);
+      LBC.notice("🖤 BROTHERHOOD VISITS — " + s.username + "\nRecorded visits: " + s.visits +
+        "\nMember since: " + s.memberSince, { toUsername: clean(username) });
+      return;
+    }
+    if (isOwner && text === "/ab retention status") {
+      LBC.notice("VIEWER RETENTION: " + (LBC.getSetting("retentionEnabled", true) === false ? "OFF" : "ON") +
+        "\nPublic recognition: " + (LBC.getSetting("retentionPublicRecognition", false) === true ? "ON" : "OFF") +
+        "\nMilestones: " + MILESTONES.join(", ") + " visits.");
+    }
+  }
+  var originalEnter = LBC.loyalty && LBC.loyalty.enter;
+  if (typeof originalEnter === "function" && !originalEnter.__retentionWrapped) {
+    var wrappedEnter = function (username) {
+      originalEnter(username);
+      enter(username);
+    };
+    wrappedEnter.__retentionWrapped = true;
+    LBC.loyalty.enter = wrappedEnter;
+  }
+  LBC.retention = { version: "1.0", enter: enter, summary: summary, milestones: MILESTONES.slice() };
+  if (LBC.gameLibrary) LBC.gameLibrary.register("viewer-retention", { onChatMessage: onChatMessage });
 }());
