@@ -4426,10 +4426,10 @@ var LBC = (function () {
     var label = period === "all" ? "ALL-TIME" : "LAST " + period + " DAYS";
     var a = aggregate(period), tipAverage = a.tips ? (a.tipTokens / a.tips).toFixed(1) : "0";
     var stats = {};
-    try { stats = JSON.parse(LBC.runtime.kvGet("lbc_m2_tip_stats", "") || "{}"); } catch (err) {}
+    try { stats = JSON.parse(LBC.runtime.kvGet("lbc_m2_tip_stats", "") || "{}"); } catch (err) { stats = {}; }
     var vip = LBC.vip ? LBC.vip.adminStatus() : { members: 0, totalUsd: 0 };
     var members = [];
-    try { members = JSON.parse(LBC.runtime.kvGet(MEMBER_INDEX_KEY, "") || "[]"); } catch (err) {}
+    try { members = JSON.parse(LBC.runtime.kvGet(MEMBER_INDEX_KEY, "") || "[]"); } catch (err) { members = []; }
     LBC.notice("🖤 AFTERDARK BROTHERHOOD — ANALYTICS · " + label + "\n" +
       "VISITORS: " + a.uniqueVisitors + " unique · " + a.visits + " visits · " + a.returningVisits + " returning visits\n" +
       "SUPPORT: " + a.tips + " tips · " + a.tipTokens + " tokens · " + tipAverage + " tokens/tip\n" +
@@ -4442,7 +4442,7 @@ var LBC = (function () {
   }
   function topSupporters() {
     var state = {};
-    try { state = JSON.parse(LBC.runtime.kvGet(VIP_KEY, "") || "{}"); } catch (err) {}
+    try { state = JSON.parse(LBC.runtime.kvGet(VIP_KEY, "") || "{}"); } catch (err) { state = {}; }
     var members = state && state.members && typeof state.members === "object" ? state.members : {};
     var rows = Object.keys(members).map(function (key) {
       var p = members[key] || {};
