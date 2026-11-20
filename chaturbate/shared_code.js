@@ -1604,6 +1604,16 @@ var LBC = (function () {
   function dispatchChat(body, username, isOwner) {
     activeDispatch = "chat";
 
+    // The unified menu is the primary owner interface. It may consume a menu
+    // selection or translate it into one existing subsystem command.
+    if (isOwner && LBC.controlMenu && typeof LBC.controlMenu.route === "function") {
+      var menuResult = LBC.controlMenu.route(body, username);
+      if (menuResult && menuResult.handled) {
+        if (!menuResult.command) { activeDispatch = ""; return; }
+        body = menuResult.command;
+      }
+    }
+
     // The Control Center accepts one consistent /ab admin <section> ... syntax
     // and routes the action into the existing subsystem handler exactly once.
     var routedBody = body;
@@ -3011,6 +3021,192 @@ var LBC = (function () {
   });
 }());
 
+
+
+/*
+ * AFTERDARK BROTHERHOOD — UNIFIED OWNER CONTROL MENU
+ * One entry point, numbered navigation, and short guided inputs.
+ * All actions are translated into existing subsystem commands; this module
+ * owns no game, goal, reward, queue, giveaway, or announcement business state.
+ */
+(function () {
+  "use strict";
+  var STATE_KEY = "lbc_ab_control_menu_state_v1";
+  var MENU_TTL = 10 * 60 * 1000;
+
+  function readState() {
+    try {
+      var raw = LBC.runtime.kvGet(STATE_KEY, "");
+      var state = raw ? JSON.parse(raw) : null;
+      if (!state || typeof state !== "object" || Number(state.expiresAt) < Date.now()) return { section: "home", wizard: "", expiresAt: 0 };
+      return state;
+    } catch (err) {
+      return { section: "home", wizard: "", expiresAt: 0 };
+    }
+  }
+  function saveState(state) {
+    state.expiresAt = Date.now() + MENU_TTL;
+    LBC.runtime.kvSet(STATE_KEY, JSON.stringify(state));
+  }
+  function clearWizard(state) {
+    state.wizard = "";
+    saveState(state);
+  }
+  function say(message) { LBC.notice(message); }
+  function home(state) {
+    state.section = "home";
+    state.wizard = "";
+    saveState(state);
+    say("🖤 AFTERDARK BROTHERHOOD — CONTROL CENTER\n" +
+      "Choose a section by sending /ab followed by its number.\n" +
+      "1. Games\n2. Goals\n3. Tip Menu\n4. Rewards\n5. Brotherhood / VIP\n" +
+      "6. Giveaways\n7. Viewer Queue\n8. Announcements\n9. Live Dashboard\n10. Settings\n\n" +
+      "Use /ab anytime to return here. /ab back returns one level.");
+  }
+  function section(state, name) {
+    state.section = name;
+    state.wizard = "";
+    saveState(state);
+    if (name === "games") {
+      if (LBC.controlCenter) LBC.controlCenter.detail("games");
+      say("GAME SHORTCUTS\nGuess the Number: /ab start or /ab stop\nOther registered games use their own /ab <game> start|stop command.\nSend /ab 0 to return.");
+    } else if (name === "goals") {
+      if (LBC.controlCenter) LBC.controlCenter.detail("goal");
+      say("GOALS — choose an action\n1. View goal status\n2. Create an untimed goal\n3. Create a timed goal\n4. Queue a goal stage\n5. Pause / resume current goal\n6. View goal queue\n7. Return to main menu");
+    } else if (name === "menu") {
+      if (LBC.controlCenter) LBC.controlCenter.detail("menu");
+      say("TIP MENU — choose an action\n1. Show current menu\n2. Add a menu item\n3. Remove an item by number\n4. Return to main menu");
+    } else if (name === "rewards") {
+      if (LBC.controlCenter) LBC.controlCenter.detail("rewards");
+      say("REWARDS — choose an action\n1. View reward catalogue\n2. View pending requests\n3. Add a reward\n4. Approve a request by number\n5. Deny a request by number\n6. Return to main menu");
+    } else if (name === "brotherhood") {
+      if (LBC.controlCenter) LBC.controlCenter.detail("vip");
+      say("BROTHERHOOD\nPermanent VIP is tracked from direct room tips. Member profiles and leaderboards remain available to viewers with !profile and !leaderboard.\nSend /ab 0 to return.");
+    } else if (name === "giveaway") {
+      if (LBC.controlCenter) LBC.controlCenter.detail("giveaway");
+      say("GIVEAWAYS — choose an action\n1. View giveaway status\n2. Start a free-entry giveaway\n3. Close entries\n4. Draw a winner\n5. Cancel giveaway\n6. Return to main menu");
+    } else if (name === "queue") {
+      if (LBC.controlCenter) LBC.controlCenter.detail("queue");
+      say("VIEWER QUEUE — choose an action\n1. View queue status\n2. Call next viewer\n3. Mark current turn done\n4. Skip current viewer\n5. Pause / resume queue\n6. View scheduled slots\n7. Return to main menu");
+    } else if (name === "announcements") {
+      var a = readJson("lbc_m2_announcements", {});
+      say("ANNOUNCEMENTS\nCurrent status: " + (a.enabled === true ? "ON" : "OFF") + "\n1. Toggle announcements\n2. Return to main menu");
+    } else if (name === "dashboard") {
+      if (LBC.controlCenter) LBC.controlCenter.status();
+      say("Live room overview refreshed. Send /ab 0 to return.");
+    } else if (name === "settings") {
+      say("ROOM SETTINGS\n1. Refresh native room panel\n2. Return to main menu\nThe native Chaturbate panel is a status display, not an interactive button menu.");
+    }
+  }
+  function prompt(state, wizard, message) {
+    state.wizard = wizard;
+    saveState(state);
+    say(message + "\nWhen ready, send: /ab value <your answer>\nSend /ab cancel to stop.");
+  }
+  function action(state, number) {
+    var s = state.section;
+    if (number === 0) { home(state); return { handled: true }; }
+    if (s === "home") {
+      var sections = {1:"games",2:"goals",3:"menu",4:"rewards",5:"brotherhood",6:"giveaway",7:"queue",8:"announcements",9:"dashboard",10:"settings"};
+      if (sections[number]) { section(state, sections[number]); return { handled: true }; }
+    }
+    if (s === "goals") {
+      if (number === 1) return {handled:true,command:"/ab goal status"};
+      if (number === 2) { prompt(state,"goal_set","Create goal. Enter target and title, for example: 1000 Main Goal."); return {handled:true}; }
+      if (number === 3) { prompt(state,"goal_timed","Create timed goal. Enter target, minutes, and title, for example: 1000 30 Main Goal."); return {handled:true}; }
+      if (number === 4) { prompt(state,"goal_queue","Queue a goal. Enter target and title, for example: 1500 Next Stage."); return {handled:true}; }
+      if (number === 5) {
+        var g=readJson("lbc_m2_room_goal",{});
+        return {handled:true,command:g.active && !g.paused ? "/ab goal pause" : "/ab goal resume"};
+      }
+      if (number === 6) return {handled:true,command:"/ab goal queue list"};
+      if (number === 7) { home(state); return {handled:true}; }
+    }
+    if (s === "menu") {
+      if (number === 1) return {handled:true,command:"/ab menu show"};
+      if (number === 2) { prompt(state,"menu_add","Add a tip-menu item. Enter token price and item name, for example: 50 Song request."); return {handled:true}; }
+      if (number === 3) { prompt(state,"menu_remove","Remove an item. Enter its item number."); return {handled:true}; }
+      if (number === 4) { home(state); return {handled:true}; }
+    }
+    if (s === "rewards") {
+      if (number === 1) return {handled:true,command:"/ab rewards list"};
+      if (number === 2) return {handled:true,command:"/ab rewards pending"};
+      if (number === 3) { prompt(state,"reward_add","Add a loyalty reward. Enter point cost and reward name, for example: 100 Choose a song."); return {handled:true}; }
+      if (number === 4) { prompt(state,"reward_approve","Approve a pending request. Enter its request number."); return {handled:true}; }
+      if (number === 5) { prompt(state,"reward_deny","Deny a pending request. Enter its request number."); return {handled:true}; }
+      if (number === 6) { home(state); return {handled:true}; }
+    }
+    if (s === "giveaway") {
+      if (number === 1) return {handled:true,command:"/ab giveaway status"};
+      if (number === 2) { prompt(state,"giveaway_start","Start a free-entry giveaway. Enter the prize description."); return {handled:true}; }
+      if (number === 3) return {handled:true,command:"/ab giveaway end"};
+      if (number === 4) return {handled:true,command:"/ab giveaway draw"};
+      if (number === 5) return {handled:true,command:"/ab giveaway cancel"};
+      if (number === 6) { home(state); return {handled:true}; }
+    }
+    if (s === "queue") {
+      if (number === 1) return {handled:true,command:"/ab queue status"};
+      if (number === 2) return {handled:true,command:"/ab queue next"};
+      if (number === 3) return {handled:true,command:"/ab queue done"};
+      if (number === 4) return {handled:true,command:"/ab queue skip"};
+      if (number === 5) {
+        var q=readJson("lbc_ab_viewer_queue_v1",{});
+        return {handled:true,command:q.paused ? "/ab queue resume" : "/ab queue pause"};
+      }
+      if (number === 6) return {handled:true,command:"/ab queue slot list"};
+      if (number === 7) { home(state); return {handled:true}; }
+    }
+    if (s === "announcements") {
+      if (number === 1) {
+        var a=readJson("lbc_m2_announcements",{});
+        return {handled:true,command:"/ab announcements " + (a.enabled === true ? "off" : "on")};
+      }
+      if (number === 2) { home(state); return {handled:true}; }
+    }
+    if (s === "settings") {
+      if (number === 1) return {handled:true,command:"/ab admin panel"};
+      if (number === 2) { home(state); return {handled:true}; }
+    }
+    say("That selection isn't available here. Choose one of the displayed numbers, or send /ab 0 to return.");
+    return {handled:true};
+  }
+  function value(state, raw) {
+    var v=String(raw||"").replace(/^\/ab value\s*/i,"").trim(), cmd="";
+    if (!v) { say("Please include a value after /ab value."); return {handled:true}; }
+    if (state.wizard === "goal_set" && /^[1-9][0-9]{0,6}\s+.{1,48}$/.test(v)) cmd="/ab goal set " + v;
+    else if (state.wizard === "goal_timed" && /^[1-9][0-9]{0,6}\s+[1-9][0-9]{0,3}\s+.{1,48}$/.test(v)) cmd="/ab goal timed " + v;
+    else if (state.wizard === "goal_queue" && /^[1-9][0-9]{0,6}\s+.{1,48}$/.test(v)) cmd="/ab goal queue " + v;
+    else if (state.wizard === "menu_add" && /^[1-9][0-9]{0,5}\s+.{1,60}$/.test(v)) cmd="/ab menu add " + v;
+    else if (state.wizard === "menu_remove" && /^[1-9][0-9]{0,2}$/.test(v)) cmd="/ab menu remove " + v;
+    else if (state.wizard === "reward_add" && /^[1-9][0-9]{0,5}\s+.{1,60}$/.test(v)) cmd="/ab rewards add " + v;
+    else if (state.wizard === "reward_approve" && /^[1-9][0-9]{0,4}$/.test(v)) cmd="/ab rewards approve " + v;
+    else if (state.wizard === "reward_deny" && /^[1-9][0-9]{0,4}$/.test(v)) cmd="/ab rewards deny " + v;
+    else if (state.wizard === "giveaway_start" && v.length <= 80) cmd="/ab giveaway start " + v;
+    else { say("That doesn't match the requested format. Please try /ab value again, or /ab cancel."); return {handled:true}; }
+    state.wizard="";
+    saveState(state);
+    return {handled:true,command:cmd};
+  }
+  function route(body, username) {
+    var raw=String(body||"").trim(), lower=raw.toLowerCase(), state=readState(), m;
+    if (lower === "/ab" || lower === "/ab admin" || lower === "/ab admin status") { home(state); return {handled:true}; }
+    if (lower === "/ab home" || lower === "/ab back" || lower === "/ab 0") { home(state); return {handled:true}; }
+    if (lower === "/ab cancel") {
+      state.wizard=""; saveState(state); say("Control Center action cancelled."); return {handled:true};
+    }
+    if ((m=raw.match(/^\/ab value\s*(.*)$/i))) {
+      if (!state.wizard) { say("No guided action is waiting. Open /ab and choose an action first."); return {handled:true}; }
+      return value(state, raw);
+    }
+    if ((m=lower.match(/^\/ab\s+(10|[1-9])$/))) return action(state,Number(m[1]));
+    if (state.wizard && lower.indexOf("/ab ") !== 0) {
+      say("A guided action is waiting. Use /ab value <answer>, or /ab cancel. Your message was not used.");
+      return {handled:true};
+    }
+    return null;
+  }
+  LBC.controlMenu = { version:"1.0", route:route, open:function(){home(readState());} };
+}());
 
 /* AFTERDARK BROTHERHOOD — FREE-ENTRY GIVEAWAY ENGINE */
 (function () {
