@@ -73,7 +73,7 @@
       "settingsHelp": {
         "type": "string",
         "title": "Configuration guide",
-        "description": "Settings changes preserve balances and room activity.",
+        "description": "Balances and activity are preserved.",
         "default": "Afterdark Brotherhood · No map. No supervision. Questionable decisions.",
         "maxLength": 120
       }
