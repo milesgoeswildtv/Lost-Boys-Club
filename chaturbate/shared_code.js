@@ -2551,7 +2551,9 @@ var LBC = (function () {
       "Games entered: " + p.gamesPlayed + " · Wins: " + p.wins + "\n" +
       "Win rate: " + (p.gamesPlayed ? Math.floor((p.wins / p.gamesPlayed) * 100) + "%" : "—") +
       (missionSummary ? "\nDaily missions: " + missionSummary.dailyCompleted + "/3 · Weekly: " +
-        missionSummary.weeklyCompleted + "/3 · Streak: " + missionSummary.streak + " days" : ""),
+        missionSummary.weeklyCompleted + "/3 · Streak: " + missionSummary.streak + " days" : "") +
+      (LBC.reputation ? (function () { var rep = LBC.reputation.summary(target); return "\nRank: " + rep.rank +
+        " · Reputation XP: " + rep.xp + " · Title: " + rep.activeTitle; }()) : ""),
       { toUsername: cleanName(viewerName) }
     );
   }
@@ -2616,6 +2618,7 @@ var LBC = (function () {
       "Brotherhood Vault: " + (LBC.vault ? LBC.vault.status().totalGamePoints + " shared points" : "offline") + "\n" +
       "Hall of Fame: " + (LBC.hallOfFame ? LBC.hallOfFame.records().membersTracked + " members tracked" : "offline") + "\n" +
       "Missions: " + (missionStats ? missionStats.dailyClaims + " daily · " + missionStats.weeklyClaims + " weekly claimed" : "offline") + "\n" +
+      "Reputation: " + (LBC.reputation ? LBC.reputation.adminStatus().members + " tracked · " + LBC.reputation.adminStatus().totalXp + " XP" : "offline") + "\n" +
       "Game modules: " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + "\n" +
       "Use /ab admin help for the control map."
     );
@@ -2691,6 +2694,15 @@ var LBC = (function () {
         "\nCommands: /ab teams create Name · delete Name · reset · season start Name.");
       return;
     }
+    if (value === "reputation" || value === "ranks") {
+      var reputationStats = LBC.reputation ? LBC.reputation.adminStatus() : null;
+      LBC.notice("🏅 REPUTATION & RANKS\n" +
+        (reputationStats ? "Tracked members: " + reputationStats.members +
+          "\nTotal earned XP: " + reputationStats.totalXp +
+          "\nBadges awarded: " + reputationStats.badges : "Reputation engine unavailable.") +
+        "\nViewer commands: !rank · !badges · !titles · !title set <id> · !rankings");
+      return;
+    }
     if (value === "missions") {
       var missionStats = LBC.missions ? LBC.missions.adminStatus() : null;
       LBC.notice("🎯 MISSION CONTROL\n" +
@@ -2726,7 +2738,7 @@ var LBC = (function () {
     LBC.notice(
       "🖤 AFTERDARK BROTHERHOOD — ADMIN CONTROL MAP\n" +
       "/ab admin — dashboard · /ab admin status — refresh dashboard\n" +
-      "/ab admin games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue|missions — subsystem status\n" +
+      "/ab admin games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue|missions|reputation — subsystem status\n" +
       "/ab admin members — member tracking summary\n" +
       "GOALS: /ab goal set 1000 Title · /ab goal queue 1500 Next\n" +
       "REWARDS: /ab rewards add 100 Reward · pending · approve 1 · deny 1\n" +
@@ -2769,7 +2781,7 @@ var LBC = (function () {
         " / " + MAX_INDEX + "\nViewer commands: !profile · !profile username · !leaderboard wins|games|points.");
       return;
     }
-    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue|missions)$/))) {
+    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue|missions|reputation|ranks)$/))) {
       adminDetail(match[1]);
       return;
     }
@@ -4217,7 +4229,7 @@ var LBC = (function () {
     if(low==="!badges"){badgesCommand(username);return;}
     if(low==="!titles"||low==="!title"){titlesCommand(username);return;}
     if(low==="!rankings"){rankings();return;}
-    if((m=low.match(/^!title\\s+set\\s+([a-z0-9-]{1,30})$/))){setTitle(username,m[1]);return;}
+    if((m=low.match(/^!title\s+set\s+([a-z0-9-]{1,30})$/))){setTitle(username,m[1]);return;}
   }
   LBC.reputation={version:"1.0",summary:summary,ranks:function(){return RANKS.slice();},
     badges:function(n){return summary(n).badges;},titles:function(n){return summary(n).titles;},adminStatus:adminStatus};
