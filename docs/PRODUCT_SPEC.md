@@ -1,11 +1,11 @@
-# Product Specification — LOST BOYS CLUB
+# Product Specification — AFTERDARK BROTHERHOOD
 
 ## 1. Product identity
 
-**Name:** LOST BOYS CLUB  
+**Name:** AFTERDARK BROTHERHOOD  
 **Tagline:** NO MAP. NO SUPERVISION. QUESTIONABLE DECISIONS.
 
-A room-wide interactive clubhouse hosted by two adult male partners. The performers are the attraction; the app is the cheeky, overconfident club manager. It should make the room feel like a late-night hangout with two affectionate, funny, alternative boyfriends—not a corporate chatbot or a generic casino.
+A room-wide interactive brotherhood hosted by two adult male partners. The performers are the attraction; the app is the cheeky, overconfident club manager. It should make the room feel like a late-night hangout with two affectionate, funny, alternative boyfriends—not a corporate chatbot or a generic casino.
 
 ### Voice
 - Relaxed, playful, affectionate, sarcastic, occasionally absurd.
@@ -24,11 +24,11 @@ A room-wide interactive clubhouse hosted by two adult male partners. The perform
 
 One Chaturbate App V2 application, modularized by feature within the platform's supported handler model:
 
-1. **Clubhouse Core** — initialization, settings, room personality, safe message cadence.
+1. **Brotherhood Core** — initialization, settings, room personality, safe message cadence.
 2. **Social** — welcomes, follow acknowledgements, return-visitor recognition where supported and privacy-appropriate.
 3. **Games** — free-to-join mini-games, state, validation, round lifecycle, score tracking.
 4. **Chaos Engine** — optional random, harmless prompts and room events, with broadcaster-controlled enable/disable.
-5. **Club Records** — session and persistent leaderboards using the supported KV store.
+5. **brotherhood records** — session and persistent leaderboards using the supported KV store.
 6. **Broadcast Panel** — compact status display for current game, goal, and leaderboard when supported.
 7. **Shortcuts** — one-click entry point for the primary viewer interaction, subject to the current Chaturbate shortcut limit.
 
@@ -53,7 +53,7 @@ Do not split into multiple apps unless a concrete platform limitation requires i
   - Validate input, enforce one guess per user per round, and handle ties/round completion.
   - No paid entry, no tip required, no cash or token prize.
   - Announce winner and reset cleanly.
-- Broadcast Panel: use the native Broadcast Panel Update handler and a compact three-row status template for club identity, game status/player count, and club records. Refresh the panel only when meaningful game state changes.
+- Broadcast Panel: use the native Broadcast Panel Update handler and a compact three-row status template for club identity, game status/player count, and brotherhood records. Refresh the panel only when meaningful game state changes.
 - Persist only small, necessary state; guard against malformed or missing KV values.
 - Add broadcaster settings for welcome enablement, welcome cooldown, game enablement, and message style where supported.
 
