@@ -1,0 +1,93 @@
+{
+  "room_controls": {
+    "type": "fieldset",
+    "title": "Room Controls",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 0,
+    "settings": {
+      "welcomeEnabled": {
+        "type": "boolean",
+        "title": "Welcome new viewers",
+        "description": "Show the existing Afterdark Brotherhood welcome notice when someone enters.",
+        "default": true,
+        "order": 0
+      },
+      "tipAcknowledgmentEnabled": {
+        "type": "boolean",
+        "title": "Tip acknowledgment notices",
+        "description": "Enable or silence the automatic thank-you notice after tips. Tip tracking and VIP attribution continue either way.",
+        "default": true,
+        "order": 1
+      }
+    }
+  },
+  "loyalty_controls": {
+    "type": "fieldset",
+    "title": "Loyalty & Rewards",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 1,
+    "settings": {
+      "loyaltyEnabled": {
+        "type": "boolean",
+        "title": "Enable loyalty points",
+        "description": "Master switch for daily visit, verified viewing, and meaningful-chat points. Existing balances and reward requests are preserved.",
+        "default": true,
+        "order": 0
+      },
+      "dailyVisitPoints": {
+        "type": "number",
+        "title": "Daily visit points",
+        "description": "Points awarded once per viewer per UTC day. Set to 0 to disable this earning source.",
+        "minimum": 0,
+        "maximum": 20,
+        "default": 2,
+        "order": 1
+      },
+      "watchPointsPerFiveMinutes": {
+        "type": "number",
+        "title": "Viewing points per 5 minutes",
+        "description": "Points for each complete five-minute room-viewing interval. Set to 0 to disable viewing rewards.",
+        "minimum": 0,
+        "maximum": 20,
+        "default": 1,
+        "order": 2
+      },
+      "meaningfulChatPoints": {
+        "type": "number",
+        "title": "Meaningful chat points",
+        "description": "Points for a qualifying message after its cooldown. Set to 0 to disable this earning source.",
+        "minimum": 0,
+        "maximum": 20,
+        "default": 1,
+        "order": 3
+      },
+      "meaningfulChatCooldownMinutes": {
+        "type": "number",
+        "title": "Meaningful chat cooldown (minutes)",
+        "minimum": 1,
+        "maximum": 1440,
+        "default": 10,
+        "order": 4
+      }
+    }
+  },
+  "interface_notes": {
+    "type": "fieldset",
+    "title": "Interface Notes",
+    "collapsible": true,
+    "collapsed": true,
+    "order": 2,
+    "settings": {
+      "settingsHelp": {
+        "type": "string",
+        "title": "Configuration guide",
+        "description": "These are native Chaturbate App V2 settings. Changes apply automatically; persistent viewer balances and room activity are not reset.",
+        "default": "Afterdark Brotherhood · No map. No supervision. Questionable decisions.",
+        "maxLength": 120,
+        "order": 0
+      }
+    }
+  }
+}
