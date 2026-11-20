@@ -108,6 +108,8 @@ var LBC = (function () {
       "!vault — shared Brotherhood progression",
       "!halloffame — permanent member records",
       "!achievements — your unlocked milestones",
+      "!queue / !joinqueue / !leavequeue — view and join the viewer waitlist",
+      "!slots / !book 1 / !cancelbooking — scheduled viewer slots",
       "",
       "Broadcaster controls:",
       "/ab start — start a 90-second round",
@@ -2714,7 +2716,8 @@ var LBC = (function () {
       "GIVEAWAY: /ab giveaway start Prize · end · draw · cancel · history (free entry only)\n" +
       "TEAMS: /ab teams create Name · !jointeam Name · !leaveteam · !teams · !team\n" +
       "VAULT: !vault · !achievements — shared progress and personal unlocks\n" +
-      "HALL OF FAME: !halloffame wins|games|points — permanent member records\n" +
+      "HALL OF FAME: !halloffame wins|games|points — permanent member records\\n" +
+      "VIEWER QUEUE: /ab queue next|done|skip|pause|resume|clear · !joinqueue · !slots · !book 1\n" +
       "GAMES: use the game's own /ab <game> start|stop command."
     );
   }
