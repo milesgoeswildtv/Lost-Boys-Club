@@ -255,6 +255,12 @@
         "title": "Dirty Charades",
         "description": "Allow viewer play; owner controls stay available.",
         "default": true
+      },
+      "gameOneWordStoryEnabled": {
+        "type": "boolean",
+        "title": "One Word Story",
+        "description": "Allow viewers to join the room story.",
+        "default": true
       }
     }
   },
