@@ -229,3 +229,38 @@ Streaks require at least one qualifying free-game participation or win on each U
 Mission rewards are credited through the existing idempotent loyalty award engine. Pending mission deliveries persist and retry on the next app start, mission view, or qualifying game award. Daily/weekly progress and streak state persist in Chaturbate KV. Streak status expires after a missed UTC day; best streak and lifetime milestone claims remain.
 
 Broadcaster overview: `/ab admin missions`; the main `/ab admin` dashboard includes daily and weekly claim totals. Mission rewards are ordinary loyalty points and do not advance Team Wars, Vault shared progress, or Hall of Fame competitive totals.
+
+
+## Viewer Reputation, Permanent Ranks & Titles
+
+Reputation is a separate recognition track built only from successful free-game awards. It does not spend, award, or modify loyalty points.
+
+- Successful free-game participation: +10 reputation XP.
+- Successful free-game win: +25 reputation XP.
+- Ranks are permanent and never decay.
+- Tipping, purchases, manual bonus grants, mission rewards, giveaways, queue bookings, and reward redemptions do not award reputation XP.
+- Reputation XP has no cash value and cannot be purchased or exchanged.
+
+Permanent rank thresholds:
+
+| Rank | Lifetime XP |
+|---|---:|
+| New Face | 0 |
+| Regular | 100 |
+| Known Face | 300 |
+| After Hours | 750 |
+| Room Fixture | 1,500 |
+| Heavyweight | 3,000 |
+| Room Legend | 6,000 |
+
+Participation badges unlock at 1, 10, 25, 50, and 100 free games. Win badges unlock at 1, 5, 25, and 50 free-game wins. Badge and rank title unlocks are permanent.
+
+Viewer commands:
+
+- `!rank` — private rank, XP, next-rank progress, participation and wins.
+- `!badges` — private earned and unearned badge list.
+- `!titles` or `!title` — private title catalogue and unlock status.
+- `!title set <id>` — select an unlocked profile title.
+- `!rankings` — room-wide top-five reputation XP leaderboard.
+
+The existing `!profile` output now includes rank, reputation XP, and selected title. Broadcaster status: `/ab admin reputation`. Reputation does not affect game odds, queue priority, loyalty balances, team scores, Vault totals, or Hall of Fame records.
