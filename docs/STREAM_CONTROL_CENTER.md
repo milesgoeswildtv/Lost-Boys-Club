@@ -1,31 +1,57 @@
-# Afterdark Brotherhood — Stream Control Center
+# Afterdark Brotherhood — Unified Control Center
 
-The Stream Control Center is the broadcaster-only operating console for the room. It is built into the existing Shared Code dispatcher and existing subsystem handlers; it does not introduce a second dispatcher or duplicate goal, queue, reward, giveaway, or announcement state.
+The primary broadcaster interface is a numbered, chat-driven menu. The broadcaster does not need to memorize subsystem command syntax for common operations.
 
-## Open the console
+## Open the Control Center
 
-- `/ab admin` — live room overview.
-- `/ab admin status` — same overview.
-- `/ab admin help` — complete command map.
-- `/ab admin panel` — request a refresh of the existing native below-camera room panel.
-- `/ab admin games`, `goal`, `rewards`, `menu`, `announcements`, `giveaway`, `queue`, or `vip` — focused subsystem status.
-- `/ab admin members` — tracked member count.
+Send **`/ab`** in broadcaster chat.
 
-## Unified broadcaster command routing
+Choose a section by sending `/ab` followed by its number:
 
-Subsystem commands can be run from one consistent namespace. The console translates these aliases into the existing subsystem command handlers once.
+| Number | Section |
+|---:|---|
+| 1 | Games |
+| 2 | Goals |
+| 3 | Tip Menu |
+| 4 | Rewards |
+| 5 | Brotherhood / permanent VIP |
+| 6 | Giveaways |
+| 7 | Viewer Queue |
+| 8 | Announcements |
+| 9 | Live Dashboard |
+| 10 | Settings |
 
-| Control | Commands |
-|---|---|
-| Room goals | `/ab admin goal set 1000 Main Goal`, `queue 1500 Next Goal`, `pause`, `resume`, `extend 250`, `reset`, `off`, `status`, `milestones 10 25 50 75 100`, `queue list`, `queue clear` |
-| Rewards | `/ab admin rewards add 100 Reward name`, `remove 1`, `list`, `pending`, `approve 1`, `deny 1` |
-| Tip menu | `/ab admin menu add 50 Request name`, `remove 1`, `clear`, `show` |
-| Announcements | `/ab admin announcements on`, `off`, `status` |
-| Giveaway | `/ab admin giveaway start Prize`, `end`, `draw`, `cancel`, `history` (free-entry only) |
-| Viewer queue | `/ab admin queue status`, `next`, `done`, `skip`, `pause`, `resume`, `clear`, `limit 25`, `slot list` |
-| Game modules | Use each game's existing `/ab <game> start` / `stop` commands. Guess the Number uses `/ab start` and `/ab stop`. |
+Inside a section, send the displayed number to select an action. Send `/ab 0`, `/ab back`, or `/ab` to return to the main menu.
 
-The dashboard summarizes current game, room support, goal progress/state, queue state, giveaway state, announcement state, tip-menu count, reward catalogue and pending requests, permanent VIP count, and registered game modules.
+### Guided actions
+
+For actions that need details, the menu asks for the information and shows one consistent input format:
+
+- `/ab value 1000 Main Goal` — create an untimed goal.
+- `/ab value 1000 30 Main Goal` — create a 30-minute goal.
+- `/ab value 1500 Next Stage` — queue a goal stage.
+- `/ab value 50 Song request` — add a tip-menu item.
+- `/ab value 100 Choose a song` — add a loyalty reward.
+- `/ab value Prize description` — start a free-entry giveaway.
+
+Use `/ab cancel` to cancel a guided action. Menu navigation state expires automatically. The menu only intercepts its own explicit `/ab` commands; ordinary broadcaster chat is not consumed.
+
+## Compatibility shortcuts
+
+Existing direct commands remain available for experienced operators and existing workflows. The menu translates selections into the existing subsystem handlers; it does not replace or duplicate those systems.
+
+Examples:
+
+- Goals: `/ab goal ...` or legacy `/ab admin goal ...`
+- Rewards: `/ab rewards ...` or legacy `/ab admin rewards ...`
+- Tip menu: `/ab menu ...` or legacy `/ab admin menu ...`
+- Giveaways: `/ab giveaway ...`
+- Queue: `/ab queue ...`
+- Announcements: `/ab announcements ...`
+- Guess the Number: `/ab start` and `/ab stop`
+- Other games retain their existing game-specific commands.
+
+The old `/ab admin` entry point opens the new main menu. Existing detailed `/ab admin ...` commands remain compatibility shortcuts.
 
 ## Native room panel
 
