@@ -3181,7 +3181,9 @@ var LBC = (function () {
         "4. Tip-menu footer: " + (c.tipMenuFooter || "Default") + "\n" +
         "5. Member-profile heading: " + (c.profileHeading || "Default") + "\n" +
         "6. Reset all customization text\n7. Return to main menu");
-    } else if (name === "analytics") {\n      say("ROOM ANALYTICS\\nHistorical tracking begins when Analytics is installed.\\n1. Last 7 days\\n2. Last 30 days\\n3. All-time tracked totals\\n4. Top room supporters\\n5. Return to main menu");\n    } else if (name === "engagement") {
+    } else if (name === "analytics") {
+      say("ROOM ANALYTICS\nHistorical tracking begins when Analytics is installed.\n1. Last 7 days\n2. Last 30 days\n3. All-time tracked totals\n4. Top room supporters\n5. Return to main menu");
+    } else if (name === "engagement") {
       var retentionOn = LBC.getSetting("retentionEnabled", true) !== false;
       var publicRecognition = LBC.getSetting("retentionPublicRecognition", false) === true;
       var storyOn = LBC.getSetting("gameOneWordStoryEnabled", true) !== false;
@@ -3247,7 +3249,14 @@ var LBC = (function () {
       }
       if (number === 7) { home(state); return {handled:true}; }
     }
-    if (s === "analytics") {\n      if (number === 1) { if (LBC.analytics) LBC.analytics.report(7); return {handled:true}; }\n      if (number === 2) { if (LBC.analytics) LBC.analytics.report(30); return {handled:true}; }\n      if (number === 3) { if (LBC.analytics) LBC.analytics.report("all"); return {handled:true}; }\n      if (number === 4) { if (LBC.analytics) LBC.analytics.topSupporters(); return {handled:true}; }\n      if (number === 5) { home(state); return {handled:true}; }\n    }\n    if (s === "engagement") {
+    if (s === "analytics") {
+      if (number === 1) { if (LBC.analytics) LBC.analytics.report(7); return {handled:true}; }
+      if (number === 2) { if (LBC.analytics) LBC.analytics.report(30); return {handled:true}; }
+      if (number === 3) { if (LBC.analytics) LBC.analytics.report("all"); return {handled:true}; }
+      if (number === 4) { if (LBC.analytics) LBC.analytics.topSupporters(); return {handled:true}; }
+      if (number === 5) { home(state); return {handled:true}; }
+    }
+    if (s === "engagement") {
       var settingMap = {
         1: ["retentionEnabled", true, "Viewer Retention"],
         2: ["retentionPublicRecognition", false, "Recognition visibility"],
