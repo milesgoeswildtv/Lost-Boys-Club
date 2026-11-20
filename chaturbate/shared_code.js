@@ -2602,6 +2602,7 @@ var LBC = (function () {
       String(goal.title || "Room Goal") + " (" + Math.min(goalProgress, goalTarget) + "/" + goalTarget + ")" : "not configured";
     var pending = Array.isArray(requests) ? requests.filter(function (r) { return r && r.status === "pending"; }).length : 0;
     var activeName = game && game.active ? String(game.name || game.id || "Unknown game") : "none";
+    var missionStats = LBC.missions ? LBC.missions.adminStatus() : null;
     LBC.notice(
       "🖤 AFTERDARK BROTHERHOOD — CONTROL CENTER\n" +
       "Active game: " + activeName + "\n" +
@@ -2613,7 +2614,7 @@ var LBC = (function () {
       "Team Wars: " + (function () { var t = readJson("lbc_ab_teams_state", {}); return (Array.isArray(t.teams) ? t.teams.length : 0) + " teams · " + String(t.seasonName || "No season"); }()) + "\n" +"Viewer queue: " + (function () { var q = readJson("lbc_ab_viewer_queue_v1", {}); return (q.current && q.current.user ? "active: " + q.current.user + " · " : "") + (Array.isArray(q.waiting) ? q.waiting.length : 0) + "/" + (Number(q.limit) || 50) + " waiting"; }()) + "\n" +
       "Brotherhood Vault: " + (LBC.vault ? LBC.vault.status().totalGamePoints + " shared points" : "offline") + "\n" +
       "Hall of Fame: " + (LBC.hallOfFame ? LBC.hallOfFame.records().membersTracked + " members tracked" : "offline") + "\n" +
-      "Missions: " + (LBC.missions ? LBC.missions.adminStatus().dailyClaims + " daily · " + LBC.missions.adminStatus().weeklyClaims + " weekly claimed" : "offline") + "\n" +
+      "Missions: " + (missionStats ? missionStats.dailyClaims + " daily · " + missionStats.weeklyClaims + " weekly claimed" : "offline") + "\n" +
       "Game modules: " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + "\n" +
       "Use /ab admin help for the control map."
     );
