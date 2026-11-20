@@ -116,3 +116,22 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] Search all active Shared Code and event-handler messages for old Lost Boys Club, Clubhouse, and old player-facing club labels.
 - [ ] Confirm startup, game, reward, support-stat, and broadcast-panel messages display AFTERDARK BROTHERHOOD branding.
 - [ ] Confirm the current public support command is !supportstats; no old !clubstats or !clubgoal wording is advertised.
+
+
+## Member Profiles & Leaderboards
+
+- Award one valid game participation point and one game win award to a test viewer.
+- Confirm `!profile` privately shows the viewer's points, participation, wins, and win rate.
+- Confirm `!profile username` is delivered privately to the requesting viewer.
+- Confirm `!leaderboard wins`, `!leaderboard games`, and `!leaderboard points` sort the tracked members correctly.
+- Replay an award with the same idempotency key; confirm neither points nor member statistics increase.
+- Confirm a new app session reads the same profile data from persistent KV.
+
+## Admin Control Center
+
+- As broadcaster, run `/ab admin` and confirm game, goal, reward, tip-menu, announcement, and module status.
+- Run each subsystem view: `/ab admin games`, `goals`, `rewards`, `menu`, and `announcements`.
+- Run `/ab admin members` and confirm the tracked member count.
+- Run `/ab admin help` and verify command map.
+- As an ordinary viewer, run `/ab admin`; confirm no admin dashboard is disclosed.
+- Confirm existing `/ab goal`, `/ab rewards`, `/ab menu`, game start/stop, and announcement commands still operate unchanged.
