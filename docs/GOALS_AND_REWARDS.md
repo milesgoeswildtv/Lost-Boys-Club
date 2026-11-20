@@ -117,3 +117,25 @@ Broadcaster commands:
 - `/ab giveaway history` — show recent winners.
 
 The engine allows one active giveaway at a time, one entry per username, up to 500 entries, and stores up to 20 completed results. Prize fulfillment is handled manually by the broadcaster. Keep prize descriptions and fulfillment within Chaturbate rules and applicable law.
+
+
+## Brotherhood Wars — Team Competition
+
+Broadcaster setup:
+
+- `/ab teams create Night Owls` — create a team (maximum 8).
+- `/ab teams delete Night Owls` — delete an empty team.
+- `/ab teams list` — show standings.
+- `/ab teams assign username Team Name` / `unassign username` — manage membership.
+- `/ab teams reset` — reset season scores without changing memberships.
+- `/ab teams season start Season Name` — archive the prior standings and start a fresh season.
+- `/ab teams season history` — show recent champions.
+
+Viewer commands:
+
+- `!teams` — view current standings.
+- `!team` — privately view your team.
+- `!jointeam Team Name` — join one team.
+- `!leaveteam` — leave your current team.
+
+Each viewer may belong to one team at a time. A successful free-game participation award adds 1 team point; a successful game-win award adds 5. Duplicate loyalty awards do not score twice. Tips and purchases never add team points. Up to 8 teams and 250 members per team are supported.
