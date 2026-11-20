@@ -2545,17 +2545,12 @@ var LBC = (function () {
       LBC.notice("🖤 " + target + " has no tracked Brotherhood activity yet.", { toUsername: cleanName(viewerName) });
       return;
     }
-    var missionSummary = LBC.missions && typeof LBC.missions.getSummary === "function" ?
-      LBC.missions.getSummary(target) : null;
     LBC.notice(
       "🖤 BROTHERHOOD PROFILE — " + p.username + "\n" +
       "Points: " + balance + " · Earned: " + p.pointsEarned + "\n" +
       "Games entered: " + p.gamesPlayed + " · Wins: " + p.wins + "\n" +
       "Win rate: " + (p.gamesPlayed ? Math.floor((p.wins / p.gamesPlayed) * 100) + "%" : "—") +
-      (missionSummary ? "\nDaily missions: " + missionSummary.dailyCompleted + "/3 · Weekly: " +
-        missionSummary.weeklyCompleted + "/3 · Streak: " + missionSummary.streak + " days" : "") +
-      (LBC.reputation ? (function () { var rep = LBC.reputation.summary(target); return "\nRank: " + rep.rank +
-        " · Reputation XP: " + rep.xp + " · Title: " + rep.activeTitle; }()) : ""),
+      (LBC.vip ? "\nVIP: " + LBC.vip.summary(target).tier + " · Room tips: $" + LBC.vip.summary(target).usd.toFixed(2) : ""),
       { toUsername: cleanName(viewerName) }
     );
   }
@@ -2607,7 +2602,6 @@ var LBC = (function () {
       String(goal.title || "Room Goal") + " (" + Math.min(goalProgress, goalTarget) + "/" + goalTarget + ")" : "not configured";
     var pending = Array.isArray(requests) ? requests.filter(function (r) { return r && r.status === "pending"; }).length : 0;
     var activeName = game && game.active ? String(game.name || game.id || "Unknown game") : "none";
-    var missionStats = LBC.missions ? LBC.missions.adminStatus() : null;
     LBC.notice(
       "🖤 AFTERDARK BROTHERHOOD — CONTROL CENTER\n" +
       "Active game: " + activeName + "\n" +
@@ -2616,11 +2610,7 @@ var LBC = (function () {
       "Tip menu: " + (Array.isArray(menu) ? menu.length : 0) + " items\n" +
       "Rotating announcements: " + (announcements.enabled === true ? "ON" : "OFF") + "\n" +
       "Giveaway: " + (function () { var g = readJson("lbc_ab_giveaway_current", null); return g && g.status === "open" ? "OPEN · " + Object.keys(g.entries || {}).length + " entered" : g && g.status === "closed" ? "CLOSED · awaiting draw" : "not running"; }()) + "\n" +
-      "Team Wars: " + (function () { var t = readJson("lbc_ab_teams_state", {}); return (Array.isArray(t.teams) ? t.teams.length : 0) + " teams · " + String(t.seasonName || "No season"); }()) + "\n" +"Viewer queue: " + (function () { var q = readJson("lbc_ab_viewer_queue_v1", {}); return (q.current && q.current.user ? "active: " + q.current.user + " · " : "") + (Array.isArray(q.waiting) ? q.waiting.length : 0) + "/" + (Number(q.limit) || 50) + " waiting"; }()) + "\n" +
-      "Brotherhood Vault: " + (LBC.vault ? LBC.vault.status().totalGamePoints + " shared points" : "offline") + "\n" +
-      "Hall of Fame: " + (LBC.hallOfFame ? LBC.hallOfFame.records().membersTracked + " members tracked" : "offline") + "\n" +
-      "Missions: " + (missionStats ? missionStats.dailyClaims + " daily · " + missionStats.weeklyClaims + " weekly claimed" : "offline") + "\n" +
-      "Reputation: " + (LBC.reputation ? LBC.reputation.adminStatus().members + " tracked · " + LBC.reputation.adminStatus().totalXp + " XP" : "offline") + "\n" +
+      "VIP members: " + (LBC.vip ? LBC.vip.adminStatus().members : 0) + "\n" + "Viewer queue: " + (function () { var q = readJson("lbc_ab_viewer_queue_v1", {}); return (q.current && q.current.user ? "active: " + q.current.user + " · " : "") + (Array.isArray(q.waiting) ? q.waiting.length : 0) + "/" + (Number(q.limit) || 50) + " waiting"; }()) + "\n" +
       "Game modules: " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + "\n" +
       "Use /ab admin help for the control map."
     );
@@ -2673,50 +2663,6 @@ var LBC = (function () {
         "\nCommands: /ab giveaway start Prize · end · draw · cancel · history.");
       return;
     }
-    if (value === "vault") {
-      var vault = LBC.vault ? LBC.vault.status() : null;
-      LBC.notice("🏛️ BROTHERHOOD VAULT\n" +
-        (vault ? "Shared game points: " + vault.totalGamePoints + "\nUnlocked milestones: " + vault.unlocked.length + " / " + vault.totalMilestones + "\nNext milestone: " + (vault.next ? vault.next.title + " at " + vault.next.points + " points · " + vault.next.remaining + " to go" : "All current milestones unlocked") : "Vault unavailable.") +
-        "\nViewer command: !vault · !achievements");
-      return;
-    }
-    if (value === "halloffame" || value === "hof") {
-      var hall = LBC.hallOfFame ? LBC.hallOfFame.records() : null;
-      LBC.notice("🏆 HALL OF FAME\n" +
-        (hall ? "Tracked members: " + hall.membersTracked + "\nTop wins: " + (hall.topWins.length ? hall.topWins.map(function (x, i) { return (i + 1) + ". " + x.username + " — " + x.wins; }).join("\n") : "No wins recorded yet.") : "Hall of Fame unavailable.") +
-        "\nViewer commands: !halloffame wins|games|points · !achievements");
-      return;
-    }
-    if (value === "teams") {
-      var teamState = readJson("lbc_ab_teams_state", {});
-      var teamRows = Array.isArray(teamState.teams) ? teamState.teams.slice() : [];
-      teamRows.sort(function (a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
-      LBC.notice("⚔️ BROTHERHOOD WARS\nSeason: " + String(teamState.seasonName || "No season") +
-        "\n" + (teamRows.length ? teamRows.map(function (t, i) { return (i + 1) + ". " + t.name + " — " + (Number(t.score) || 0) + " points · " + (Array.isArray(t.members) ? t.members.length : 0) + " members"; }).join("\n") : "No teams created.") +
-        "\nCommands: /ab teams create Name · delete Name · reset · season start Name.");
-      return;
-    }
-    if (value === "reputation" || value === "ranks") {
-      var reputationStats = LBC.reputation ? LBC.reputation.adminStatus() : null;
-      LBC.notice("🏅 REPUTATION & RANKS\n" +
-        (reputationStats ? "Tracked members: " + reputationStats.members +
-          "\nTotal earned XP: " + reputationStats.totalXp +
-          "\nBadges awarded: " + reputationStats.badges : "Reputation engine unavailable.") +
-        "\nViewer commands: !rank · !badges · !titles · !title set <id> · !rankings");
-      return;
-    }
-    if (value === "missions") {
-      var missionStats = LBC.missions ? LBC.missions.adminStatus() : null;
-      LBC.notice("🎯 MISSION CONTROL\n" +
-        (missionStats ? "Tracked members: " + missionStats.members +
-          "\nActive today: " + missionStats.activeToday +
-          "\nDaily missions claimed: " + missionStats.dailyClaims +
-          "\nWeekly missions claimed: " + missionStats.weeklyClaims +
-          "\nPending reward deliveries: " + missionStats.pendingRewards : "Mission engine unavailable.") +
-        "\nDaily/weekly resets: 00:00 UTC / Monday 00:00 UTC." +
-        "\nViewer commands: !missions · !streak · !missionhistory.");
-      return;
-    }
     if (value === "queue") {
       var queue = readJson("lbc_ab_viewer_queue_v1", {});
       LBC.notice("🎤 VIEWER QUEUE CONTROL\\n" +
@@ -2725,6 +2671,11 @@ var LBC = (function () {
         "\\nWaiting: " + (Array.isArray(queue.waiting) ? queue.waiting.length : 0) + " / " + (Number(queue.limit) || 50) +
         "\\nBooked slots: " + (Array.isArray(queue.slots) ? queue.slots.filter(function (x) { return x && x.user; }).length : 0) +
         "\\nCommands: /ab queue next · done · skip · pause · resume · clear · limit · slot add/list/remove.");
+      return;
+    }
+    if (value === "vip") {
+      var vipStats = LBC.vip ? LBC.vip.adminStatus() : { members: 0, totalUsd: 0 };
+      LBC.notice("🖤 VIP STATUS\\nMembers: " + vipStats.members + "\\nCumulative room tips: $" + vipStats.totalUsd.toFixed(2) + "\\nThresholds are permanent and count only direct room tips.");
       return;
     }
     if (value === "announcements") {
@@ -2740,18 +2691,14 @@ var LBC = (function () {
     LBC.notice(
       "🖤 AFTERDARK BROTHERHOOD — ADMIN CONTROL MAP\n" +
       "/ab admin — dashboard · /ab admin status — refresh dashboard\n" +
-      "/ab admin games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue|missions|reputation — subsystem status\n" +
+      "/ab admin games|goals|rewards|menu|announcements|giveaway|queue|vip — subsystem status\n" +
       "/ab admin members — member tracking summary\n" +
       "GOALS: /ab goal set 1000 Title · /ab goal queue 1500 Next\n" +
       "REWARDS: /ab rewards add 100 Reward · pending · approve 1 · deny 1\n" +
       "TIP MENU: /ab menu add 50 Request · /ab menu remove 1\n" +
       "ANNOUNCEMENTS: /ab announcements on|off\n" +
       "GIVEAWAY: /ab giveaway start Prize · end · draw · cancel · history (free entry only)\n" +
-      "TEAMS: /ab teams create Name · !jointeam Name · !leaveteam · !teams · !team\n" +
-      "VAULT: !vault · !achievements — shared progress and personal unlocks\n" +
-      "HALL OF FAME: !halloffame wins|games|points — permanent member records\n" +
       "VIEWER QUEUE: /ab queue next|done|skip|pause|resume|clear · !joinqueue · !slots · !book 1\n" +
-      "MISSIONS: !missions · !streak · !missionhistory — daily, weekly, and streak rewards\\n" +
       "GAMES: use the game's own /ab <game> start|stop command."
     );
   }
@@ -2783,7 +2730,7 @@ var LBC = (function () {
         " / " + MAX_INDEX + "\nViewer commands: !profile · !profile username · !leaderboard wins|games|points.");
       return;
     }
-    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue|missions|reputation|ranks)$/))) {
+    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|queue|vip)$/))) {
       adminDetail(match[1]);
       return;
     }
@@ -3032,575 +2979,6 @@ var LBC = (function () {
 }());
 
 
-/* AFTERDARK BROTHERHOOD — BROTHERHOOD WARS */
-(function () {
-  "use strict";
-
-  var STATE_KEY = "lbc_ab_teams_state";
-  var HISTORY_KEY = "lbc_ab_teams_history";
-  var MAX_TEAMS = 8;
-  var MAX_HISTORY = 10;
-
-  function cleanName(value) {
-    return String(value || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25);
-  }
-
-  function cleanTeamName(value) {
-    return String(value || "").replace(/[\r\n\t]/g, " ").replace(/\s+/g, " ").trim().replace(/[^A-Za-z0-9 _-]/g, "").slice(0, 24);
-  }
-
-  function slug(value) {
-    return cleanTeamName(value).toLowerCase().replace(/\s+/g, "-");
-  }
-
-  function read(key, fallback) {
-    try {
-      var raw = LBC.runtime.kvGet(key, "");
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (err) {
-      return fallback;
-    }
-  }
-
-  function save(state) {
-    try {
-      return LBC.runtime.kvSet(STATE_KEY, JSON.stringify(state)) !== false;
-    } catch (err) {
-      return false;
-    }
-  }
-
-  function state() {
-    var s = read(STATE_KEY, {});
-    if (!Array.isArray(s.teams)) s.teams = [];
-    s.seasonName = String(s.seasonName || "Founding Season");
-    s.startedAt = Number(s.startedAt) || Date.now();
-    s.teams = s.teams.slice(0, MAX_TEAMS).map(function (t) {
-      return {
-        id: String(t.id || slug(t.name)),
-        name: cleanTeamName(t.name),
-        score: Math.max(0, Number(t.score) || 0),
-        members: Array.isArray(t.members) ? t.members.map(cleanName).filter(Boolean).slice(0, 250) : []
-      };
-    }).filter(function (t) { return t.id && t.name; });
-    return s;
-  }
-
-  function findTeam(s, name) {
-    var id = slug(name);
-    for (var i = 0; i < s.teams.length; i++) {
-      if (s.teams[i].id === id || s.teams[i].name.toLowerCase() === cleanTeamName(name).toLowerCase()) return s.teams[i];
-    }
-    return null;
-  }
-
-  function memberTeam(s, username) {
-    var key = cleanName(username).toLowerCase();
-    for (var i = 0; i < s.teams.length; i++) {
-      if (s.teams[i].members.some(function (name) { return name.toLowerCase() === key; })) return s.teams[i];
-    }
-    return null;
-  }
-
-  function removeMember(s, username) {
-    var key = cleanName(username).toLowerCase();
-    s.teams.forEach(function (team) {
-      team.members = team.members.filter(function (name) { return name.toLowerCase() !== key; });
-    });
-  }
-
-  function showTeams() {
-    var s = state();
-    var rows = s.teams.slice().sort(function (a, b) { return b.score - a.score || a.name.localeCompare(b.name); });
-    LBC.notice("⚔️ BROTHERHOOD WARS — " + s.seasonName + "\n" +
-      (rows.length ? rows.map(function (team, i) {
-        return (i + 1) + ". " + team.name + " — " + team.score + " points · " + team.members.length + " members";
-      }).join("\n") : "No teams yet. The broadcaster can create teams with /ab teams create Name.") +
-      "\nGame participation earns 1 team point; a game win earns 5. Tips never add team points.");
-  }
-
-  function showTeam(username) {
-    var s = state();
-    var team = memberTeam(s, username);
-    if (!team) {
-      LBC.notice("You're not on a team yet. Type !teams to see the standings.", { toUsername: cleanName(username) });
-      return;
-    }
-    LBC.notice("⚔️ YOUR TEAM — " + team.name + "\n" +
-      "Season points: " + team.score + "\n" +
-      "Members: " + team.members.length + "\n" +
-      "Game participation = 1 point; game wins = 5 points.",
-      { toUsername: cleanName(username) });
-  }
-
-  function join(username, teamName) {
-    var name = cleanName(username);
-    var s = state();
-    var team = findTeam(s, teamName);
-    if (!name || !team) {
-      LBC.notice("That team doesn't exist. Type !teams to see available teams.", { toUsername: name });
-      return;
-    }
-    var current = memberTeam(s, name);
-    if (current) {
-      LBC.notice(current.id === team.id ? "You're already on " + team.name + "." : "You're already on " + current.name + ". Leave that team before joining another.", { toUsername: name });
-      return;
-    }
-    if (team.members.length >= 250) {
-      LBC.notice("That team has reached its 250-member limit.", { toUsername: name });
-      return;
-    }
-    team.members.push(name);
-    if (!save(s)) {
-      team.members.pop();
-      LBC.notice("Your team membership couldn't be saved. Please try again.", { toUsername: name });
-      return;
-    }
-    LBC.notice("You're now on " + team.name + ". Let the wars begin. ⚔️", { toUsername: name });
-  }
-
-  function awardTeamPoints(username, reason) {
-    var why = String(reason || "");
-    var amount = /participation/i.test(why) ? 1 : /\bwin\b/i.test(why) ? 5 : 0;
-    if (!amount) return;
-    var s = state();
-    var team = memberTeam(s, username);
-    if (!team) return;
-    team.score += amount;
-    save(s);
-  }
-
-  if (LBC.rewards && typeof LBC.rewards.award === "function" && !LBC.rewards.award.__teamWars) {
-    var originalAward = LBC.rewards.award;
-    var teamAward = function (username, amount, reason, id) {
-      var ok = originalAward.apply(null, arguments);
-      if (ok) awardTeamPoints(username, reason);
-      return ok;
-    };
-    teamAward.__teamWars = true;
-    LBC.rewards.award = teamAward;
-  }
-
-  function history() {
-    var list = read(HISTORY_KEY, []);
-    if (!Array.isArray(list) || !list.length) {
-      LBC.notice("No previous Brotherhood Wars seasons recorded.");
-      return;
-    }
-    LBC.notice("⚔️ BROTHERHOOD WARS HISTORY\n" + list.slice(-5).reverse().map(function (season) {
-      return season.name + " — " + (season.winner || "No champion") + " (" + season.score + " points)";
-    }).join("\n"));
-  }
-
-  function onChatMessage(body, username, isOwner) {
-    var raw = String(body || "").trim();
-    var lower = raw.toLowerCase();
-    var match;
-
-    if (lower === "!teams") { showTeams(); return; }
-    if (lower === "!team") { showTeam(username); return; }
-    if ((match = raw.match(/^!jointeam\s+(.+)$/i))) { join(username, match[1]); return; }
-    if (lower === "!leaveteam") {
-      var s = state();
-      var old = memberTeam(s, username);
-      if (!old) {
-        LBC.notice("You're not on a team.", { toUsername: cleanName(username) });
-        return;
-      }
-      removeMember(s, username);
-      save(s);
-      LBC.notice("You left " + old.name + ".", { toUsername: cleanName(username) });
-      return;
-    }
-
-    if (!isOwner || lower.indexOf("/ab teams") !== 0) return;
-
-    if ((match = raw.match(/^\/ab teams create\s+(.+)$/i))) {
-      var name = cleanTeamName(match[1]);
-      var sCreate = state();
-      if (!name) { LBC.notice("Give the team a name."); return; }
-      if (sCreate.teams.length >= MAX_TEAMS) { LBC.notice("The league is full. Maximum: " + MAX_TEAMS + " teams."); return; }
-      if (findTeam(sCreate, name)) { LBC.notice("That team already exists."); return; }
-      sCreate.teams.push({ id: slug(name), name: name, score: 0, members: [] });
-      save(sCreate);
-      LBC.notice("⚔️ Team created: " + name + ". View standings with !teams.");
-      return;
-    }
-
-    if ((match = raw.match(/^\/ab teams delete\s+(.+)$/i))) {
-      var sDelete = state();
-      var target = findTeam(sDelete, match[1]);
-      if (!target) { LBC.notice("Team not found."); return; }
-      if (target.members.length) { LBC.notice("That team still has members. Remove them before deleting it."); return; }
-      sDelete.teams = sDelete.teams.filter(function (t) { return t.id !== target.id; });
-      save(sDelete);
-      LBC.notice("Team deleted: " + target.name + ".");
-      return;
-    }
-
-    if ((match = raw.match(/^\/ab teams assign\s+([A-Za-z0-9_-]{1,25})\s+(.+)$/i))) {
-      var sAssign = state();
-      var targetTeam = findTeam(sAssign, match[2]);
-      if (!targetTeam) { LBC.notice("Team not found."); return; }
-      removeMember(sAssign, match[1]);
-      targetTeam.members.push(cleanName(match[1]));
-      save(sAssign);
-      LBC.notice("Assigned " + cleanName(match[1]) + " to " + targetTeam.name + ".");
-      return;
-    }
-
-    if ((match = raw.match(/^\/ab teams unassign\s+([A-Za-z0-9_-]{1,25})$/i))) {
-      var sUnassign = state();
-      var assigned = memberTeam(sUnassign, match[1]);
-      if (!assigned) { LBC.notice("That viewer isn't assigned to a team."); return; }
-      removeMember(sUnassign, match[1]);
-      save(sUnassign);
-      LBC.notice("Removed " + cleanName(match[1]) + " from " + assigned.name + ".");
-      return;
-    }
-
-    if (lower === "/ab teams list" || lower === "/ab teams") { showTeams(); return; }
-
-    if (lower === "/ab teams reset") {
-      var sReset = state();
-      sReset.teams.forEach(function (team) { team.score = 0; });
-      save(sReset);
-      LBC.notice("Brotherhood Wars scores reset. Team memberships are unchanged.");
-      return;
-    }
-
-    if ((match = raw.match(/^\/ab teams season start\s+(.+)$/i))) {
-      var seasonName = cleanTeamName(match[1]);
-      if (!seasonName) { LBC.notice("Give the season a name."); return; }
-      var sSeason = state();
-      var sorted = sSeason.teams.slice().sort(function (a, b) { return b.score - a.score; });
-      var previous = read(HISTORY_KEY, []);
-      if (!Array.isArray(previous)) previous = [];
-      previous.push({
-        name: sSeason.seasonName,
-        winner: sorted.length && sorted[0].score > 0 ? sorted[0].name : "",
-        score: sorted.length ? sorted[0].score : 0,
-        endedAt: Date.now()
-      });
-      LBC.runtime.kvSet(HISTORY_KEY, JSON.stringify(previous.slice(-MAX_HISTORY)));
-      sSeason.seasonName = seasonName;
-      sSeason.startedAt = Date.now();
-      sSeason.teams.forEach(function (team) { team.score = 0; });
-      save(sSeason);
-      LBC.notice("⚔️ New Brotherhood Wars season started: " + seasonName + ". Scores reset; memberships preserved.");
-      return;
-    }
-
-    if (lower === "/ab teams season history") { history(); return; }
-    if (lower === "/ab teams status") { showTeams(); return; }
-
-    LBC.notice("TEAMS: /ab teams create Name · delete Name · list · reset · assign username Team · unassign username · season start Name · season history. VIEWERS: !teams · !team · !jointeam Name · !leaveteam.");
-  }
-
-  LBC.teams = {
-    version: "1.0",
-    standings: function () {
-      var s = state();
-      return s.teams.slice().sort(function (a, b) { return b.score - a.score; });
-    },
-    memberTeam: function (username) {
-      var team = memberTeam(state(), username);
-      return team ? { id: team.id, name: team.name, score: team.score } : null;
-    }
-  };
-
-  LBC.gameLibrary.register("brotherhood-wars", {
-    onChatMessage: onChatMessage
-  });
-}());
-
-
-/* AFTERDARK BROTHERHOOD — BROTHERHOOD VAULT + HALL OF FAME */
-(function () {
-  "use strict";
-
-  var VAULT_KEY = "lbc_ab_vault_state";
-  var MEMBER_KEY = "lbc_ab_vault_members";
-  var EVENT_KEY = "lbc_ab_vault_events";
-  var INDEX_KEY = "lbc_ab_member_index";
-  var MAX_EVENTS = 100;
-  var MAX_INDEX = 250;
-
-  var MILESTONES = [
-    { id: "first-100", points: 100, title: "First 100 — The Door Opens" },
-    { id: "250", points: 250, title: "250 — The Room Is Alive" },
-    { id: "500", points: 500, title: "500 — Brotherhood Built" },
-    { id: "1000", points: 1000, title: "1,000 — Afterdark Established" },
-    { id: "2500", points: 2500, title: "2,500 — No Turning Back" },
-    { id: "5000", points: 5000, title: "5,000 — The Brotherhood Is Permanent" },
-    { id: "10000", points: 10000, title: "10,000 — Afterdark Immortalized" }
-  ];
-
-  function cleanName(value) {
-    return String(value || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25);
-  }
-
-  function read(key, fallback) {
-    try {
-      var raw = LBC.runtime.kvGet(key, "");
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (err) {
-      return fallback;
-    }
-  }
-
-  function write(key, value) {
-    try {
-      return LBC.runtime.kvSet(key, JSON.stringify(value)) !== false;
-    } catch (err) {
-      return false;
-    }
-  }
-
-  function vaultState() {
-    var state = read(VAULT_KEY, {});
-    state.totalGamePoints = Math.max(0, Number(state.totalGamePoints) || 0);
-    if (!state.unlocked || typeof state.unlocked !== "object") state.unlocked = {};
-    state.updatedAt = Math.max(0, Number(state.updatedAt) || 0);
-    return state;
-  }
-
-  function memberState(username) {
-    var name = cleanName(username);
-    var all = read(MEMBER_KEY, {});
-    var key = name.toLowerCase();
-    var item = all[key] || {};
-    return {
-      username: name,
-      gamePoints: Math.max(0, Number(item.gamePoints) || 0),
-      games: Math.max(0, Number(item.games) || 0),
-      wins: Math.max(0, Number(item.wins) || 0),
-      achievements: Array.isArray(item.achievements) ? item.achievements.slice() : [],
-      firstSeenAt: Number(item.firstSeenAt) || Date.now(),
-      lastActivityAt: Number(item.lastActivityAt) || 0
-    };
-  }
-
-  function saveMember(member) {
-    var all = read(MEMBER_KEY, {});
-    all[member.username.toLowerCase()] = member;
-    var keys = Object.keys(all);
-    if (keys.length > MAX_INDEX) {
-      keys.sort(function (a, b) {
-        return (Number(all[a].lastActivityAt) || 0) - (Number(all[b].lastActivityAt) || 0);
-      });
-      while (keys.length > MAX_INDEX) delete all[keys.shift()];
-    }
-    return write(MEMBER_KEY, all);
-  }
-
-  function remember(name) {
-    var index = read(INDEX_KEY, []);
-    if (!Array.isArray(index)) index = [];
-    if (!index.some(function (x) { return String(x).toLowerCase() === name.toLowerCase(); })) {
-      index.push(name);
-      if (index.length > MAX_INDEX) index = index.slice(-MAX_INDEX);
-      write(INDEX_KEY, index);
-    }
-  }
-
-  function awardAchievement(member, id, title, description) {
-    if (member.achievements.some(function (x) { return x.id === id; })) return false;
-    member.achievements.push({ id: id, title: title, description: description, unlockedAt: Date.now() });
-    LBC.notice("🏅 ACHIEVEMENT UNLOCKED — " + member.username + "\n" + title + ": " + description);
-    return true;
-  }
-
-  function updateAchievements(member) {
-    if (member.games >= 1) awardAchievement(member, "first-game", "First Night", "You played your first free game.");
-    if (member.games >= 10) awardAchievement(member, "regular", "Regular", "You have entered 10 free games.");
-    if (member.games >= 25) awardAchievement(member, "veteran", "Veteran", "You have entered 25 free games.");
-    if (member.wins >= 1) awardAchievement(member, "first-win", "First Blood", "You recorded your first game victory.");
-    if (member.wins >= 5) awardAchievement(member, "five-wins", "Getting Dangerous", "You have won five games.");
-    if (member.wins >= 25) awardAchievement(member, "twenty-five-wins", "Room Legend", "You have won 25 games.");
-    if (member.gamePoints >= 10) awardAchievement(member, "ten-points", "Contributor", "You earned 10 free-game points.");
-    if (member.gamePoints >= 50) awardAchievement(member, "fifty-points", "Pillar", "You earned 50 free-game points.");
-    if (member.gamePoints >= 100) awardAchievement(member, "hundred-points", "Afterdark Mainstay", "You earned 100 free-game points.");
-  }
-
-  function processAward(username, amount, reason) {
-    var name = cleanName(username);
-    var why = String(reason || "");
-    var points = Math.max(0, Math.floor(Number(amount) || 0));
-    var isGame = /participation|\bwin\b/i.test(why);
-    if (!name || !isGame || points < 1) return;
-
-    var state = vaultState();
-    var member = memberState(name);
-    var isParticipation = /participation/i.test(why);
-    var isWin = /\bwin\b/i.test(why);
-
-    state.totalGamePoints += points;
-    state.updatedAt = Date.now();
-    write(VAULT_KEY, state);
-
-    member.gamePoints += points;
-    if (isParticipation) member.games += 1;
-    if (isWin) member.wins += 1;
-    member.lastActivityAt = Date.now();
-    updateAchievements(member);
-    saveMember(member);
-    remember(name);
-
-    var events = read(EVENT_KEY, []);
-    if (!Array.isArray(events)) events = [];
-    events.unshift({
-      username: name,
-      points: points,
-      reason: why.slice(0, 60),
-      at: Date.now()
-    });
-    write(EVENT_KEY, events.slice(0, MAX_EVENTS));
-
-    MILESTONES.forEach(function (milestone) {
-      if (state.totalGamePoints >= milestone.points && !state.unlocked[milestone.id]) {
-        state.unlocked[milestone.id] = Date.now();
-        LBC.notice("🏛️ BROTHERHOOD VAULT UNLOCKED\n" + milestone.title +
-          "\nThe room reached " + milestone.points + " shared free-game points. This milestone belongs to everyone.");
-      }
-    });
-    write(VAULT_KEY, state);
-  }
-
-  if (LBC.rewards && typeof LBC.rewards.award === "function" && !LBC.rewards.award.__vaultAndHall) {
-    var originalAward = LBC.rewards.award;
-    var observedAward = function (username, amount, reason, id) {
-      var ok = originalAward.apply(null, arguments);
-      if (ok) processAward(username, amount, reason);
-      return ok;
-    };
-    observedAward.__vaultAndHall = true;
-    LBC.rewards.award = observedAward;
-  }
-
-  function vaultStatus() {
-    var state = vaultState();
-    var unlocked = MILESTONES.filter(function (m) { return !!state.unlocked[m.id]; }).map(function (m) {
-      return { id: m.id, title: m.title, points: m.points, unlockedAt: state.unlocked[m.id] };
-    });
-    var next = null;
-    for (var i = 0; i < MILESTONES.length; i++) {
-      if (state.totalGamePoints < MILESTONES[i].points) {
-        next = {
-          id: MILESTONES[i].id,
-          title: MILESTONES[i].title,
-          points: MILESTONES[i].points,
-          remaining: MILESTONES[i].points - state.totalGamePoints
-        };
-        break;
-      }
-    }
-    return {
-      totalGamePoints: state.totalGamePoints,
-      unlocked: unlocked,
-      totalMilestones: MILESTONES.length,
-      next: next,
-      updatedAt: state.updatedAt
-    };
-  }
-
-  function showVault(username) {
-    var status = vaultStatus();
-    var lines = MILESTONES.map(function (m) {
-      var done = status.unlocked.some(function (x) { return x.id === m.id; });
-      return (done ? "✓ " : "○ ") + m.points + " — " + m.title;
-    });
-    LBC.notice("🏛️ AFTERDARK BROTHERHOOD — THE VAULT\n" +
-      "Shared free-game points: " + status.totalGamePoints + "\n" +
-      "Unlocked: " + status.unlocked.length + " / " + status.totalMilestones + "\n" +
-      lines.join("\n") +
-      (status.next ? "\nNext: " + status.next.title + " · " + status.next.remaining + " points to go." : "\nEvery current Vault milestone has been reached. The room made history."),
-      username ? { toUsername: cleanName(username) } : {});
-  }
-
-  function hallRecords() {
-    var index = read(INDEX_KEY, []);
-    if (!Array.isArray(index)) index = [];
-    var rows = index.map(function (name) {
-      var p = LBC.members && LBC.members.profile ? LBC.members.profile(name) : null;
-      var v = memberState(name);
-      if (!p) return null;
-      return {
-        username: p.username,
-        games: Math.max(p.gamesPlayed, v.games),
-        wins: Math.max(p.wins, v.wins),
-        points: v.gamePoints
-      };
-    }).filter(Boolean);
-    function top(key) {
-      return rows.slice().sort(function (a, b) {
-        return b[key] - a[key] || a.username.localeCompare(b.username);
-      }).filter(function (x) { return x[key] > 0; }).slice(0, 5);
-    }
-    return {
-      membersTracked: rows.length,
-      topWins: top("wins"),
-      topGames: top("games"),
-      topPoints: top("points")
-    };
-  }
-
-  function showHall(kind, viewer) {
-    var mode = String(kind || "wins").toLowerCase();
-    var key = mode === "games" || mode === "participation" ? "games" : mode === "points" ? "points" : "wins";
-    var title = key === "games" ? "MOST GAMES PLAYED" : key === "points" ? "MOST FREE-GAME POINTS EARNED" : "MOST GAME VICTORIES";
-    var records = hallRecords();
-    var rows = key === "games" ? records.topGames : key === "points" ? records.topPoints : records.topWins;
-    LBC.notice("🏆 AFTERDARK BROTHERHOOD — HALL OF FAME\n" + title + "\n" +
-      (rows.length ? rows.map(function (x, i) {
-        return (i + 1) + ". " + x.username + " — " + x[key];
-      }).join("\n") : "No records yet.") +
-      "\nRecords are based on successful free-game awards; tips and bonus grants are excluded.",
-      viewer ? { toUsername: cleanName(viewer) } : {});
-  }
-
-  function showAchievements(username) {
-    var member = memberState(username);
-    if (!member.username) return;
-    LBC.notice("🏅 YOUR AFTERDARK ACHIEVEMENTS — " + member.username + "\n" +
-      (member.achievements.length ? member.achievements.map(function (x) {
-        return "✓ " + x.title + " — " + x.description;
-      }).join("\n") : "No achievements unlocked yet. Join a free game and start building your record."),
-      { toUsername: member.username });
-  }
-
-  function onChatMessage(body, username, isOwner) {
-    var raw = String(body || "").trim();
-    var lower = raw.toLowerCase();
-    var match;
-    if (lower === "!vault") { showVault(username); return; }
-    if (lower === "!achievements") { showAchievements(username); return; }
-    if ((match = lower.match(/^!(?:halloffame|hof)(?:\s+(wins|games|participation|points))?$/))) {
-      showHall(match[1] || "wins", username);
-      return;
-    }
-    if (!isOwner) return;
-    if (lower === "/ab vault" || lower === "/ab vault status") { showVault(""); return; }
-    if (lower === "/ab halloffame" || lower === "/ab hof") { showHall("wins", ""); return; }
-  }
-
-  LBC.vault = {
-    version: "1.0",
-    status: vaultStatus,
-    achievements: function (username) { return memberState(username).achievements.slice(); }
-  };
-  LBC.hallOfFame = {
-    version: "1.0",
-    records: hallRecords,
-    show: showHall
-  };
-
-  LBC.gameLibrary.register("vault-hall-of-fame", {
-    onChatMessage: onChatMessage
-  });
-}());
-
-
 /*
  * AFTERDARK BROTHERHOOD — ADVANCED VIEWER QUEUE
  * Persistent FIFO waitlist, active turn controls, and bookable scheduled slots.
@@ -3842,398 +3220,125 @@ var LBC = (function () {
 }());
 
 
-/*
- * AFTERDARK BROTHERHOOD — DAILY & WEEKLY MISSIONS
- * UTC-based repeatable missions, lifetime streak milestones, and idempotent
- * loyalty-point rewards. Only successful free-game participation/win awards
- * advance progress. Tips and manual bonus grants never count.
- */
+
+
+/* AFTERDARK BROTHERHOOD — UNIFIED LOYALTY + PERMANENT ROOM VIP */
 (function () {
   "use strict";
-  var PREFIX = "lbc_ab_missions_user_";
-  var INDEX_KEY = "lbc_ab_member_index";
-  var MAX_HISTORY = 20;
-  var DAILY = [
-    { id: "play-2", label: "Play 2 free games", metric: "games", target: 2, reward: 5 },
-    { id: "win-1", label: "Win 1 free game", metric: "wins", target: 1, reward: 8 },
-    { id: "points-10", label: "Earn 10 game points", metric: "points", target: 10, reward: 5 }
+  var LOYALTY_KEY = "lbc_ab_loyalty_activity_v1";
+  var SESSION_PREFIX = "lbc_ab_watch_session_";
+  var VIP_KEY = "lbc_ab_vip_members_v1";
+  var TIP_DEDUPE_KEY = "lbc_ab_vip_tip_dedupe_v1";
+  var WATCH_INTERVAL_SECONDS = 300;
+  var CHAT_COOLDOWN_SECONDS = 600;
+  var DAILY_VISIT_POINTS = 2;
+  var WATCH_POINTS_PER_INTERVAL = 1;
+  var CHAT_POINTS = 1;
+  var TIERS = [
+    { usd: 5000, name: "Brotherhood Royalty" },
+    { usd: 1000, name: "The Obsession" },
+    { usd: 500, name: "House Favorite" },
+    { usd: 250, name: "Bad Habit" },
+    { usd: 100, name: "Little Tease" },
+    { usd: 50, name: "The Curious" }
   ];
-  var WEEKLY = [
-    { id: "play-10", label: "Play 10 free games", metric: "games", target: 10, reward: 20 },
-    { id: "win-5", label: "Win 5 free games", metric: "wins", target: 5, reward: 30 },
-    { id: "points-50", label: "Earn 50 game points", metric: "points", target: 50, reward: 25 }
-  ];
-  var STREAKS = [
-    { days: 3, reward: 5 },
-    { days: 7, reward: 15 },
-    { days: 14, reward: 30 },
-    { days: 30, reward: 75 }
-  ];
-  function cleanName(value) {
-    return String(value || "").replace(/^@/, "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25);
-  }
+  function clean(value) { return String(value || "").replace(/^@/, "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0,25); }
+  function keyName(value) { return clean(value).toLowerCase(); }
   function read(key, fallback) {
-    try { var raw = LBC.runtime.kvGet(key, ""); return raw ? JSON.parse(raw) : fallback; }
-    catch (err) { return fallback; }
+    try { var raw=LBC.runtime.kvGet(key,""); return raw ? JSON.parse(raw) : fallback; } catch(e) { return fallback; }
   }
-  function write(key, value) {
-    try { return LBC.runtime.kvSet(key, JSON.stringify(value)) !== false; }
-    catch (err) { return false; }
+  function write(key, value) { try { return LBC.runtime.kvSet(key,JSON.stringify(value)); } catch(e) { return false; } }
+  function activity() {
+    var s=read(LOYALTY_KEY,{chat:{},daily:{}});
+    if(!s||typeof s!=="object") s={chat:{},daily:{}};
+    if(!s.chat) s.chat={}; if(!s.daily) s.daily={}; return s;
   }
-  function keyFor(name) { return PREFIX + cleanName(name).toLowerCase(); }
-  function dayKey(ms) { return new Date(ms).toISOString().slice(0, 10); }
-  function weekKey(ms) {
-    var d = new Date(ms);
-    d.setUTCHours(0, 0, 0, 0);
-    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
-    return dayKey(d.getTime());
+  function award(name, points, reason, id) {
+    return !!(LBC.rewards && LBC.rewards.award && LBC.rewards.award(name,points,reason,id));
   }
-  function blankPeriod(period) { return { period: period, games: 0, wins: 0, points: 0, claims: {} }; }
-  function stateFor(name) {
-    var user = cleanName(name), s = read(keyFor(user), {});
-    if (!s || typeof s !== "object") s = {};
-    s.version = 1; s.username = user;
-    s.daily = s.daily && typeof s.daily === "object" ? s.daily : blankPeriod(dayKey(Date.now()));
-    s.weekly = s.weekly && typeof s.weekly === "object" ? s.weekly : blankPeriod(weekKey(Date.now()));
-    s.streak = s.streak && typeof s.streak === "object" ? s.streak : { current: 0, best: 0, lastDay: "", claimed: {} };
-    s.streak.current = Math.max(0, Number(s.streak.current) || 0);
-    s.streak.best = Math.max(s.streak.current, Number(s.streak.best) || 0);
-    if (!s.streak.claimed || typeof s.streak.claimed !== "object") s.streak.claimed = {};
-    if (!Array.isArray(s.pending)) s.pending = [];
-    if (!Array.isArray(s.history)) s.history = [];
-    return s;
-  }
-  function ensurePeriods(s, now) {
-    var day = dayKey(now), week = weekKey(now), changed = false;
-    if (!s.daily || s.daily.period !== day) { s.daily = blankPeriod(day); changed = true; }
-    if (!s.weekly || s.weekly.period !== week) { s.weekly = blankPeriod(week); changed = true; }
-    return changed;
-  }
-  function saveState(s) { return write(keyFor(s.username), s); }
-  function effectiveStreak(s, now) {
-    if (!s.streak.lastDay) return 0;
-    var today = dayKey(now), yesterday = dayKey(now - 86400000);
-    return s.streak.lastDay === today || s.streak.lastDay === yesterday ? s.streak.current : 0;
-  }
-  function metricValue(record, metric) { return Math.max(0, Number(record[metric]) || 0); }
-  function rawAwardHasId(username, id) {
-    var p = read("lbc_ab_rewards_user_" + cleanName(username).toLowerCase(), {});
-    return !!(p && Array.isArray(p.ids) && p.ids.indexOf(id) >= 0);
-  }
-  function recordHistory(s, item) {
-    s.history.unshift({ mission: item.label, period: item.period, reward: item.points, at: Date.now(), kind: item.kind });
-    s.history = s.history.slice(0, MAX_HISTORY);
-  }
-  function queueClaim(s, kind, period, missionId, label, points) {
-    var id = "mission:" + kind + ":" + period + ":" + missionId + ":" + s.username.toLowerCase();
-    s.pending.push({ id: id, kind: kind, period: period, missionId: missionId, label: label,
-      points: points, username: s.username, createdAt: Date.now() });
-  }
-  function evaluateMissions(s, kind, definitions, record) {
-    definitions.forEach(function (mission) {
-      if (record.claims[mission.id] || metricValue(record, mission.metric) < mission.target) return;
-      record.claims[mission.id] = true;
-      queueClaim(s, kind, record.period, mission.id, mission.label, mission.reward);
-    });
-  }
-  function evaluateStreak(s) {
-    STREAKS.forEach(function (milestone) {
-      var id = String(milestone.days);
-      if (s.streak.current >= milestone.days && !s.streak.claimed[id]) {
-        s.streak.claimed[id] = true;
-        queueClaim(s, "streak", "lifetime", id, milestone.days + "-day activity streak", milestone.reward);
+  function dayKey() { return new Date().toISOString().slice(0,10); }
+  function enter(username) {
+    var name=clean(username), k=keyName(username), now=Math.floor(Date.now()/1000);
+    if(!name || k===keyName(LBC.runtime.kvGet("lbc_room_owner",""))) return;
+    var sessionKey=SESSION_PREFIX+k;
+    var existing=Number(LBC.runtime.kvGet(sessionKey,"0"))||0;
+    if(!existing) LBC.runtime.kvSet(sessionKey,String(now));
+    var s=activity(), today=dayKey();
+    if(s.daily[k]!==today) {
+      if(award(name,DAILY_VISIT_POINTS,"Daily room visit","loyalty:daily:"+k+":"+today)) {
+        s.daily[k]=today; write(LOYALTY_KEY,s);
       }
-    });
-  }
-  function attemptPending(s) {
-    if (!LBC.rewards || typeof LBC.rewards.award !== "function" || !s.pending.length) return false;
-    var remaining = [], changed = false;
-    s.pending.forEach(function (item) {
-      var delivered = rawAwardHasId(item.username, item.id);
-      if (!delivered) {
-        var ok = LBC.rewards.award(item.username, item.points,
-          (item.kind === "streak" ? "Mission streak bonus" : "Mission reward bonus"), item.id);
-        delivered = ok === true || rawAwardHasId(item.username, item.id);
-      }
-      if (delivered) {
-        recordHistory(s, item); changed = true;
-        LBC.notice("🎯 MISSION COMPLETE — " + item.label + " · +" + item.points +
-          " Brotherhood points.", { toUsername: item.username });
-      } else { remaining.push(item); }
-    });
-    if (remaining.length !== s.pending.length) changed = true;
-    s.pending = remaining;
-    if (changed) saveState(s);
-    return changed;
-  }
-  function processGameAward(username, amount, reason) {
-    var name = cleanName(username), why = String(reason || "").toLowerCase();
-    if (!name || /mission (?:streak )?reward/i.test(reason)) return;
-    var participation = /participation/i.test(why), win = /\bwin\b/i.test(why);
-    if (!participation && !win) return;
-    var s = stateFor(name), now = Date.now(), day = dayKey(now);
-    ensurePeriods(s, now);
-    var points = Math.max(0, Math.floor(Number(amount) || 0));
-    if (participation) { s.daily.games += 1; s.weekly.games += 1; }
-    if (win) { s.daily.wins += 1; s.weekly.wins += 1; }
-    s.daily.points += points; s.weekly.points += points;
-    if (s.streak.lastDay !== day) {
-      var yesterday = dayKey(now - 86400000);
-      s.streak.current = s.streak.lastDay === yesterday ? s.streak.current + 1 : 1;
-      s.streak.lastDay = day;
-      s.streak.best = Math.max(s.streak.best, s.streak.current);
     }
-    evaluateMissions(s, "daily", DAILY, s.daily);
-    evaluateMissions(s, "weekly", WEEKLY, s.weekly);
-    evaluateStreak(s);
-    saveState(s);
-    attemptPending(s);
   }
-  function completedCount(record, definitions) {
-    return definitions.filter(function (m) { return !!record.claims[m.id]; }).length;
-  }
-  function progressLine(definitions, record) {
-    return definitions.map(function (m) {
-      var value = metricValue(record, m.metric), complete = !!record.claims[m.id];
-      return (complete ? "✓ " : "• ") + m.label + " — " + Math.min(value, m.target) + "/" +
-        m.target + " · +" + m.reward + (complete ? " CLAIMED" : "");
-    }).join("\n");
-  }
-  function summary(name) {
-    var s = stateFor(name), now = Date.now();
-    if (ensurePeriods(s, now)) saveState(s);
-    attemptPending(s);
-    return { username: s.username, dailyCompleted: completedCount(s.daily, DAILY),
-      weeklyCompleted: completedCount(s.weekly, WEEKLY), streak: s.streak.current,
-      bestStreak: s.streak.best, pendingRewards: s.pending.length, daily: s.daily, weekly: s.weekly };
-  }
-  function showMissions(username) {
-    var s = stateFor(username), now = Date.now();
-    if (ensurePeriods(s, now)) saveState(s);
-    attemptPending(s);
-    LBC.notice("🎯 AFTERDARK MISSIONS — " + s.username + "\n" +
-      "DAILY · resets 00:00 UTC\n" + progressLine(DAILY, s.daily) + "\n" +
-      "WEEKLY · resets Monday 00:00 UTC\n" + progressLine(WEEKLY, s.weekly) + "\n" +
-      "Current streak: " + effectiveStreak(s, now) + " days · Best: " + s.streak.best +
-      "\nStreak bonuses: 3d +5 · 7d +15 · 14d +30 · 30d +75 points.\n" +
-      "Free games only. Tips and purchases do not count.", { toUsername: s.username });
-  }
-  function showStreak(username) {
-    var s = stateFor(username), now = Date.now();
-    if (ensurePeriods(s, now)) saveState(s);
-    attemptPending(s);
-    var next = null;
-    for (var i = 0; i < STREAKS.length; i++) {
-      if (!s.streak.claimed[String(STREAKS[i].days)]) { next = STREAKS[i]; break; }
+  function exit(username) {
+    var name=clean(username), k=keyName(username);
+    if(!name) return;
+    var sessionKey=SESSION_PREFIX+k;
+    var started=Number(LBC.runtime.kvGet(sessionKey,"0"))||0;
+    if(!started) return;
+    LBC.runtime.kvSet(sessionKey,"");
+    var elapsed=Math.max(0,Math.min(86400,Math.floor(Date.now()/1000)-started));
+    var intervals=Math.floor(elapsed/WATCH_INTERVAL_SECONDS);
+    if(intervals>0) {
+      var points=Math.min(288,intervals*WATCH_POINTS_PER_INTERVAL);
+      award(name,points,"Verified room viewing time","loyalty:watch:"+k+":"+started);
     }
-    LBC.notice("🔥 AFTERDARK STREAK — " + s.username + "\nCurrent: " + effectiveStreak(s, now) +
-      " consecutive UTC days · Best: " + s.streak.best +
-      (next ? "\nNext lifetime streak reward: " + next.days + " days · +" + next.reward + " points." :
-        "\nAll current lifetime streak milestones have been claimed.") +
-      "\nPlay at least one free game each UTC day to keep your streak.", { toUsername: s.username });
   }
-  function showHistory(username) {
-    var s = stateFor(username);
-    attemptPending(s);
-    LBC.notice("🏅 MISSION HISTORY — " + s.username + "\n" +
-      (s.history.length ? s.history.slice(0, 10).map(function (x) {
-        return x.mission + " · +" + x.reward + " pts · " + new Date(x.at).toISOString().slice(0, 10);
-      }).join("\n") : "No completed missions yet."), { toUsername: s.username });
+  function chat(username, body) {
+    var name=clean(username), k=keyName(username), text=String(body||"").trim();
+    if(!name || text.length<12 || text.split(/\s+/).length<3 || /^(!|\/)/.test(text)) return;
+    var s=activity(), now=Math.floor(Date.now()/1000), last=Number(s.chat[k])||0;
+    if(now-last<CHAT_COOLDOWN_SECONDS) return;
+    if(award(name,CHAT_POINTS,"Meaningful chat engagement","loyalty:chat:"+k+":"+now)) {
+      s.chat[k]=now; write(LOYALTY_KEY,s);
+    }
+  }
+  function vipState() {
+    var v=read(VIP_KEY,{members:{},events:[]});
+    if(!v||typeof v!=="object") v={members:{},events:[]};
+    if(!v.members) v.members={}; if(!Array.isArray(v.events)) v.events=[];
+    return v;
+  }
+  function tierFor(usd) {
+    for(var i=0;i<TIERS.length;i++) if(usd>=TIERS[i].usd) return TIERS[i].name;
+    return "Not yet VIP";
+  }
+  function summary(username) {
+    var v=vipState(), p=v.members[keyName(username)]||{username:clean(username),tokens:0,usd:0,firstTipAt:0,lastTipAt:0};
+    return {username:p.username||clean(username),tokens:Number(p.tokens)||0,usd:Number(p.usd)||0,tier:tierFor(Number(p.usd)||0)};
+  }
+  function recordTip(username,tokens,eventId) {
+    var name=clean(username), amount=Math.floor(Number(tokens)||0);
+    if(!name || amount<1) return false;
+    var v=vipState(), now=Math.floor(Date.now()/1000);
+    var id=String(eventId||"").slice(0,100);
+    if(!id) id="fallback:"+keyName(name)+":"+amount+":"+now;
+    if(v.events.indexOf(id)>=0) return false;
+    var k=keyName(name), p=v.members[k]||{username:name,tokens:0,usd:0,firstTipAt:now,lastTipAt:0};
+    p.username=name; p.tokens=(Number(p.tokens)||0)+amount;
+    p.usd=Math.round((Number(p.tokens)*0.05)*100)/100;
+    p.lastTipAt=now;
+    v.members[k]=p; v.events.push(id);
+    if(v.events.length>500) v.events=v.events.slice(-500);
+    return write(VIP_KEY,v)!==false;
+  }
+  function showVip(username,viewer) {
+    var s=summary(username);
+    LBC.notice("🖤 ROOM VIP — "+s.username+"\\nTier: "+s.tier+"\\nLifetime room tips: $"+s.usd.toFixed(2)+" ("+s.tokens+" tokens)\\nVIP status is permanent.",{toUsername:clean(viewer)});
   }
   function adminStatus() {
-    var index = read(INDEX_KEY, []);
-    if (!Array.isArray(index)) index = [];
-    var stats = { members: index.length, activeToday: 0, dailyClaims: 0, weeklyClaims: 0, pendingRewards: 0 };
-    var today = dayKey(Date.now());
-    index.forEach(function (name) {
-      var s = stateFor(name);
-      ensurePeriods(s, Date.now());
-      if (s.streak.lastDay === today) stats.activeToday += 1;
-      stats.dailyClaims += completedCount(s.daily, DAILY);
-      stats.weeklyClaims += completedCount(s.weekly, WEEKLY);
-      stats.pendingRewards += s.pending.length;
-    });
-    return stats;
+    var v=vipState(), names=Object.keys(v.members), total=0;
+    names.forEach(function(k){total+=Number(v.members[k].usd)||0;});
+    return {members:names.filter(function(k){return (Number(v.members[k].usd)||0)>=50;}).length,totalUsd:Math.round(total*100)/100};
   }
-  function onChatMessage(body, username) {
-    var low = String(body || "").trim().toLowerCase();
-    if (low === "!missions") { showMissions(username); return; }
-    if (low === "!streak") { showStreak(username); return; }
-    if (low === "!missionhistory") { showHistory(username); return; }
+  function onChatMessage(body,username,isOwner) {
+    var text=String(body||"").trim(), lower=text.toLowerCase(), m;
+    if((m=lower.match(/^!vip(?:\s+@?([a-z0-9_-]{1,25}))?$/))) { showVip(m[1]||username,username); return; }
+    if(!isOwner && !/^\//.test(text)) chat(username,text);
   }
-  function onAppStart() {
-    var index = read(INDEX_KEY, []);
-    if (!Array.isArray(index)) return;
-    index.forEach(function (name) {
-      var s = stateFor(name);
-      if (ensurePeriods(s, Date.now())) saveState(s);
-      attemptPending(s);
-    });
-  }
-  if (LBC.rewards && typeof LBC.rewards.award === "function" && !LBC.rewards.award.__missions) {
-    var previousAward = LBC.rewards.award;
-    var missionAward = function (username, amount, reason, id) {
-      var ok = previousAward.apply(null, arguments);
-      if (ok) {
-        try { processGameAward(username, amount, reason); }
-        catch (err) { LBC.notice("Mission progress couldn't be saved for that game award. The game reward itself was preserved."); }
-      }
-      return ok;
-    };
-    missionAward.__missions = true;
-    LBC.rewards.award = missionAward;
-  }
-  LBC.missions = {
-    version: "1.0",
-    getSummary: summary,
-    adminStatus: adminStatus,
-    definitions: function () { return { daily: DAILY.slice(), weekly: WEEKLY.slice(), streaks: STREAKS.slice() }; }
-  };
-  LBC.gameLibrary.register("daily-weekly-missions", { onChatMessage: onChatMessage, onAppStart: onAppStart });
-}());
-
-
-/*
- * AFTERDARK BROTHERHOOD — VIEWER REPUTATION & RANK PROGRESSION
- * +10 XP per successful free-game participation award; +25 per game win.
- * Tips, mission rewards, manual bonuses, purchases, giveaways and queue activity
- * never award reputation. Ranks are permanent; XP has no cash value.
- */
-(function () {
-  "use strict";
-  var PREFIX="lbc_ab_reputation_", INDEX_KEY="lbc_ab_member_index", MAX_AWARDS=500;
-  var RANKS=[
-    {id:"new-face",name:"New Face",xp:0},{id:"regular",name:"Regular",xp:100},
-    {id:"known-face",name:"Known Face",xp:300},{id:"after-hours",name:"After Hours",xp:750},
-    {id:"fixture",name:"Room Fixture",xp:1500},{id:"heavyweight",name:"Heavyweight",xp:3000},
-    {id:"legend",name:"Room Legend",xp:6000}
-  ];
-  var BADGES=[
-    {id:"first-night",name:"First Night",desc:"Entered your first free game.",games:1},
-    {id:"regular-attendance",name:"Regular Attendance",desc:"Entered 10 free games.",games:10},
-    {id:"veteran-presence",name:"Veteran Presence",desc:"Entered 25 free games.",games:25},
-    {id:"familiar-face",name:"Familiar Face",desc:"Entered 50 free games.",games:50},
-    {id:"room-fixture",name:"Room Fixture",desc:"Entered 100 free games.",games:100},
-    {id:"first-blood",name:"First Blood",desc:"Won your first free game.",wins:1},
-    {id:"dangerous",name:"Getting Dangerous",desc:"Won five free games.",wins:5},
-    {id:"serial-winner",name:"Serial Winner",desc:"Won 25 free games.",wins:25},
-    {id:"dominant",name:"Dominant",desc:"Won 50 free games.",wins:50}
-  ];
-  var TITLES=[
-    {id:"new-face",name:"New Face",rank:0},{id:"regular",name:"Regular",rank:1},
-    {id:"known-face",name:"Known Face",rank:2},{id:"after-hours",name:"After Hours",rank:3},
-    {id:"fixture",name:"Room Fixture",rank:4},{id:"heavyweight",name:"Heavyweight",rank:5},
-    {id:"legend",name:"Room Legend",rank:6},{id:"first-blood",name:"First Blood",badge:"first-blood"},
-    {id:"veteran",name:"Veteran",badge:"veteran-presence"},
-    {id:"serial-winner",name:"Serial Winner",badge:"serial-winner"}
-  ];
-  function clean(v){return String(v||"").replace(/^@/,"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,25);}
-  function key(n){return PREFIX+clean(n).toLowerCase();}
-  function read(k,d){try{var x=LBC.runtime.kvGet(k,"");return x?JSON.parse(x):d;}catch(e){return d;}}
-  function write(k,v){try{return LBC.runtime.kvSet(k,JSON.stringify(v))!==false;}catch(e){return false;}}
-  function fresh(n){return {version:1,username:clean(n),xp:0,games:0,wins:0,rankIndex:0,badges:[],activeTitle:"new-face",awardIds:[],firstAt:0,lastAt:0};}
-  function state(n){
-    var s=read(key(n),null);if(!s||typeof s!=="object")s=fresh(n);
-    s.username=clean(n);s.xp=Math.max(0,Number(s.xp)||0);
-    s.games=Math.max(0,Number(s.games)||0);s.wins=Math.max(0,Number(s.wins)||0);
-    s.rankIndex=Math.max(0,Math.min(RANKS.length-1,Number(s.rankIndex)||0));
-    if(!Array.isArray(s.badges))s.badges=[];if(!Array.isArray(s.awardIds))s.awardIds=[];
-    if(!TITLES.some(function(t){return t.id===s.activeTitle;}))s.activeTitle="new-face";
-    return s;
-  }
-  function hasBadge(s,id){return s.badges.some(function(b){return b.id===id;});}
-  function unlocked(s,t){return t.rank!==undefined?s.rankIndex>=t.rank:hasBadge(s,t.badge);}
-  function titleName(s){
-    var t=TITLES.filter(function(x){return x.id===s.activeTitle;})[0];
-    return t&&unlocked(s,t)?t.name:RANKS[s.rankIndex].name;
-  }
-  function summary(n){
-    var s=state(n),next=RANKS[s.rankIndex+1]||null;
-    return {username:s.username,xp:s.xp,rank:RANKS[s.rankIndex].name,rankId:RANKS[s.rankIndex].id,
-      nextRank:next?next.name:null,xpToNext:next?Math.max(0,next.xp-s.xp):0,
-      games:s.games,wins:s.wins,badges:s.badges.slice(),activeTitle:titleName(s),
-      titles:TITLES.filter(function(t){return unlocked(s,t);})};
-  }
-  function processAward(username,reason,id){
-    var n=clean(username),why=String(reason||"").toLowerCase();
-    var play=/participation/.test(why),win=/\bwin\b/.test(why);
-    if(!n||(!play&&!win))return;
-    var s=state(n),awardId=String(id||"");
-    if(awardId&&s.awardIds.indexOf(awardId)>=0)return;
-    s.xp+=(play?10:0)+(win?25:0);if(play)s.games++;if(win)s.wins++;
-    if(!s.firstAt)s.firstAt=Date.now();s.lastAt=Date.now();
-    if(awardId){s.awardIds.push(awardId);if(s.awardIds.length>MAX_AWARDS)s.awardIds=s.awardIds.slice(-MAX_AWARDS);}
-    var unlocks=[];
-    while(s.rankIndex+1<RANKS.length&&s.xp>=RANKS[s.rankIndex+1].xp){s.rankIndex++;unlocks.push({rank:RANKS[s.rankIndex].name,xp:RANKS[s.rankIndex].xp});}
-    BADGES.forEach(function(b){
-      if(((b.games&&s.games>=b.games)||(b.wins&&s.wins>=b.wins))&&!hasBadge(s,b.id)){
-        s.badges.push({id:b.id,name:b.name,description:b.desc,unlockedAt:Date.now()});
-        unlocks.push({badge:b.name});
-      }
-    });
-    if(!write(key(n),s)){LBC.notice("Reputation progress for "+n+" could not be saved; the game award itself was preserved.");return;}
-    unlocks.forEach(function(u){
-      if(u.badge)LBC.notice("🏅 REPUTATION BADGE — "+n+" unlocked "+u.badge+".");
-      else LBC.notice("⬆️ RANK UP — "+n+" reached "+u.rank+" ("+u.xp+" reputation XP).");
-    });
-  }
-  if(LBC.rewards&&typeof LBC.rewards.award==="function"&&!LBC.rewards.award.__reputation){
-    var prior=LBC.rewards.award;
-    var wrapped=function(username,amount,reason,id){
-      var ok=prior.apply(null,arguments);
-      if(ok){try{processAward(username,reason,id);}catch(e){LBC.notice("Reputation progress could not be updated for that game award.");}}
-      return ok;
-    };
-    wrapped.__reputation=true;LBC.rewards.award=wrapped;
-  }
-  function rankCommand(n){
-    var s=summary(n);
-    LBC.notice("🏅 AFTERDARK REPUTATION — "+s.username+"\nRank: "+s.rank+" · "+s.xp+" XP\nTitle: "+s.activeTitle+
-      "\nFree games: "+s.games+" · Wins: "+s.wins+
-      (s.nextRank?"\nNext: "+s.nextRank+" · "+s.xpToNext+" XP to go.":"\nHighest rank reached.")+
-      "\nEarn XP from free-game participation (+10) and wins (+25).",{toUsername:s.username});
-  }
-  function badgesCommand(n){
-    var s=summary(n);
-    LBC.notice("🏅 REPUTATION BADGES — "+s.username+"\n"+BADGES.map(function(b){
-      return (hasBadge(state(n),b.id)?"✓ ":"○ ")+b.name+" — "+b.desc;
-    }).join("\n"),{toUsername:s.username});
-  }
-  function titlesCommand(n){
-    var s=state(n);
-    LBC.notice("🎖️ UNLOCKABLE TITLES — "+s.username+"\n"+TITLES.map(function(t){
-      return (s.activeTitle===t.id?"★ ":unlocked(s,t)?"✓ ":"🔒 ")+t.name+" ["+t.id+"]";
-    }).join("\n")+"\nSet one with !title set <id>.",{toUsername:s.username});
-  }
-  function setTitle(n,id){
-    var s=state(n),t=TITLES.filter(function(x){return x.id===id;})[0];
-    if(!t){LBC.notice("Unknown title. Use !titles to see title IDs.",{toUsername:s.username});return;}
-    if(!unlocked(s,t)){LBC.notice("That title is locked. Keep building free-game reputation.",{toUsername:s.username});return;}
-    s.activeTitle=t.id;write(key(n),s);LBC.notice("🎖️ Your profile title is now "+t.name+".",{toUsername:s.username});
-  }
-  function rankings(){
-    var idx=read(INDEX_KEY,[]);if(!Array.isArray(idx))idx=[];
-    var rows=idx.map(summary).filter(function(s){return s.xp>0;})
-      .sort(function(a,b){return b.xp-a.xp||a.username.localeCompare(b.username);}).slice(0,5);
-    LBC.notice("🏆 AFTERDARK REPUTATION LEADERBOARD\n"+(rows.length?rows.map(function(s,i){
-      return (i+1)+". "+s.username+" — "+s.rank+" · "+s.xp+" XP";
-    }).join("\n"):"No reputation earned yet."));
-  }
-  function adminStatus(){
-    var idx=read(INDEX_KEY,[]);if(!Array.isArray(idx))idx=[];
-    var out={members:0,totalXp:0,badges:0};
-    idx.forEach(function(n){var s=state(n);if(s.xp>0)out.members++;out.totalXp+=s.xp;out.badges+=s.badges.length;});
-    return out;
-  }
-  function onChatMessage(body,username){
-    var low=String(body||"").trim().toLowerCase(),m;
-    if(low==="!rank"){rankCommand(username);return;}
-    if(low==="!badges"){badgesCommand(username);return;}
-    if(low==="!titles"||low==="!title"){titlesCommand(username);return;}
-    if(low==="!rankings"){rankings();return;}
-    if((m=low.match(/^!title\s+set\s+([a-z0-9-]{1,30})$/))){setTitle(username,m[1]);return;}
-  }
-  LBC.reputation={version:"1.0",summary:summary,ranks:function(){return RANKS.slice();},
-    badges:function(n){return summary(n).badges;},titles:function(n){return summary(n).titles;},adminStatus:adminStatus};
-  LBC.gameLibrary.register("viewer-reputation-ranks",{onChatMessage:onChatMessage});
+  LBC.loyalty={version:"2.0",enter:enter,exit:exit,chat:chat,settings:{
+    watchPointsPerFiveMinutes:WATCH_POINTS_PER_INTERVAL,chatPoints:CHAT_POINTS,chatCooldownSeconds:CHAT_COOLDOWN_SECONDS,dailyVisitPoints:DAILY_VISIT_POINTS
+  }};
+  LBC.vip={version:"1.0",summary:summary,recordTip:recordTip,tiers:function(){return TIERS.slice();},adminStatus:adminStatus};
+  LBC.gameLibrary.register("unified-loyalty-vip",{onChatMessage:onChatMessage});
 }());
