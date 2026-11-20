@@ -1,5 +1,5 @@
 /*
- * LOST BOYS CLUB — EVENT HANDLER RUNTIME BRIDGE
+ * AFTERDARK BROTHERHOOD — EVENT HANDLER RUNTIME BRIDGE
  * Chaturbate SDK access stays in event handlers, never Shared Code.
  */
 LBC.setRuntime({
@@ -13,7 +13,7 @@ LBC.setRuntime({
 });
 
 
-// LOST BOYS CLUB — Chat Message
+// AFTERDARK BROTHERHOOD — Chat Message
 LBC.onChatMessage($message.body, $user.username, $user.isOwner);
 
 var rawBody = String($message.body || "").trim();
@@ -34,7 +34,7 @@ if (body === "!clubstats") {
   var largestName = String(stats.largestName || "No record yet");
 
   $room.sendNotice(
-    "🏚️ LOST BOYS CLUB — CLUB SUPPORT\n" +
+    "🏚️ AFTERDARK BROTHERHOOD — brotherhood support\n" +
     "Total support: " + totalTokens + " tokens\n" +
     "Tips received: " + tipCount + "\n" +
     "Biggest single tip: " + largestTokens + " tokens" +
@@ -43,7 +43,7 @@ if (body === "!clubstats") {
 }
 
 // Refresh the native panel only for commands that can change game state.
-if (/^\s*(\/lbc\s+(start|stop)|!guess\s+\d{1,3})\s*$/i.test(rawBody)) {
+if (/^\s*(\/ab\s+(start|stop)|!guess\s+\d{1,3})\s*$/i.test(rawBody)) {
   $room.reloadPanel();
 }
 
