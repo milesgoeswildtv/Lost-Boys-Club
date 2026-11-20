@@ -329,5 +329,49 @@
         "default": 5000
       }
     }
+  },
+  "retention_controls": {
+    "type": "fieldset",
+    "title": "Viewer Retention",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "retentionEnabled": {
+        "type": "boolean",
+        "title": "Enable viewer recognition",
+        "description": "Track visits and member milestones.",
+        "default": true
+      },
+      "retentionPublicRecognition": {
+        "type": "boolean",
+        "title": "Public recognition notices",
+        "description": "Post recognition publicly; off sends it privately.",
+        "default": false
+      },
+      "retentionFirstVisitMessage": {
+        "type": "boolean",
+        "title": "First-visit welcome",
+        "description": "Recognize first-time visitors.",
+        "default": true
+      },
+      "retentionReturnRecognition": {
+        "type": "boolean",
+        "title": "Returning member greeting",
+        "description": "Greet members returning after 7 days.",
+        "default": true
+      },
+      "retentionMilestoneRecognition": {
+        "type": "boolean",
+        "title": "Visit milestone notices",
+        "description": "Recognize 5, 10, 25, 50 and 100 visits.",
+        "default": true
+      },
+      "retentionAnniversaryRecognition": {
+        "type": "boolean",
+        "title": "Membership anniversaries",
+        "description": "Recognize yearly membership anniversaries.",
+        "default": true
+      }
+    }
   }
 }
