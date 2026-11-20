@@ -159,7 +159,8 @@ Broadcaster status: `/ab admin vault`.
 - `!halloffame` or `!halloffame wins` — top game victories.
 - `!halloffame games` — most free-game participations.
 - `!halloffame points` — most points earned from free games.
-- `/ab admin halloffame` — broadcaster overview.
+- `/ab admin halloffame`
+- `/ab admin queue` — viewer waitlist and scheduled booking status — broadcaster overview.
 
 Personal achievements currently recognize first game, 10 and 25 games, first win, 5 and 25 wins, and 10, 50, and 100 free-game points. Hall of Fame and Vault point totals exclude manual bonus grants. These systems record successful loyalty awards and do not change the underlying reward balance.
 
