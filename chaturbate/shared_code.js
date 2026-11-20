@@ -4154,7 +4154,7 @@ var LBC = (function () {
   }
   function processAward(username,reason,id){
     var n=clean(username),why=String(reason||"").toLowerCase();
-    var play=/participation/.test(why),win=/\\bwin\\b/.test(why);
+    var play=/participation/.test(why),win=/\bwin\b/.test(why);
     if(!n||(!play&&!win))return;
     var s=state(n),awardId=String(id||"");
     if(awardId&&s.awardIds.indexOf(awardId)>=0)return;
