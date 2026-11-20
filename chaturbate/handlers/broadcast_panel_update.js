@@ -6,7 +6,8 @@ LBC.setRuntime({
   kvGet: function (key, fallback) { try { var value = $kv.get(key); return value === undefined || value === null || value === "" ? fallback : value; } catch (err) { return fallback; } },
   kvSet: function (key, value, ttlSeconds) { try { if (typeof ttlSeconds === "number" && ttlSeconds > 0) return $kv.set(key, value, ttlSeconds); return $kv.set(key, value); } catch (err) { return false; } },
   sendNotice: function (message, options) { try { return $room.sendNotice(String(message), options || {}); } catch (err) { return false; } },
-  setPanelTemplate: function (template) { try { return $room.setPanelTemplate(template); } catch (err) { return false; } }
+  setPanelTemplate: function (template) { try { return $room.setPanelTemplate(template); } catch (err) { return false; } },
+  getSetting: function (name, fallback) { try { var value = $settings && $settings[name]; return value === undefined || value === null ? fallback : value; } catch (err) { return fallback; } }
 });
 
 
@@ -38,4 +39,4 @@ $room.setPanelTemplate({
 });
 
 // M2.2 modular extension: override row two only when a room goal exists.
-LBC.updateGoalPanel();
+if (LBC.getSetting("broadcastPanelStyle", "Goal + Game") !== "Game + Record") LBC.updateGoalPanel();
