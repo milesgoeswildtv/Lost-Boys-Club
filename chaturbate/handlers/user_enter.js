@@ -16,4 +16,5 @@ LBC.setRuntime({
 
 // AFTERDARK BROTHERHOOD — User Enter
 if (LBC.getSetting("welcomeEnabled", true) !== false) LBC.onUserEnter($user.username);
+if (LBC.analytics) LBC.analytics.recordVisit($user.username);
 if (LBC.loyalty) LBC.loyalty.enter($user.username);
