@@ -4,21 +4,18 @@
     "title": "Room Controls",
     "collapsible": true,
     "collapsed": false,
-    "order": 0,
     "settings": {
       "welcomeEnabled": {
         "type": "boolean",
         "title": "Welcome new viewers",
         "description": "Show the existing Afterdark Brotherhood welcome notice when someone enters.",
-        "default": true,
-        "order": 0
+        "default": true
       },
       "tipAcknowledgmentEnabled": {
         "type": "boolean",
         "title": "Tip acknowledgment notices",
         "description": "Enable or silence the automatic thank-you notice after tips. Tip tracking and VIP attribution continue either way.",
-        "default": true,
-        "order": 1
+        "default": true
       }
     }
   },
@@ -27,14 +24,12 @@
     "title": "Loyalty & Rewards",
     "collapsible": true,
     "collapsed": false,
-    "order": 1,
     "settings": {
       "loyaltyEnabled": {
         "type": "boolean",
         "title": "Enable loyalty points",
         "description": "Master switch for daily visit, verified viewing, and meaningful-chat points. Existing balances and reward requests are preserved.",
-        "default": true,
-        "order": 0
+        "default": true
       },
       "dailyVisitPoints": {
         "type": "number",
@@ -42,8 +37,7 @@
         "description": "Points awarded once per viewer per UTC day. Set to 0 to disable this earning source.",
         "minimum": 0,
         "maximum": 20,
-        "default": 2,
-        "order": 1
+        "default": 2
       },
       "watchPointsPerFiveMinutes": {
         "type": "number",
@@ -51,8 +45,7 @@
         "description": "Points for each complete five-minute room-viewing interval. Set to 0 to disable viewing rewards.",
         "minimum": 0,
         "maximum": 20,
-        "default": 1,
-        "order": 2
+        "default": 1
       },
       "meaningfulChatPoints": {
         "type": "number",
@@ -60,16 +53,14 @@
         "description": "Points for a qualifying message after its cooldown. Set to 0 to disable this earning source.",
         "minimum": 0,
         "maximum": 20,
-        "default": 1,
-        "order": 3
+        "default": 1
       },
       "meaningfulChatCooldownMinutes": {
         "type": "number",
         "title": "Meaningful chat cooldown (minutes)",
         "minimum": 1,
         "maximum": 1440,
-        "default": 10,
-        "order": 4
+        "default": 10
       }
     }
   },
@@ -78,15 +69,13 @@
     "title": "Interface Notes",
     "collapsible": true,
     "collapsed": true,
-    "order": 2,
     "settings": {
       "settingsHelp": {
         "type": "string",
         "title": "Configuration guide",
         "description": "These are native Chaturbate App V2 settings. Changes apply automatically; persistent viewer balances and room activity are not reset.",
         "default": "Afterdark Brotherhood · No map. No supervision. Questionable decisions.",
-        "maxLength": 120,
-        "order": 0
+        "maxLength": 120
       }
     }
   },
@@ -95,30 +84,26 @@
     "title": "Tip Menu Display",
     "collapsible": true,
     "collapsed": false,
-    "order": 2,
     "settings": {
       "tipMenuDisplayEnabled": {
         "type": "boolean",
         "title": "Show informational tip menu",
         "description": "Controls !tipmenu and !menu display. Existing menu items are preserved.",
-        "default": true,
-        "order": 0
+        "default": true
       },
       "tipMenuTitle": {
         "type": "string",
         "title": "Tip menu heading",
         "description": "Custom heading shown above the existing menu items.",
         "maxLength": 70,
-        "default": "AFTERDARK BROTHERHOOD — TIP MENU",
-        "order": 1
+        "default": "AFTERDARK BROTHERHOOD — TIP MENU"
       },
       "tipMenuFooter": {
         "type": "string",
         "title": "Tip menu footer",
         "description": "Short note shown below menu items. Leave blank for no footer.",
         "maxLength": 180,
-        "default": "Tips are voluntary. Menu items are requests, not guaranteed outcomes. No game access or advantage is tied to tipping.",
-        "order": 2
+        "default": "Tips are voluntary. Menu items are requests, not guaranteed outcomes. No game access or advantage is tied to tipping."
       }
     }
   },
@@ -127,7 +112,6 @@
     "title": "Rotating Announcements",
     "collapsible": true,
     "collapsed": false,
-    "order": 3,
     "settings": {
       "announcementIntervalMinutes": {
         "type": "number",
@@ -135,8 +119,7 @@
         "description": "Used when rotating announcements are enabled. Minimum 5 minutes.",
         "minimum": 5,
         "maximum": 1440,
-        "default": 15,
-        "order": 0
+        "default": 15
       }
     }
   },
@@ -145,14 +128,12 @@
     "title": "Free Giveaways",
     "collapsible": true,
     "collapsed": false,
-    "order": 4,
     "settings": {
       "giveawayEnabled": {
         "type": "boolean",
         "title": "Enable free giveaways",
         "description": "Allows viewers to view and enter free giveaways. Disabling does not erase an active giveaway or its entries; broadcaster controls remain available.",
-        "default": true,
-        "order": 0
+        "default": true
       }
     }
   },
@@ -161,14 +142,12 @@
     "title": "Viewer Queue",
     "collapsible": true,
     "collapsed": false,
-    "order": 5,
     "settings": {
       "viewerQueueEnabled": {
         "type": "boolean",
         "title": "Enable viewer queue",
         "description": "Allows viewers to join, leave, view, and book queue slots. Existing queue and bookings are preserved when disabled.",
-        "default": true,
-        "order": 0
+        "default": true
       },
       "viewerQueueMaxWaitlist": {
         "type": "number",
@@ -176,8 +155,7 @@
         "description": "Caps the queue capacity. Existing stored entries are retained if the cap is lowered.",
         "minimum": 1,
         "maximum": 50,
-        "default": 50,
-        "order": 1
+        "default": 50
       }
     }
   },
@@ -186,7 +164,6 @@
     "title": "Room Goal Defaults",
     "collapsible": true,
     "collapsed": false,
-    "order": 6,
     "settings": {
       "goalDefaultDurationMinutes": {
         "type": "number",
@@ -194,40 +171,34 @@
         "description": "Applied to newly created untimed goals and queued stages. Set to 0 for no timer. Explicit timed-goal commands still take priority.",
         "minimum": 0,
         "maximum": 1440,
-        "default": 0,
-        "order": 0
+        "default": 0
       },
       "goalMilestone25Enabled": {
         "type": "boolean",
         "title": "Announce 25% milestone",
-        "default": true,
-        "order": 1
+        "default": true
       },
       "goalMilestone50Enabled": {
         "type": "boolean",
         "title": "Announce 50% milestone",
-        "default": true,
-        "order": 2
+        "default": true
       },
       "goalMilestone75Enabled": {
         "type": "boolean",
         "title": "Announce 75% milestone",
-        "default": true,
-        "order": 3
+        "default": true
       },
       "goalCarryoverDefault": {
         "type": "boolean",
         "title": "Default token overflow carryover",
         "description": "Initial default for goals before the broadcaster explicitly changes carryover.",
-        "default": true,
-        "order": 4
+        "default": true
       },
       "goalAutoRepeatDefault": {
         "type": "boolean",
         "title": "Default automatic goal repeat",
         "description": "Initial default for goals before the broadcaster explicitly changes repeat.",
-        "default": false,
-        "order": 5
+        "default": false
       }
     }
   },
@@ -236,7 +207,6 @@
     "title": "Broadcast Panel",
     "collapsible": true,
     "collapsed": false,
-    "order": 7,
     "settings": {
       "broadcastPanelStyle": {
         "type": "string",
@@ -246,8 +216,7 @@
           "Goal + Game",
           "Game + Record"
         ],
-        "default": "Goal + Game",
-        "order": 0
+        "default": "Goal + Game"
       }
     }
   },
@@ -256,42 +225,36 @@
     "title": "Game Availability",
     "collapsible": true,
     "collapsed": false,
-    "order": 8,
     "settings": {
       "gameCodebreakerEnabled": {
         "type": "boolean",
         "title": "Codebreaker",
         "description": "Allow viewers to submit answers. Broadcaster controls remain available.",
-        "default": true,
-        "order": 0
+        "default": true
       },
       "gameWordScrambleEnabled": {
         "type": "boolean",
         "title": "Word Scramble",
         "description": "Allow viewers to submit answers. Broadcaster controls remain available.",
-        "default": true,
-        "order": 1
+        "default": true
       },
       "gameWouldYouRatherEnabled": {
         "type": "boolean",
         "title": "Dirty Would You Rather",
         "description": "Allow viewer participation. Broadcaster controls remain available.",
-        "default": true,
-        "order": 2
+        "default": true
       },
       "gamePositionImpossibleEnabled": {
         "type": "boolean",
         "title": "Position Impossible",
         "description": "Allow viewer participation. Broadcaster controls remain available.",
-        "default": true,
-        "order": 3
+        "default": true
       },
       "gameDirtyCharadesEnabled": {
         "type": "boolean",
         "title": "Dirty Charades",
         "description": "Allow viewer participation. Broadcaster controls remain available.",
-        "default": true,
-        "order": 4
+        "default": true
       }
     }
   },
@@ -300,22 +263,19 @@
     "title": "Rewards Redemptions",
     "collapsible": true,
     "collapsed": false,
-    "order": 9,
     "settings": {
       "rewardRedemptionEnabled": {
         "type": "boolean",
         "title": "Allow viewer reward browsing and redemption",
         "description": "Disabling hides the public catalogue and blocks new redemptions. Points and existing pending requests are preserved; broadcaster review controls remain available.",
-        "default": true,
-        "order": 0
+        "default": true
       },
       "rewardMaxPendingRequests": {
         "type": "number",
         "title": "Maximum pending requests per viewer",
         "minimum": 1,
         "maximum": 10,
-        "default": 3,
-        "order": 1
+        "default": 3
       }
     }
   },
@@ -324,7 +284,6 @@
     "title": "Permanent VIP Thresholds",
     "collapsible": true,
     "collapsed": false,
-    "order": 10,
     "settings": {
       "vipCuriousThresholdUsd": {
         "type": "number",
@@ -332,48 +291,42 @@
         "description": "Lifetime direct room tips required. Higher tiers are automatically kept above this threshold.",
         "minimum": 1,
         "maximum": 1000000,
-        "default": 50,
-        "order": 0
+        "default": 50
       },
       "vipLittleTeaseThresholdUsd": {
         "type": "number",
         "title": "Little Tease ($)",
         "minimum": 1,
         "maximum": 1000000,
-        "default": 100,
-        "order": 1
+        "default": 100
       },
       "vipBadHabitThresholdUsd": {
         "type": "number",
         "title": "Bad Habit ($)",
         "minimum": 1,
         "maximum": 1000000,
-        "default": 250,
-        "order": 2
+        "default": 250
       },
       "vipHouseFavoriteThresholdUsd": {
         "type": "number",
         "title": "House Favorite ($)",
         "minimum": 1,
         "maximum": 1000000,
-        "default": 500,
-        "order": 3
+        "default": 500
       },
       "vipObsessionThresholdUsd": {
         "type": "number",
         "title": "The Obsession ($)",
         "minimum": 1,
         "maximum": 1000000,
-        "default": 1000,
-        "order": 4
+        "default": 1000
       },
       "vipRoyaltyThresholdUsd": {
         "type": "number",
         "title": "Brotherhood Royalty ($)",
         "minimum": 1,
         "maximum": 1000000,
-        "default": 5000,
-        "order": 5
+        "default": 5000
       }
     }
   }
