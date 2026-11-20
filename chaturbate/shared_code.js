@@ -105,7 +105,7 @@ var LBC = (function () {
       "!giveaway / !enter — view or enter a free room giveaway",
       "!profile — view your profile, game stats, loyalty balance, and VIP tier",
       "!vip — view your permanent room VIP tier",
-      "!story — check the live One Word Story round; contribute with !word <one word>",
+      "!story — check the live One Word Story round; contribute with !addword <one word>",
       "!leaderboard wins|games|points — room leaderboards",
       "!queue / !joinqueue / !leavequeue — view and join the viewer waitlist",
       "!slots / !book 1 / !cancelbooking — scheduled viewer slots",
@@ -4039,13 +4039,13 @@ var LBC = (function () {
     if (!LBC.gameLibrary.claim("one-word-story", "One Word Story")) return;
     state = {active:true,words:[],contributors:{},startedAt:Math.floor(Date.now()/1000),endsAt:0};
     schedule(DURATION);
-    LBC.notice("📖 ONE WORD STORY IS LIVE\nThe room writes one ridiculous story together. Each viewer gets ONE word.\nSend !word followed by a single word. 15 contributors maximum · 2 minutes.\nNo tips, purchases, or points are needed to join.");
+    LBC.notice("📖 ONE WORD STORY IS LIVE\nThe room writes one ridiculous story together. Each viewer gets ONE word.\nSend !addword followed by a single word. 15 contributors maximum · 2 minutes.\nNo tips, purchases, or points are needed to join.");
     LBC.runtime.reloadPanel();
   }
   function contribute(username, raw) {
     if (!state || !state.active) { LBC.notice("There isn't a One Word Story round running.",{toUsername:cleanName(username)}); return; }
     var word=cleanWord(raw), name=cleanName(username), key=name.toLowerCase();
-    if (!word) { LBC.notice("Use one word containing letters only (up to 20 characters).",{toUsername:name}); return; }
+    if (!addword) { LBC.notice("Use one word containing letters only (up to 20 characters).",{toUsername:name}); return; }
     if (state.contributors[key]) { LBC.notice("You already added your word. Let someone else steer this disaster.",{toUsername:name}); return; }
     state.contributors[key]=true; state.words.push({username:name,word:word}); save();
     if (LBC.rewards) LBC.rewards.award(name,1,"One Word Story participation","play:one-word-story:"+state.startedAt+":"+key);
@@ -4059,10 +4059,10 @@ var LBC = (function () {
     if(lower==="!story"){
       var current=state||read();
       if(!current) LBC.notice("No One Word Story is running. The room is waiting for its opening sentence.",{toUsername:cleanName(username)});
-      else LBC.notice("📖 ONE WORD STORY · "+current.words.length+"/"+MAX_WORDS+" words · "+Math.max(0,current.endsAt-Math.floor(Date.now()/1000))+"s left. Add yours with !word <one word>.",{toUsername:cleanName(username)});
+      else LBC.notice("📖 ONE WORD STORY · "+current.words.length+"/"+MAX_WORDS+" words · "+Math.max(0,current.endsAt-Math.floor(Date.now()/1000))+"s left. Add yours with !addword <one word>.",{toUsername:cleanName(username)});
       return;
     }
-    if((m=t.match(/^!word\s+(.+)$/i))){if(!state)state=read();contribute(username,m[1]);}
+    if((m=t.match(/^!addword\s+(.+)$/i))){if(!state)state=read();contribute(username,m[1]);}
   }
   function onCallback(label){if(label!==TIMER)return;if(!state)state=read();if(state&&state.active)finish("timeout");}
   var recovered=false;
