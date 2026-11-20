@@ -26,6 +26,7 @@ GitHub does not synchronize this manifest into the Developer Portal. Saving this
 - **Enable viewer queue** and **maximum waitlist size** — gates viewer queue interactions and caps queue capacity without deleting stored queue entries or bookings.
 - **Room goal defaults** — default timer for newly created goals, default 25/50/75% milestone announcements (100% is always retained), and initial carryover/repeat preferences.
 - **Broadcast panel layout** — choose the existing goal-focused layout or the game-and-record layout.
+- **Game availability** — independently enable/disable viewer participation in Codebreaker, Word Scramble, Dirty Would You Rather, Position Impossible, and Dirty Charades. Broadcaster controls remain available when a game is disabled.
 
 All fields have safe defaults matching the current behavior. Existing points, reward catalogues, pending redemptions, VIP totals, goals, and other persistent KV data are not reset by changing these settings.
 
