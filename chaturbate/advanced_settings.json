@@ -180,5 +180,75 @@
         "order": 1
       }
     }
+  },
+  "goal_controls": {
+    "type": "fieldset",
+    "title": "Room Goal Defaults",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 6,
+    "settings": {
+      "goalDefaultDurationMinutes": {
+        "type": "number",
+        "title": "Default goal timer (minutes)",
+        "description": "Applied to newly created untimed goals and queued stages. Set to 0 for no timer. Explicit timed-goal commands still take priority.",
+        "minimum": 0,
+        "maximum": 1440,
+        "default": 0,
+        "order": 0
+      },
+      "goalMilestone25Enabled": {
+        "type": "boolean",
+        "title": "Announce 25% milestone",
+        "default": true,
+        "order": 1
+      },
+      "goalMilestone50Enabled": {
+        "type": "boolean",
+        "title": "Announce 50% milestone",
+        "default": true,
+        "order": 2
+      },
+      "goalMilestone75Enabled": {
+        "type": "boolean",
+        "title": "Announce 75% milestone",
+        "default": true,
+        "order": 3
+      },
+      "goalCarryoverDefault": {
+        "type": "boolean",
+        "title": "Default token overflow carryover",
+        "description": "Initial default for goals before the broadcaster explicitly changes carryover.",
+        "default": true,
+        "order": 4
+      },
+      "goalAutoRepeatDefault": {
+        "type": "boolean",
+        "title": "Default automatic goal repeat",
+        "description": "Initial default for goals before the broadcaster explicitly changes repeat.",
+        "default": false,
+        "order": 5
+      }
+    }
+  },
+  "panel_controls": {
+    "type": "fieldset",
+    "title": "Broadcast Panel",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 7,
+    "settings": {
+      "broadcastPanelStyle": {
+        "type": "string",
+        "title": "Room panel layout",
+        "description": "Choose whether the native panel emphasizes the live goal or the game and record.",
+        "enum": [
+          "Goal + Game",
+          "Game + Record"
+        ],
+        "default": "Goal + Game",
+        "order": 0
+      }
+    }
   }
 }
