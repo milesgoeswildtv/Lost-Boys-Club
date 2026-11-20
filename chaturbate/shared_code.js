@@ -3114,7 +3114,7 @@ var LBC = (function () {
     say("🖤 AFTERDARK BROTHERHOOD — CONTROL CENTER\n" +
       "Choose a section by sending /ab followed by its number.\n" +
       "1. Games\n2. Goals\n3. Tip Menu\n4. Rewards\n5. Brotherhood / VIP\n" +
-      "6. Giveaways\\n7. Viewer Queue\\n8. Announcements\\n9. Live Dashboard\\n10. Settings\\n11. Engagement Controls\\n\\n" +
+      "6. Giveaways\n7. Viewer Queue\n8. Announcements\n9. Live Dashboard\n10. Settings\n11. Engagement Controls\n\n" +
       "Use /ab anytime to return here. /ab back returns one level.");
   }
   function section(state, name) {
@@ -3124,8 +3124,8 @@ var LBC = (function () {
     if (name === "games") {
       var activeGame = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
       var baseGame = readJson("lbc_v1_game", {});
-      say("GAMES" + (activeGame && activeGame.active ? "\\nActive: " + activeGame.name : baseGame && baseGame.active ? "\\nActive: Guess the Number" : "\\nNo game running") +
-        "\\n1. Codebreaker\\n2. Word Scramble\\n3. Dirty Would You Rather\\n4. Position Impossible\\n5. Dirty Charades\\n6. Guess the Number\\n7. One Word Story\\n8. Afterdark Dare Deck\\n9. Stop active game\\n10. Return to main menu");
+      say("GAMES" + (activeGame && activeGame.active ? "\nActive: " + activeGame.name : baseGame && baseGame.active ? "\nActive: Guess the Number" : "\nNo game running") +
+        "\n1. Codebreaker\n2. Word Scramble\n3. Dirty Would You Rather\n4. Position Impossible\n5. Dirty Charades\n6. Guess the Number\n7. One Word Story\n8. Afterdark Dare Deck\n9. Stop active game\n10. Return to main menu");
     } else if (name === "goals") {
       if (LBC.controlCenter) LBC.controlCenter.detail("goal");
       say("GOALS — choose an action\n1. View goal status\n2. Create an untimed goal\n3. Create a timed goal\n4. Queue a goal stage\n5. Pause / resume current goal\n6. View goal queue\n7. Return to main menu");
@@ -3157,15 +3157,15 @@ var LBC = (function () {
       var publicRecognition = LBC.getSetting("retentionPublicRecognition", false) === true;
       var storyOn = LBC.getSetting("gameOneWordStoryEnabled", true) !== false;
       var dareOn = LBC.getSetting("gameAfterdarkDareDeckEnabled", true) !== false;
-      say("ENGAGEMENT CONTROLS\\n" +
-        "Viewer Retention: " + (retentionOn ? "ON" : "OFF") + "\\n" +
-        "Recognition: " + (publicRecognition ? "PUBLIC" : "PRIVATE") + "\\n" +
-        "One Word Story: " + (storyOn ? "ENABLED" : "DISABLED") + "\\n" +
-        "Afterdark Dare Deck: " + (dareOn ? "ENABLED" : "DISABLED") + "\\n\\n" +
-        "1. Toggle Viewer Retention\\n2. Toggle Public / Private Recognition\\n" +
-        "3. Toggle First-Visit Greeting\\n4. Toggle Return Recognition\\n" +
-        "5. Toggle Visit Milestones\\n6. Toggle Anniversary Recognition\\n" +
-        "7. Enable / Disable One Word Story\\n8. Enable / Disable Dare Deck\\n" +
+      say("ENGAGEMENT CONTROLS\n" +
+        "Viewer Retention: " + (retentionOn ? "ON" : "OFF") + "\n" +
+        "Recognition: " + (publicRecognition ? "PUBLIC" : "PRIVATE") + "\n" +
+        "One Word Story: " + (storyOn ? "ENABLED" : "DISABLED") + "\n" +
+        "Afterdark Dare Deck: " + (dareOn ? "ENABLED" : "DISABLED") + "\n\n" +
+        "1. Toggle Viewer Retention\n2. Toggle Public / Private Recognition\n" +
+        "3. Toggle First-Visit Greeting\n4. Toggle Return Recognition\n" +
+        "5. Toggle Visit Milestones\n6. Toggle Anniversary Recognition\n" +
+        "7. Enable / Disable One Word Story\n8. Enable / Disable Dare Deck\n" +
         "9. Return to main menu");
 
     }
