@@ -1580,7 +1580,7 @@ var LBC = (function () {
   "use strict";
 
   if (LBC.__afterHoursPackInstalled) return;
-  if (!ab.gameLibrary) {
+  if (!LBC.gameLibrary) {
     LBC.notice("Game Library not found. After Hours Pack was not loaded.");
     return;
   }
@@ -1770,7 +1770,7 @@ var LBC = (function () {
       return false;
     }
 
-    if (!ab.gameLibrary.claim(id, name)) return false;
+    if (!LBC.gameLibrary.claim(id, name)) return false;
 
     state = {
       id: id,
@@ -2343,7 +2343,7 @@ var LBC = (function () {
       return;
     }
 
-    if (!ab.gameLibrary.claim(state.id, state.name)) {
+    if (!LBC.gameLibrary.claim(state.id, state.name)) {
       finish("interrupted");
       return;
     }
