@@ -2833,8 +2833,11 @@ var LBC = (function () {
     var announcements = readJson("lbc_m2_announcements", {});
     var goalTarget = Math.max(0, Number(goal.target) || 0);
     var goalProgress = Math.max(0, (Number(tipStats.totalTokens) || 0) - (Number(goal.startTotal) || 0));
+    var goalTimer = Number(goal.durationMinutes) > 0 ?
+      (goal.paused ? " · timer paused" : goal.deadlineAt ? " · " + Math.max(0, Math.ceil((Number(goal.deadlineAt) - Date.now()) / 60000)) + "m left" : "") : "";
     var goalLine = goalTarget ? (goal.paused ? "PAUSED " : goal.active ? "LIVE " : goal.completed ? "REACHED " : "OFF ") +
-      String(goal.title || "Room Goal") + " (" + Math.min(goalProgress, goalTarget) + "/" + goalTarget + ")" : "not configured";
+      String(goal.title || "Room Goal") + " (" + Math.min(goalProgress, goalTarget) + "/" + goalTarget + ")" + goalTimer +
+      (Array.isArray(goal.queue) && goal.queue.length ? " · " + goal.queue.length + " stages queued" : "") : "not configured";
     var pending = Array.isArray(requests) ? requests.filter(function (r) { return r && r.status === "pending"; }).length : 0;
     var activeName = game && game.active ? String(game.name || game.id || "Unknown game") : "none";
     var giveaway = readJson("lbc_ab_giveaway_current", null);
@@ -2870,14 +2873,17 @@ var LBC = (function () {
     }
     if (value === "goal" || value === "goals") {
       var g = readJson("lbc_m2_room_goal", {});
-      var s = readJson("lbc_m2_tip_stats", {});
+      var stats = readJson("lbc_m2_tip_stats", {});
       var target = Math.max(0, Number(g.target) || 0);
-      var progress = Math.max(0, (Number(s.totalTokens) || 0) - (Number(g.startTotal) || 0));
-      LBC.notice("🏁 GOAL CONTROL\n" + (target ? String(g.title || "Room Goal") + " · " +
+      var progress = Math.max(0, (Number(stats.totalTokens) || 0) - (Number(g.startTotal) || 0));
+      var timerText = Number(g.durationMinutes) > 0 ?
+        (g.paused ? " · timer paused" : g.deadlineAt ? " · " + Math.max(0, Math.ceil((Number(g.deadlineAt) - Date.now()) / 60000)) + "m left" : "") : " · untimed";
+      LBC.notice("🏁 GOAL CONTROL\\n" + (target ? String(g.title || "Room Goal") + " · " +
         (g.paused ? "PAUSED" : g.active ? "LIVE" : g.completed ? "REACHED" : "OFF") +
-        " · " + Math.min(progress, target) + "/" + target + " · queue " +
-        (Array.isArray(g.queue) ? g.queue.length : 0) : "No goal configured.") +
-        "\nCommands: /ab goal set · queue · pause · resume · extend · reset · off.");
+        " · " + Math.min(progress, target) + "/" + target + timerText + " · queue " +
+        (Array.isArray(g.queue) ? g.queue.length : 0) + " · carryover " + (g.carryover === false ? "OFF" : "ON") +
+        " · repeat " + (g.repeat === true ? "ON" : "OFF") : "No goal configured.") +
+        "\\nCommands: /ab admin goal timed 1000 30 Title · queue timed 2000 20 Next · milestones · pause · resume · extend · carryover on|off · repeat on|off · reset · off.");
       return;
     }
     if (value === "rewards") {
