@@ -27,6 +27,8 @@ GitHub does not synchronize this manifest into the Developer Portal. Saving this
 - **Room goal defaults** — default timer for newly created goals, default 25/50/75% milestone announcements (100% is always retained), and initial carryover/repeat preferences.
 - **Broadcast panel layout** — choose the existing goal-focused layout or the game-and-record layout.
 - **Game availability** — independently enable/disable viewer participation in Codebreaker, Word Scramble, Dirty Would You Rather, Position Impossible, and Dirty Charades. Broadcaster controls remain available when a game is disabled.
+- **Rewards redemptions** — enable/disable public catalogue browsing and new redemption requests, and set each viewer’s pending-request limit. Existing points and requests are preserved.
+- **Permanent VIP thresholds** — configure all six lifetime direct-room-tip thresholds. Values are kept in ascending order automatically; existing tip totals are preserved and tier labels recalculate from the current thresholds.
 
 All fields have safe defaults matching the current behavior. Existing points, reward catalogues, pending redemptions, VIP totals, goals, and other persistent KV data are not reset by changing these settings.
 
