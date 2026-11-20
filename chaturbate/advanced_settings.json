@@ -261,6 +261,12 @@
         "title": "One Word Story",
         "description": "Allow viewers to join the room story.",
         "default": true
+      },
+      "gameAfterdarkDareDeckEnabled": {
+        "type": "boolean",
+        "title": "Afterdark Dare Deck",
+        "description": "Allow viewers to join timed prompt rounds.",
+        "default": true
       }
     }
   },
