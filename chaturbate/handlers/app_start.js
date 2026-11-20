@@ -14,6 +14,8 @@ LBC.setRuntime({
 
 
 // AFTERDARK BROTHERHOOD — App Start
+// Drop stale viewing sessions; presence cannot be verified across app restarts.
+if (LBC.loyalty) LBC.loyalty.resetSessions();
 // Shared Code is executed before this handler.
 var state = $kv.get("lbc_v1_game", "");
 if (!state) {
