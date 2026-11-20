@@ -4077,3 +4077,149 @@ var LBC = (function () {
   };
   LBC.gameLibrary.register("daily-weekly-missions", { onChatMessage: onChatMessage, onAppStart: onAppStart });
 }());
+
+
+/*
+ * AFTERDARK BROTHERHOOD — VIEWER REPUTATION & RANK PROGRESSION
+ * +10 XP per successful free-game participation award; +25 per game win.
+ * Tips, mission rewards, manual bonuses, purchases, giveaways and queue activity
+ * never award reputation. Ranks are permanent; XP has no cash value.
+ */
+(function () {
+  "use strict";
+  var PREFIX="lbc_ab_reputation_", INDEX_KEY="lbc_ab_member_index", MAX_AWARDS=500;
+  var RANKS=[
+    {id:"new-face",name:"New Face",xp:0},{id:"regular",name:"Regular",xp:100},
+    {id:"known-face",name:"Known Face",xp:300},{id:"after-hours",name:"After Hours",xp:750},
+    {id:"fixture",name:"Room Fixture",xp:1500},{id:"heavyweight",name:"Heavyweight",xp:3000},
+    {id:"legend",name:"Room Legend",xp:6000}
+  ];
+  var BADGES=[
+    {id:"first-night",name:"First Night",desc:"Entered your first free game.",games:1},
+    {id:"regular-attendance",name:"Regular Attendance",desc:"Entered 10 free games.",games:10},
+    {id:"veteran-presence",name:"Veteran Presence",desc:"Entered 25 free games.",games:25},
+    {id:"familiar-face",name:"Familiar Face",desc:"Entered 50 free games.",games:50},
+    {id:"room-fixture",name:"Room Fixture",desc:"Entered 100 free games.",games:100},
+    {id:"first-blood",name:"First Blood",desc:"Won your first free game.",wins:1},
+    {id:"dangerous",name:"Getting Dangerous",desc:"Won five free games.",wins:5},
+    {id:"serial-winner",name:"Serial Winner",desc:"Won 25 free games.",wins:25},
+    {id:"dominant",name:"Dominant",desc:"Won 50 free games.",wins:50}
+  ];
+  var TITLES=[
+    {id:"new-face",name:"New Face",rank:0},{id:"regular",name:"Regular",rank:1},
+    {id:"known-face",name:"Known Face",rank:2},{id:"after-hours",name:"After Hours",rank:3},
+    {id:"fixture",name:"Room Fixture",rank:4},{id:"heavyweight",name:"Heavyweight",rank:5},
+    {id:"legend",name:"Room Legend",rank:6},{id:"first-blood",name:"First Blood",badge:"first-blood"},
+    {id:"veteran",name:"Veteran",badge:"veteran-presence"},
+    {id:"serial-winner",name:"Serial Winner",badge:"serial-winner"}
+  ];
+  function clean(v){return String(v||"").replace(/^@/,"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,25);}
+  function key(n){return PREFIX+clean(n).toLowerCase();}
+  function read(k,d){try{var x=LBC.runtime.kvGet(k,"");return x?JSON.parse(x):d;}catch(e){return d;}}
+  function write(k,v){try{return LBC.runtime.kvSet(k,JSON.stringify(v))!==false;}catch(e){return false;}}
+  function fresh(n){return {version:1,username:clean(n),xp:0,games:0,wins:0,rankIndex:0,badges:[],activeTitle:"new-face",awardIds:[],firstAt:0,lastAt:0};}
+  function state(n){
+    var s=read(key(n),null);if(!s||typeof s!=="object")s=fresh(n);
+    s.username=clean(n);s.xp=Math.max(0,Number(s.xp)||0);
+    s.games=Math.max(0,Number(s.games)||0);s.wins=Math.max(0,Number(s.wins)||0);
+    s.rankIndex=Math.max(0,Math.min(RANKS.length-1,Number(s.rankIndex)||0));
+    if(!Array.isArray(s.badges))s.badges=[];if(!Array.isArray(s.awardIds))s.awardIds=[];
+    if(!TITLES.some(function(t){return t.id===s.activeTitle;}))s.activeTitle="new-face";
+    return s;
+  }
+  function hasBadge(s,id){return s.badges.some(function(b){return b.id===id;});}
+  function unlocked(s,t){return t.rank!==undefined?s.rankIndex>=t.rank:hasBadge(s,t.badge);}
+  function titleName(s){
+    var t=TITLES.filter(function(x){return x.id===s.activeTitle;})[0];
+    return t&&unlocked(s,t)?t.name:RANKS[s.rankIndex].name;
+  }
+  function summary(n){
+    var s=state(n),next=RANKS[s.rankIndex+1]||null;
+    return {username:s.username,xp:s.xp,rank:RANKS[s.rankIndex].name,rankId:RANKS[s.rankIndex].id,
+      nextRank:next?next.name:null,xpToNext:next?Math.max(0,next.xp-s.xp):0,
+      games:s.games,wins:s.wins,badges:s.badges.slice(),activeTitle:titleName(s),
+      titles:TITLES.filter(function(t){return unlocked(s,t);})};
+  }
+  function processAward(username,reason,id){
+    var n=clean(username),why=String(reason||"").toLowerCase();
+    var play=/participation/.test(why),win=/\\bwin\\b/.test(why);
+    if(!n||(!play&&!win))return;
+    var s=state(n),awardId=String(id||"");
+    if(awardId&&s.awardIds.indexOf(awardId)>=0)return;
+    s.xp+=(play?10:0)+(win?25:0);if(play)s.games++;if(win)s.wins++;
+    if(!s.firstAt)s.firstAt=Date.now();s.lastAt=Date.now();
+    if(awardId){s.awardIds.push(awardId);if(s.awardIds.length>MAX_AWARDS)s.awardIds=s.awardIds.slice(-MAX_AWARDS);}
+    var unlocks=[];
+    while(s.rankIndex+1<RANKS.length&&s.xp>=RANKS[s.rankIndex+1].xp){s.rankIndex++;unlocks.push({rank:RANKS[s.rankIndex].name,xp:RANKS[s.rankIndex].xp});}
+    BADGES.forEach(function(b){
+      if(((b.games&&s.games>=b.games)||(b.wins&&s.wins>=b.wins))&&!hasBadge(s,b.id)){
+        s.badges.push({id:b.id,name:b.name,description:b.desc,unlockedAt:Date.now()});
+        unlocks.push({badge:b.name});
+      }
+    });
+    if(!write(key(n),s)){LBC.notice("Reputation progress for "+n+" could not be saved; the game award itself was preserved.");return;}
+    unlocks.forEach(function(u){
+      if(u.badge)LBC.notice("🏅 REPUTATION BADGE — "+n+" unlocked "+u.badge+".");
+      else LBC.notice("⬆️ RANK UP — "+n+" reached "+u.rank+" ("+u.xp+" reputation XP).");
+    });
+  }
+  if(LBC.rewards&&typeof LBC.rewards.award==="function"&&!LBC.rewards.award.__reputation){
+    var prior=LBC.rewards.award;
+    var wrapped=function(username,amount,reason,id){
+      var ok=prior.apply(null,arguments);
+      if(ok){try{processAward(username,reason,id);}catch(e){LBC.notice("Reputation progress could not be updated for that game award.");}}
+      return ok;
+    };
+    wrapped.__reputation=true;LBC.rewards.award=wrapped;
+  }
+  function rankCommand(n){
+    var s=summary(n);
+    LBC.notice("🏅 AFTERDARK REPUTATION — "+s.username+"\nRank: "+s.rank+" · "+s.xp+" XP\nTitle: "+s.activeTitle+
+      "\nFree games: "+s.games+" · Wins: "+s.wins+
+      (s.nextRank?"\nNext: "+s.nextRank+" · "+s.xpToNext+" XP to go.":"\nHighest rank reached.")+
+      "\nEarn XP from free-game participation (+10) and wins (+25).",{toUsername:s.username});
+  }
+  function badgesCommand(n){
+    var s=summary(n);
+    LBC.notice("🏅 REPUTATION BADGES — "+s.username+"\n"+BADGES.map(function(b){
+      return (hasBadge(state(n),b.id)?"✓ ":"○ ")+b.name+" — "+b.desc;
+    }).join("\n"),{toUsername:s.username});
+  }
+  function titlesCommand(n){
+    var s=state(n);
+    LBC.notice("🎖️ UNLOCKABLE TITLES — "+s.username+"\n"+TITLES.map(function(t){
+      return (s.activeTitle===t.id?"★ ":unlocked(s,t)?"✓ ":"🔒 ")+t.name+" ["+t.id+"]";
+    }).join("\n")+"\nSet one with !title set <id>.",{toUsername:s.username});
+  }
+  function setTitle(n,id){
+    var s=state(n),t=TITLES.filter(function(x){return x.id===id;})[0];
+    if(!t){LBC.notice("Unknown title. Use !titles to see title IDs.",{toUsername:s.username});return;}
+    if(!unlocked(s,t)){LBC.notice("That title is locked. Keep building free-game reputation.",{toUsername:s.username});return;}
+    s.activeTitle=t.id;write(key(n),s);LBC.notice("🎖️ Your profile title is now "+t.name+".",{toUsername:s.username});
+  }
+  function rankings(){
+    var idx=read(INDEX_KEY,[]);if(!Array.isArray(idx))idx=[];
+    var rows=idx.map(summary).filter(function(s){return s.xp>0;})
+      .sort(function(a,b){return b.xp-a.xp||a.username.localeCompare(b.username);}).slice(0,5);
+    LBC.notice("🏆 AFTERDARK REPUTATION LEADERBOARD\n"+(rows.length?rows.map(function(s,i){
+      return (i+1)+". "+s.username+" — "+s.rank+" · "+s.xp+" XP";
+    }).join("\n"):"No reputation earned yet."));
+  }
+  function adminStatus(){
+    var idx=read(INDEX_KEY,[]);if(!Array.isArray(idx))idx=[];
+    var out={members:0,totalXp:0,badges:0};
+    idx.forEach(function(n){var s=state(n);if(s.xp>0)out.members++;out.totalXp+=s.xp;out.badges+=s.badges.length;});
+    return out;
+  }
+  function onChatMessage(body,username){
+    var low=String(body||"").trim().toLowerCase(),m;
+    if(low==="!rank"){rankCommand(username);return;}
+    if(low==="!badges"){badgesCommand(username);return;}
+    if(low==="!titles"||low==="!title"){titlesCommand(username);return;}
+    if(low==="!rankings"){rankings();return;}
+    if((m=low.match(/^!title\\s+set\\s+([a-z0-9-]{1,30})$/))){setTitle(username,m[1]);return;}
+  }
+  LBC.reputation={version:"1.0",summary:summary,ranks:function(){return RANKS.slice();},
+    badges:function(n){return summary(n).badges;},titles:function(n){return summary(n).titles;},adminStatus:adminStatus};
+  LBC.gameLibrary.register("viewer-reputation-ranks",{onChatMessage:onChatMessage});
+}());
