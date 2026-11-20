@@ -338,7 +338,34 @@ var LBC = (function () {
   "use strict";
   var runtime = {};
   LBC.setRuntime = function (api) { runtime = api || {}; };
-  LBC.getSetting = function (name, fallback) { return LBC.runtime.getSetting(name, fallback); };
+  var CONTROL_SETTINGS_KEY = "lbc_ab_panel_control_settings_v1";
+  var CONTROL_SETTING_ALLOWLIST = {
+    retentionEnabled: true, retentionPublicRecognition: true,
+    retentionFirstVisitMessage: true, retentionReturnRecognition: true,
+    retentionMilestoneRecognition: true, retentionAnniversaryRecognition: true,
+    gameOneWordStoryEnabled: true, gameAfterdarkDareDeckEnabled: true
+  };
+  function readControlSettings() {
+    try {
+      var raw = LBC.runtime.kvGet(CONTROL_SETTINGS_KEY, "");
+      var value = raw ? JSON.parse(raw) : {};
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    } catch (err) { return {}; }
+  }
+  LBC.getSetting = function (name, fallback) {
+    var overrides = readControlSettings();
+    if (Object.prototype.hasOwnProperty.call(overrides, name)) return overrides[name];
+    return LBC.runtime.getSetting(name, fallback);
+  };
+  LBC.setControlSetting = function (name, value) {
+    if (!Object.prototype.hasOwnProperty.call(CONTROL_SETTING_ALLOWLIST, name) || typeof value !== "boolean") return false;
+    var overrides = readControlSettings();
+    overrides[name] = value;
+    if (LBC.runtime.kvSet(CONTROL_SETTINGS_KEY, JSON.stringify(overrides)) === false) return false;
+    LBC.runtime.reloadPanel();
+    return true;
+  };
+  LBC.getControlSettings = readControlSettings;
   LBC.runtime = {
     kvGet: function (key, fallback) { try { return typeof runtime.kvGet === "function" ? runtime.kvGet(key, fallback) : fallback; } catch (err) { return fallback; } },
     kvSet: function (key, value, ttlSeconds) { try { return typeof runtime.kvSet === "function" ? runtime.kvSet(key, value, ttlSeconds) : false; } catch (err) { return false; } },
@@ -3087,7 +3114,7 @@ var LBC = (function () {
     say("🖤 AFTERDARK BROTHERHOOD — CONTROL CENTER\n" +
       "Choose a section by sending /ab followed by its number.\n" +
       "1. Games\n2. Goals\n3. Tip Menu\n4. Rewards\n5. Brotherhood / VIP\n" +
-      "6. Giveaways\n7. Viewer Queue\n8. Announcements\n9. Live Dashboard\n10. Settings\n\n" +
+      "6. Giveaways\\n7. Viewer Queue\\n8. Announcements\\n9. Live Dashboard\\n10. Settings\\n11. Engagement Controls\\n\\n" +
       "Use /ab anytime to return here. /ab back returns one level.");
   }
   function section(state, name) {
@@ -3125,6 +3152,22 @@ var LBC = (function () {
       say("Live room overview refreshed. Send /ab 0 to return.");
     } else if (name === "settings") {
       say("ROOM SETTINGS\n1. Refresh native room panel\n2. Return to main menu\nThe native Chaturbate panel is a status display, not an interactive button menu.");
+    } else if (name === "engagement") {
+      var retentionOn = LBC.getSetting("retentionEnabled", true) !== false;
+      var publicRecognition = LBC.getSetting("retentionPublicRecognition", false) === true;
+      var storyOn = LBC.getSetting("gameOneWordStoryEnabled", true) !== false;
+      var dareOn = LBC.getSetting("gameAfterdarkDareDeckEnabled", true) !== false;
+      say("ENGAGEMENT CONTROLS\\n" +
+        "Viewer Retention: " + (retentionOn ? "ON" : "OFF") + "\\n" +
+        "Recognition: " + (publicRecognition ? "PUBLIC" : "PRIVATE") + "\\n" +
+        "One Word Story: " + (storyOn ? "ENABLED" : "DISABLED") + "\\n" +
+        "Afterdark Dare Deck: " + (dareOn ? "ENABLED" : "DISABLED") + "\\n\\n" +
+        "1. Toggle Viewer Retention\\n2. Toggle Public / Private Recognition\\n" +
+        "3. Toggle First-Visit Greeting\\n4. Toggle Return Recognition\\n" +
+        "5. Toggle Visit Milestones\\n6. Toggle Anniversary Recognition\\n" +
+        "7. Enable / Disable One Word Story\\n8. Enable / Disable Dare Deck\\n" +
+        "9. Return to main menu");
+
     }
   }
   function prompt(state, wizard, message) {
@@ -3136,7 +3179,7 @@ var LBC = (function () {
     var s = state.section;
     if (number === 0) { home(state); return { handled: true }; }
     if (s === "home") {
-      var sections = {1:"games",2:"goals",3:"menu",4:"rewards",5:"brotherhood",6:"giveaway",7:"queue",8:"announcements",9:"dashboard",10:"settings"};
+      var sections = {1:"games",2:"goals",3:"menu",4:"rewards",5:"brotherhood",6:"giveaway",7:"queue",8:"announcements",9:"dashboard",10:"settings",11:"engagement"};
       if (sections[number]) { section(state, sections[number]); return { handled: true }; }
     }
     if (s === "games") {
@@ -3151,6 +3194,30 @@ var LBC = (function () {
         say("There is no active game to stop."); return {handled:true};
       }
       if (number === 10) { home(state); return {handled:true}; }
+    }
+    if (s === "engagement") {
+      var settingMap = {
+        1: ["retentionEnabled", true, "Viewer Retention"],
+        2: ["retentionPublicRecognition", false, "Recognition visibility"],
+        3: ["retentionFirstVisitMessage", true, "First-visit greeting"],
+        4: ["retentionReturnRecognition", true, "Return recognition"],
+        5: ["retentionMilestoneRecognition", true, "Visit milestone recognition"],
+        6: ["retentionAnniversaryRecognition", true, "Anniversary recognition"],
+        7: ["gameOneWordStoryEnabled", true, "One Word Story"],
+        8: ["gameAfterdarkDareDeckEnabled", true, "Afterdark Dare Deck"]
+      };
+      if (settingMap[number]) {
+        var setting = settingMap[number];
+        var nextValue = LBC.getSetting(setting[0], setting[1]) === false;
+        if (LBC.setControlSetting(setting[0], nextValue)) {
+          say(setting[2] + ": " + (nextValue ? "ON" : "OFF") + ". Saved to persistent bot-panel controls.");
+          section(state, "engagement");
+        } else {
+          say("Couldn't save that control. No setting was changed.");
+        }
+        return {handled:true};
+      }
+      if (number === 9) { home(state); return {handled:true}; }
     }
     if (s === "goals") {
       if (number === 1) return {handled:true,command:"/ab goal status"};
@@ -3241,7 +3308,7 @@ var LBC = (function () {
       if (!state.wizard) { say("No guided action is waiting. Open /ab and choose an action first."); return {handled:true}; }
       return value(state, raw);
     }
-    if ((m=lower.match(/^\/ab\s+(10|[1-9])$/))) return action(state,Number(m[1]));
+    if ((m=lower.match(/^\/ab\s+(11|10|[1-9])$/))) return action(state,Number(m[1]));
     return null;
   }
   LBC.controlMenu = { version:"1.0", route:route, open:function(){home(readState());} };
