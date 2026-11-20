@@ -1,5 +1,5 @@
 /*
- * LOST BOYS CLUB — EVENT HANDLER RUNTIME BRIDGE
+ * AFTERDARK BROTHERHOOD — EVENT HANDLER RUNTIME BRIDGE
  * Chaturbate SDK access stays in event handlers, never Shared Code.
  */
 LBC.setRuntime({
@@ -13,7 +13,7 @@ LBC.setRuntime({
 });
 
 
-// LOST BOYS CLUB — Callback
+// AFTERDARK BROTHERHOOD — Callback
 LBC.onCallback($callback.label);
 
 // A callback may end a timed round; refresh the native panel afterward.
