@@ -105,6 +105,9 @@ var LBC = (function () {
       "!giveaway / !enter — view or enter a free room giveaway",
       "!teams / !team — Brotherhood Wars standings and your team",
       "!jointeam Name / !leaveteam — manage your free team membership",
+      "!vault — shared Brotherhood progression",
+      "!halloffame — permanent member records",
+      "!achievements — your unlocked milestones",
       "",
       "Broadcaster controls:",
       "/ab start — start a 90-second round",
@@ -2602,6 +2605,8 @@ var LBC = (function () {
       "Rotating announcements: " + (announcements.enabled === true ? "ON" : "OFF") + "\n" +
       "Giveaway: " + (function () { var g = readJson("lbc_ab_giveaway_current", null); return g && g.status === "open" ? "OPEN · " + Object.keys(g.entries || {}).length + " entered" : g && g.status === "closed" ? "CLOSED · awaiting draw" : "not running"; }()) + "\n" +
       "Team Wars: " + (function () { var t = readJson("lbc_ab_teams_state", {}); return (Array.isArray(t.teams) ? t.teams.length : 0) + " teams · " + String(t.seasonName || "No season"); }()) + "\n" +
+      "Brotherhood Vault: " + (LBC.vault ? LBC.vault.status().totalGamePoints + " shared points" : "offline") + "\n" +
+      "Hall of Fame: " + (LBC.hallOfFame ? LBC.hallOfFame.records().membersTracked + " members tracked" : "offline") + "\n" +
       "Game modules: " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + "\n" +
       "Use /ab admin help for the control map."
     );
@@ -2654,6 +2659,20 @@ var LBC = (function () {
         "\nCommands: /ab giveaway start Prize · end · draw · cancel · history.");
       return;
     }
+    if (value === "vault") {
+      var vault = LBC.vault ? LBC.vault.status() : null;
+      LBC.notice("🏛️ BROTHERHOOD VAULT\n" +
+        (vault ? "Shared game points: " + vault.totalGamePoints + "\nUnlocked milestones: " + vault.unlocked.length + " / " + vault.totalMilestones + "\nNext milestone: " + (vault.next ? vault.next.title + " at " + vault.next.points + " points · " + vault.next.remaining + " to go" : "All current milestones unlocked") : "Vault unavailable.") +
+        "\nViewer command: !vault · !achievements");
+      return;
+    }
+    if (value === "halloffame" || value === "hof") {
+      var hall = LBC.hallOfFame ? LBC.hallOfFame.records() : null;
+      LBC.notice("🏆 HALL OF FAME\n" +
+        (hall ? "Tracked members: " + hall.membersTracked + "\nTop wins: " + (hall.topWins.length ? hall.topWins.map(function (x, i) { return (i + 1) + ". " + x.username + " — " + x.wins; }).join("\n") : "No wins recorded yet.") : "Hall of Fame unavailable.") +
+        "\nViewer commands: !halloffame wins|games|points · !achievements");
+      return;
+    }
     if (value === "teams") {
       var teamState = readJson("lbc_ab_teams_state", {});
       var teamRows = Array.isArray(teamState.teams) ? teamState.teams.slice() : [];
@@ -2676,7 +2695,7 @@ var LBC = (function () {
     LBC.notice(
       "🖤 AFTERDARK BROTHERHOOD — ADMIN CONTROL MAP\n" +
       "/ab admin — dashboard · /ab admin status — refresh dashboard\n" +
-      "/ab admin games|goals|rewards|menu|announcements|giveaway|teams — subsystem status\n" +
+      "/ab admin games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame — subsystem status\n" +
       "/ab admin members — member tracking summary\n" +
       "GOALS: /ab goal set 1000 Title · /ab goal queue 1500 Next\n" +
       "REWARDS: /ab rewards add 100 Reward · pending · approve 1 · deny 1\n" +
@@ -2684,6 +2703,8 @@ var LBC = (function () {
       "ANNOUNCEMENTS: /ab announcements on|off\n" +
       "GIVEAWAY: /ab giveaway start Prize · end · draw · cancel · history (free entry only)\n" +
       "TEAMS: /ab teams create Name · !jointeam Name · !leaveteam · !teams · !team\n" +
+      "VAULT: !vault · !achievements — shared progress and personal unlocks\n" +
+      "HALL OF FAME: !halloffame wins|games|points — permanent member records\n" +
       "GAMES: use the game's own /ab <game> start|stop command."
     );
   }
@@ -2715,7 +2736,7 @@ var LBC = (function () {
         " / " + MAX_INDEX + "\nViewer commands: !profile · !profile username · !leaderboard wins|games|points.");
       return;
     }
-    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|teams)$/))) {
+    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame)$/))) {
       adminDetail(match[1]);
       return;
     }
@@ -3242,6 +3263,292 @@ var LBC = (function () {
   };
 
   LBC.gameLibrary.register("brotherhood-wars", {
+    onChatMessage: onChatMessage
+  });
+}());
+
+
+/* AFTERDARK BROTHERHOOD — BROTHERHOOD VAULT + HALL OF FAME */
+(function () {
+  "use strict";
+
+  var VAULT_KEY = "lbc_ab_vault_state";
+  var MEMBER_KEY = "lbc_ab_vault_members";
+  var EVENT_KEY = "lbc_ab_vault_events";
+  var INDEX_KEY = "lbc_ab_member_index";
+  var MAX_EVENTS = 100;
+  var MAX_INDEX = 250;
+
+  var MILESTONES = [
+    { id: "first-100", points: 100, title: "First 100 — The Door Opens" },
+    { id: "250", points: 250, title: "250 — The Room Is Alive" },
+    { id: "500", points: 500, title: "500 — Brotherhood Built" },
+    { id: "1000", points: 1000, title: "1,000 — Afterdark Established" },
+    { id: "2500", points: 2500, title: "2,500 — No Turning Back" },
+    { id: "5000", points: 5000, title: "5,000 — The Brotherhood Is Permanent" },
+    { id: "10000", points: 10000, title: "10,000 — Afterdark Immortalized" }
+  ];
+
+  function cleanName(value) {
+    return String(value || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25);
+  }
+
+  function read(key, fallback) {
+    try {
+      var raw = LBC.runtime.kvGet(key, "");
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (err) {
+      return fallback;
+    }
+  }
+
+  function write(key, value) {
+    try {
+      return LBC.runtime.kvSet(key, JSON.stringify(value)) !== false;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function vaultState() {
+    var state = read(VAULT_KEY, {});
+    state.totalGamePoints = Math.max(0, Number(state.totalGamePoints) || 0);
+    if (!state.unlocked || typeof state.unlocked !== "object") state.unlocked = {};
+    state.updatedAt = Math.max(0, Number(state.updatedAt) || 0);
+    return state;
+  }
+
+  function memberState(username) {
+    var name = cleanName(username);
+    var all = read(MEMBER_KEY, {});
+    var key = name.toLowerCase();
+    var item = all[key] || {};
+    return {
+      username: name,
+      gamePoints: Math.max(0, Number(item.gamePoints) || 0),
+      games: Math.max(0, Number(item.games) || 0),
+      wins: Math.max(0, Number(item.wins) || 0),
+      achievements: Array.isArray(item.achievements) ? item.achievements.slice() : [],
+      firstSeenAt: Number(item.firstSeenAt) || Date.now(),
+      lastActivityAt: Number(item.lastActivityAt) || 0
+    };
+  }
+
+  function saveMember(member) {
+    var all = read(MEMBER_KEY, {});
+    all[member.username.toLowerCase()] = member;
+    var keys = Object.keys(all);
+    if (keys.length > MAX_INDEX) {
+      keys.sort(function (a, b) {
+        return (Number(all[a].lastActivityAt) || 0) - (Number(all[b].lastActivityAt) || 0);
+      });
+      while (keys.length > MAX_INDEX) delete all[keys.shift()];
+    }
+    return write(MEMBER_KEY, all);
+  }
+
+  function remember(name) {
+    var index = read(INDEX_KEY, []);
+    if (!Array.isArray(index)) index = [];
+    if (!index.some(function (x) { return String(x).toLowerCase() === name.toLowerCase(); })) {
+      index.push(name);
+      if (index.length > MAX_INDEX) index = index.slice(-MAX_INDEX);
+      write(INDEX_KEY, index);
+    }
+  }
+
+  function awardAchievement(member, id, title, description) {
+    if (member.achievements.some(function (x) { return x.id === id; })) return false;
+    member.achievements.push({ id: id, title: title, description: description, unlockedAt: Date.now() });
+    LBC.notice("🏅 ACHIEVEMENT UNLOCKED — " + member.username + "\n" + title + ": " + description);
+    return true;
+  }
+
+  function updateAchievements(member) {
+    if (member.games >= 1) awardAchievement(member, "first-game", "First Night", "You played your first free game.");
+    if (member.games >= 10) awardAchievement(member, "regular", "Regular", "You have entered 10 free games.");
+    if (member.games >= 25) awardAchievement(member, "veteran", "Veteran", "You have entered 25 free games.");
+    if (member.wins >= 1) awardAchievement(member, "first-win", "First Blood", "You recorded your first game victory.");
+    if (member.wins >= 5) awardAchievement(member, "five-wins", "Getting Dangerous", "You have won five games.");
+    if (member.wins >= 25) awardAchievement(member, "twenty-five-wins", "Room Legend", "You have won 25 games.");
+    if (member.gamePoints >= 10) awardAchievement(member, "ten-points", "Contributor", "You earned 10 free-game points.");
+    if (member.gamePoints >= 50) awardAchievement(member, "fifty-points", "Pillar", "You earned 50 free-game points.");
+    if (member.gamePoints >= 100) awardAchievement(member, "hundred-points", "Afterdark Mainstay", "You earned 100 free-game points.");
+  }
+
+  function processAward(username, amount, reason) {
+    var name = cleanName(username);
+    var why = String(reason || "");
+    var points = Math.max(0, Math.floor(Number(amount) || 0));
+    var isGame = /participation|\bwin\b/i.test(why);
+    if (!name || !isGame || points < 1) return;
+
+    var state = vaultState();
+    var member = memberState(name);
+    var isParticipation = /participation/i.test(why);
+    var isWin = /\bwin\b/i.test(why);
+
+    state.totalGamePoints += points;
+    state.updatedAt = Date.now();
+    write(VAULT_KEY, state);
+
+    member.gamePoints += points;
+    if (isParticipation) member.games += 1;
+    if (isWin) member.wins += 1;
+    member.lastActivityAt = Date.now();
+    updateAchievements(member);
+    saveMember(member);
+    remember(name);
+
+    var events = read(EVENT_KEY, []);
+    if (!Array.isArray(events)) events = [];
+    events.unshift({
+      username: name,
+      points: points,
+      reason: why.slice(0, 60),
+      at: Date.now()
+    });
+    write(EVENT_KEY, events.slice(0, MAX_EVENTS));
+
+    MILESTONES.forEach(function (milestone) {
+      if (state.totalGamePoints >= milestone.points && !state.unlocked[milestone.id]) {
+        state.unlocked[milestone.id] = Date.now();
+        LBC.notice("🏛️ BROTHERHOOD VAULT UNLOCKED\n" + milestone.title +
+          "\nThe room reached " + milestone.points + " shared free-game points. This milestone belongs to everyone.");
+      }
+    });
+    write(VAULT_KEY, state);
+  }
+
+  if (LBC.rewards && typeof LBC.rewards.award === "function" && !LBC.rewards.award.__vaultAndHall) {
+    var originalAward = LBC.rewards.award;
+    var observedAward = function (username, amount, reason, id) {
+      var ok = originalAward.apply(null, arguments);
+      if (ok) processAward(username, amount, reason);
+      return ok;
+    };
+    observedAward.__vaultAndHall = true;
+    LBC.rewards.award = observedAward;
+  }
+
+  function vaultStatus() {
+    var state = vaultState();
+    var unlocked = MILESTONES.filter(function (m) { return !!state.unlocked[m.id]; }).map(function (m) {
+      return { id: m.id, title: m.title, points: m.points, unlockedAt: state.unlocked[m.id] };
+    });
+    var next = null;
+    for (var i = 0; i < MILESTONES.length; i++) {
+      if (state.totalGamePoints < MILESTONES[i].points) {
+        next = {
+          id: MILESTONES[i].id,
+          title: MILESTONES[i].title,
+          points: MILESTONES[i].points,
+          remaining: MILESTONES[i].points - state.totalGamePoints
+        };
+        break;
+      }
+    }
+    return {
+      totalGamePoints: state.totalGamePoints,
+      unlocked: unlocked,
+      totalMilestones: MILESTONES.length,
+      next: next,
+      updatedAt: state.updatedAt
+    };
+  }
+
+  function showVault(username) {
+    var status = vaultStatus();
+    var lines = MILESTONES.map(function (m) {
+      var done = status.unlocked.some(function (x) { return x.id === m.id; });
+      return (done ? "✓ " : "○ ") + m.points + " — " + m.title;
+    });
+    LBC.notice("🏛️ AFTERDARK BROTHERHOOD — THE VAULT\n" +
+      "Shared free-game points: " + status.totalGamePoints + "\n" +
+      "Unlocked: " + status.unlocked.length + " / " + status.totalMilestones + "\n" +
+      lines.join("\n") +
+      (status.next ? "\nNext: " + status.next.title + " · " + status.next.remaining + " points to go." : "\nEvery current Vault milestone has been reached. The room made history."),
+      username ? { toUsername: cleanName(username) } : {});
+  }
+
+  function hallRecords() {
+    var index = read(INDEX_KEY, []);
+    if (!Array.isArray(index)) index = [];
+    var rows = index.map(function (name) {
+      var p = LBC.members && LBC.members.profile ? LBC.members.profile(name) : null;
+      var v = memberState(name);
+      if (!p) return null;
+      return {
+        username: p.username,
+        games: Math.max(p.gamesPlayed, v.games),
+        wins: Math.max(p.wins, v.wins),
+        points: Math.max(p.pointsEarned, v.gamePoints)
+      };
+    }).filter(Boolean);
+    function top(key) {
+      return rows.slice().sort(function (a, b) {
+        return b[key] - a[key] || a.username.localeCompare(b.username);
+      }).filter(function (x) { return x[key] > 0; }).slice(0, 5);
+    }
+    return {
+      membersTracked: rows.length,
+      topWins: top("wins"),
+      topGames: top("games"),
+      topPoints: top("points")
+    };
+  }
+
+  function showHall(kind, viewer) {
+    var mode = String(kind || "wins").toLowerCase();
+    var key = mode === "games" || mode === "participation" ? "games" : mode === "points" ? "points" : "wins";
+    var title = key === "games" ? "MOST GAMES PLAYED" : key === "points" ? "MOST FREE-GAME POINTS EARNED" : "MOST GAME VICTORIES";
+    var records = hallRecords();
+    var rows = key === "games" ? records.topGames : key === "points" ? records.topPoints : records.topWins;
+    LBC.notice("🏆 AFTERDARK BROTHERHOOD — HALL OF FAME\n" + title + "\n" +
+      (rows.length ? rows.map(function (x, i) {
+        return (i + 1) + ". " + x.username + " — " + x[key];
+      }).join("\n") : "No records yet.") +
+      "\nRecords are based on successful free-game awards; tips and bonus grants are excluded.",
+      viewer ? { toUsername: cleanName(viewer) } : {});
+  }
+
+  function showAchievements(username) {
+    var member = memberState(username);
+    if (!member.username) return;
+    LBC.notice("🏅 YOUR AFTERDARK ACHIEVEMENTS — " + member.username + "\n" +
+      (member.achievements.length ? member.achievements.map(function (x) {
+        return "✓ " + x.title + " — " + x.description;
+      }).join("\n") : "No achievements unlocked yet. Join a free game and start building your record."),
+      { toUsername: member.username });
+  }
+
+  function onChatMessage(body, username, isOwner) {
+    var raw = String(body || "").trim();
+    var lower = raw.toLowerCase();
+    var match;
+    if (lower === "!vault") { showVault(username); return; }
+    if (lower === "!achievements") { showAchievements(username); return; }
+    if ((match = lower.match(/^!(?:halloffame|hof)(?:\s+(wins|games|participation|points))?$/))) {
+      showHall(match[1] || "wins", username);
+      return;
+    }
+    if (!isOwner) return;
+    if (lower === "/ab vault" || lower === "/ab vault status") { showVault(""); return; }
+    if (lower === "/ab halloffame" || lower === "/ab hof") { showHall("wins", ""); return; }
+  }
+
+  LBC.vault = {
+    version: "1.0",
+    status: vaultStatus,
+    achievements: function (username) { return memberState(username).achievements.slice(); }
+  };
+  LBC.hallOfFame = {
+    version: "1.0",
+    records: hallRecords,
+    show: showHall
+  };
+
+  LBC.gameLibrary.register("vault-hall-of-fame", {
     onChatMessage: onChatMessage
   });
 }());
