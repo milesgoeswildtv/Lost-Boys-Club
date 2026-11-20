@@ -3134,7 +3134,7 @@ var LBC = (function () {
     say("🖤 AFTERDARK BROTHERHOOD — CONTROL CENTER\n" +
       "Choose a section by sending /ab followed by its number.\n" +
       "1. Games\n2. Goals\n3. Tip Menu\n4. Rewards\n5. Brotherhood / VIP\n" +
-      "6. Giveaways\n7. Viewer Queue\n8. Announcements\n9. Live Dashboard\n10. Settings\n11. Engagement Controls\n12. Customization\n\n" +
+      "6. Giveaways\n7. Viewer Queue\n8. Announcements\n9. Live Dashboard\n10. Settings\n11. Engagement Controls\n12. Customization\n13. Analytics\n\n" +
       "Use /ab anytime to return here. /ab back returns one level.");
   }
   function section(state, name) {
@@ -3181,7 +3181,7 @@ var LBC = (function () {
         "4. Tip-menu footer: " + (c.tipMenuFooter || "Default") + "\n" +
         "5. Member-profile heading: " + (c.profileHeading || "Default") + "\n" +
         "6. Reset all customization text\n7. Return to main menu");
-    } else if (name === "engagement") {
+    } else if (name === "analytics") {\n      say("ROOM ANALYTICS\\nHistorical tracking begins when Analytics is installed.\\n1. Last 7 days\\n2. Last 30 days\\n3. All-time tracked totals\\n4. Top room supporters\\n5. Return to main menu");\n    } else if (name === "engagement") {
       var retentionOn = LBC.getSetting("retentionEnabled", true) !== false;
       var publicRecognition = LBC.getSetting("retentionPublicRecognition", false) === true;
       var storyOn = LBC.getSetting("gameOneWordStoryEnabled", true) !== false;
@@ -3216,7 +3216,7 @@ var LBC = (function () {
     var s = state.section;
     if (number === 0) { home(state); return { handled: true }; }
     if (s === "home") {
-      var sections = {1:"games",2:"goals",3:"menu",4:"rewards",5:"brotherhood",6:"giveaway",7:"queue",8:"announcements",9:"dashboard",10:"settings",11:"engagement",12:"customization"};
+      var sections = {1:"games",2:"goals",3:"menu",4:"rewards",5:"brotherhood",6:"giveaway",7:"queue",8:"announcements",9:"dashboard",10:"settings",11:"engagement",12:"customization",13:"analytics"};
       if (sections[number]) { section(state, sections[number]); return { handled: true }; }
     }
     if (s === "games") {
@@ -3247,7 +3247,7 @@ var LBC = (function () {
       }
       if (number === 7) { home(state); return {handled:true}; }
     }
-    if (s === "engagement") {
+    if (s === "analytics") {\n      if (number === 1) { if (LBC.analytics) LBC.analytics.report(7); return {handled:true}; }\n      if (number === 2) { if (LBC.analytics) LBC.analytics.report(30); return {handled:true}; }\n      if (number === 3) { if (LBC.analytics) LBC.analytics.report("all"); return {handled:true}; }\n      if (number === 4) { if (LBC.analytics) LBC.analytics.topSupporters(); return {handled:true}; }\n      if (number === 5) { home(state); return {handled:true}; }\n    }\n    if (s === "engagement") {
       var settingMap = {
         1: ["retentionEnabled", true, "Viewer Retention"],
         2: ["retentionPublicRecognition", false, "Recognition visibility"],
@@ -4309,4 +4309,159 @@ var LBC = (function () {
   }
   LBC.afterdarkDareDeck={version:"1.0",status:function(){return state||read();},prompts:PROMPTS.slice()};
   LBC.gameLibrary.register("afterdark-dare-deck",{onChatMessage:onChatMessage,onCallback:onCallback,onAppStart:onAppStart});
+}());
+
+
+/*
+ * AFTERDARK BROTHERHOOD — ROOM ANALYTICS
+ * Aggregates existing successful events; does not create another points system.
+ * Daily history is retained for 90 days. Lifetime totals remain available.
+ */
+(function () {
+  "use strict";
+  if (LBC.analytics) return;
+  var KEY = "lbc_ab_room_analytics_v1";
+  var VIP_KEY = "lbc_ab_vip_members_v1";
+  var MEMBER_INDEX_KEY = "lbc_ab_member_index";
+  var DAY_LIMIT = 90;
+  function clean(value) { return String(value || "").replace(/^@/, "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25); }
+  function dayKey(at) {
+    var d = new Date(at || Date.now());
+    return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0");
+  }
+  function read() {
+    try {
+      var raw = LBC.runtime.kvGet(KEY, ""), value = raw ? JSON.parse(raw) : {};
+      if (!value || typeof value !== "object" || Array.isArray(value)) value = {};
+      value.totals = value.totals && typeof value.totals === "object" ? value.totals : {};
+      value.days = value.days && typeof value.days === "object" ? value.days : {};
+      value.members = Array.isArray(value.members) ? value.members : [];
+      return value;
+    } catch (err) { return { totals: {}, days: {}, members: [] }; }
+  }
+  function number(value) { return Math.max(0, Number(value) || 0); }
+  function bucket(state, key) {
+    var d = state.days[key];
+    if (!d || typeof d !== "object") d = state.days[key] = {
+      visits: 0, visitors: [], returningVisits: 0, tips: 0, tipTokens: 0, supporters: [],
+      gameParticipations: 0, gameWins: 0, meaningfulChats: 0, viewingPoints: 0, loyaltyPoints: 0
+    };
+    ["visitors", "supporters"].forEach(function (field) { if (!Array.isArray(d[field])) d[field] = []; });
+    ["visits", "returningVisits", "tips", "tipTokens", "gameParticipations", "gameWins", "meaningfulChats", "viewingPoints", "loyaltyPoints"].forEach(function (field) { d[field] = number(d[field]); });
+    return d;
+  }
+  function save(state) {
+    var keys = Object.keys(state.days).sort();
+    while (keys.length > DAY_LIMIT) delete state.days[keys.shift()];
+    state.updatedAt = Date.now();
+    return LBC.runtime.kvSet(KEY, JSON.stringify(state)) !== false;
+  }
+  function addUnique(list, value, cap) {
+    if (!value) return;
+    var key = String(value).toLowerCase();
+    if (list.indexOf(key) < 0 && list.length < cap) list.push(key);
+  }
+  function total(state, field, amount) { state.totals[field] = number(state.totals[field]) + amount; }
+  function recordVisit(username) {
+    var name = clean(username), key = name.toLowerCase();
+    if (!name) return false;
+    var state = read(), d = bucket(state, dayKey()), returning = state.members.indexOf(key) >= 0;
+    d.visits += 1; total(state, "visits", 1);
+    if (returning) { d.returningVisits += 1; total(state, "returningVisits", 1); }
+    addUnique(d.visitors, key, 500);
+    if (!returning) { addUnique(state.members, key, 2000); total(state, "uniqueVisitors", 1); }
+    return save(state);
+  }
+  function recordTip(tokens, username, anonymous) {
+    var amount = Math.floor(Number(tokens) || 0);
+    if (amount < 1) return false;
+    var name = anonymous ? "" : clean(username), key = dayKey(), state = read(), d = bucket(state, key);
+    d.tips += 1; d.tipTokens += amount;
+    total(state, "tips", 1); total(state, "tipTokens", amount);
+    if (name) addUnique(d.supporters, name.toLowerCase(), 500);
+    return save(state);
+  }
+  function recordAward(username, amount, reason) {
+    var points = Math.max(0, Math.floor(Number(amount) || 0)), why = String(reason || "").toLowerCase();
+    if (!points) return false;
+    var state = read(), d = bucket(state, dayKey());
+    total(state, "loyaltyPoints", points); d.loyaltyPoints += points;
+    if (/participation/.test(why)) { total(state, "gameParticipations", 1); d.gameParticipations += 1; }
+    if (/\bwin\b/.test(why)) { total(state, "gameWins", 1); d.gameWins += 1; }
+    if (/meaningful chat/.test(why)) { total(state, "meaningfulChats", 1); d.meaningfulChats += 1; }
+    if (/viewing time/.test(why)) { total(state, "viewingPoints", points); d.viewingPoints += points; }
+    if (/daily room visit/.test(why)) { total(state, "dailyVisitAwards", 1); }
+    if (username) addUnique(d.visitors, clean(username).toLowerCase(), 500);
+    return save(state);
+  }
+  function aggregate(period) {
+    var state = read(), days = Object.keys(state.days).sort(), cutoff = period === "all" ? "" : dayKey(Date.now() - Math.max(1, Number(period) || 7) * 86400000);
+    var out = { visits: 0, returningVisits: 0, tips: 0, tipTokens: 0, gameParticipations: 0, gameWins: 0, meaningfulChats: 0, viewingPoints: 0, loyaltyPoints: 0 };
+    var visitors = [];
+    days.forEach(function (key) {
+      if (cutoff && key < cutoff) return;
+      var d = bucket(state, key);
+      Object.keys(out).forEach(function (field) { out[field] += number(d[field]); });
+      d.visitors.forEach(function (name) { addUnique(visitors, name, 10000); });
+    });
+    out.uniqueVisitors = visitors.length;
+    out.uniqueVisitorsAllTime = number(state.totals.uniqueVisitors);
+    out.trackedDays = days.filter(function (key) { return !cutoff || key >= cutoff; }).length;
+    if (period === "all") {
+      Object.keys(out).forEach(function (field) { if (field !== "uniqueVisitors" && field !== "trackedDays") out[field] = number(state.totals[field]); });
+      out.uniqueVisitors = number(state.totals.uniqueVisitors);
+    }
+    return out;
+  }
+  function report(period) {
+    var label = period === "all" ? "ALL-TIME" : "LAST " + period + " DAYS";
+    var a = aggregate(period), tipAverage = a.tips ? (a.tipTokens / a.tips).toFixed(1) : "0";
+    var stats = {};
+    try { stats = JSON.parse(LBC.runtime.kvGet("lbc_m2_tip_stats", "") || "{}"); } catch (err) {}
+    var vip = LBC.vip ? LBC.vip.adminStatus() : { members: 0, totalUsd: 0 };
+    var members = [];
+    try { members = JSON.parse(LBC.runtime.kvGet(MEMBER_INDEX_KEY, "") || "[]"); } catch (err) {}
+    LBC.notice("🖤 AFTERDARK BROTHERHOOD — ANALYTICS · " + label + "\n" +
+      "VISITORS: " + a.uniqueVisitors + " unique · " + a.visits + " visits · " + a.returningVisits + " returning visits\n" +
+      "SUPPORT: " + a.tips + " tips · " + a.tipTokens + " tokens · " + tipAverage + " tokens/tip\n" +
+      "GAMES: " + a.gameParticipations + " participations · " + a.gameWins + " wins\n" +
+      "ENGAGEMENT: " + a.meaningfulChats + " meaningful-chat awards · " + a.viewingPoints + " viewing points\n" +
+      "COMMUNITY: " + (Array.isArray(members) ? members.length : 0) + " tracked profiles · " + vip.members + " top-tier VIPs\n" +
+      "ROOM LIFETIME SUPPORT: " + number(stats.totalTokens) + " tokens · VIP tracked: $" + number(vip.totalUsd).toFixed(2) + "\n" +
+      "HISTORY: " + a.trackedDays + " daily records available. Analytics starts collecting from installation; earlier daily history is not reconstructed.");
+    return a;
+  }
+  function topSupporters() {
+    var state = {};
+    try { state = JSON.parse(LBC.runtime.kvGet(VIP_KEY, "") || "{}"); } catch (err) {}
+    var members = state && state.members && typeof state.members === "object" ? state.members : {};
+    var rows = Object.keys(members).map(function (key) {
+      var p = members[key] || {};
+      return { name: clean(p.username || key), usd: number(p.usd), tokens: number(p.tokens) };
+    }).filter(function (p) { return p.name && p.tokens > 0; });
+    rows.sort(function (a, b) { return b.usd - a.usd || b.tokens - a.tokens; });
+    LBC.notice("🖤 AFTERDARK BROTHERHOOD — TOP ROOM SUPPORTERS\n" +
+      (rows.length ? rows.slice(0, 5).map(function (p, i) { return (i + 1) + ". " + p.name + " — $" + p.usd.toFixed(2) + " (" + p.tokens + " tokens)"; }).join("\n") : "No named supporters recorded yet.") +
+      "\nLifetime VIP totals are based on direct, non-anonymous room tips.");
+    return rows.slice(0, 5);
+  }
+  if (LBC.rewards && typeof LBC.rewards.award === "function" && !LBC.rewards.award.__analyticsTracking) {
+    var originalAward = LBC.rewards.award;
+    var analyticsAward = function (username, amount, reason, id) {
+      var ok = originalAward.apply(null, arguments);
+      if (ok) recordAward(username, amount, reason);
+      return ok;
+    };
+    analyticsAward.__analyticsTracking = true;
+    LBC.rewards.award = analyticsAward;
+  }
+  LBC.analytics = { version: "1.0", recordVisit: recordVisit, recordTip: recordTip, recordAward: recordAward, aggregate: aggregate, report: report, topSupporters: topSupporters };
+  LBC.gameLibrary.register("room-analytics", {
+    onChatMessage: function (body, username, isOwner) {
+      var match = String(body || "").trim().toLowerCase().match(/^\/ab analytics(?:\s+(7|30|all|supporters))?$/);
+      if (!isOwner || !match) return;
+      if (match[1] === "supporters") topSupporters();
+      else report(match[1] === "all" ? "all" : Number(match[1] || 7));
+    }
+  });
 }());
