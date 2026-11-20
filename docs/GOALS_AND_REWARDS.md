@@ -195,3 +195,37 @@ Broadcaster commands:
 The waitlist is first-in, first-out. Each viewer may hold one scheduled slot at a time. Bookings are free; one slot cannot be booked twice. The app announces a booked slot five minutes before its scheduled time when its callback is running. Queue and booking state persist in Chaturbate KV. The queue holds up to 50 waiting viewers and 30 scheduled slots. The broadcaster manually calls and closes each live turn; scheduled bookings do not automatically interrupt an active game or viewer turn.
 
 Storage key: `lbc_ab_viewer_queue_v1`.
+
+
+## Daily & Weekly Missions — Loyalty Progression
+
+Missions advance only from successful free-game participation and win awards. Tips, purchases, manual broadcaster bonus grants, giveaways, queue bookings, and mission rewards themselves do not count toward mission progress.
+
+Viewer commands:
+
+- `!missions` — private daily and weekly mission progress, rewards, and current/best streak.
+- `!streak` — private consecutive active-day streak and next lifetime milestone.
+- `!missionhistory` — private recent completed mission rewards.
+
+Daily missions (reset at 00:00 UTC):
+
+- Play 2 free games — 5 Brotherhood points.
+- Win 1 free game — 8 Brotherhood points.
+- Earn 10 free-game points — 5 Brotherhood points.
+
+Weekly missions (reset Monday at 00:00 UTC):
+
+- Play 10 free games — 20 Brotherhood points.
+- Win 5 free games — 30 Brotherhood points.
+- Earn 50 free-game points — 25 Brotherhood points.
+
+Streaks require at least one qualifying free-game participation or win on each UTC calendar day. Lifetime streak milestones award once per account:
+
+- 3 consecutive days — 5 points.
+- 7 consecutive days — 15 points.
+- 14 consecutive days — 30 points.
+- 30 consecutive days — 75 points.
+
+Mission rewards are credited through the existing idempotent loyalty award engine. Pending mission deliveries persist and retry on the next app start, mission view, or qualifying game award. Daily/weekly progress and streak state persist in Chaturbate KV. Streak status expires after a missed UTC day; best streak and lifetime milestone claims remain.
+
+Broadcaster overview: `/ab admin missions`; the main `/ab admin` dashboard includes daily and weekly claim totals. Mission rewards are ordinary loyalty points and do not advance Team Wars, Vault shared progress, or Hall of Fame competitive totals.
