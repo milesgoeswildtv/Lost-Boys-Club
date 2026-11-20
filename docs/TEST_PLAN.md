@@ -96,3 +96,23 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] Balances and requests persist across app restart.
 - [ ] Invalid usernames, amounts, IDs, and malformed stored data fail safely.
 - [ ] Approved rewards are manually fulfilled by the broadcaster; no cash value or random prize claim is implied.
+
+
+## M2.5: Loyalty & rewards integration (required before release)
+- [ ] In Testbed, a viewer sends !points; they receive a private balance response, including a zero balance for a first-time viewer.
+- [ ] Broadcaster sends /ab rewards add 100 Reward Name; the reward appears in !rewards.
+- [ ] A viewer with sufficient points sends !redeem 1; one pending request is created and the exact cost is reserved.
+- [ ] Broadcaster sends /ab rewards pending; the request is listed.
+- [ ] Broadcaster denies the request; the viewer receives an exact refund and the request is no longer pending.
+- [ ] Repeat redemption and approve the request; approval does not refund points and is marked approved.
+- [ ] Broadcaster bonus grant /ab points grant username 10 updates the named viewer balance.
+- [ ] Guess the Number awards 1 point for a valid entry and 5 additional points for a win; duplicate event processing does not double-award.
+- [ ] Higher or Lower, Couple Trivia, and eligible After Hours entries/wins award their documented points once.
+- [ ] Tips do not award loyalty points.
+- [ ] Restart the app and verify balances, catalogue, and requests persist.
+- [ ] Verify viewer commands work for non-owner accounts and broadcaster controls are rejected for non-owners.
+
+## Branding regression
+- [ ] Search all active Shared Code and event-handler messages for old Lost Boys Club, Clubhouse, and old player-facing club labels.
+- [ ] Confirm startup, game, reward, support-stat, and broadcast-panel messages display AFTERDARK BROTHERHOOD branding.
+- [ ] Confirm the current public support command is !supportstats; no old !clubstats or !clubgoal wording is advertised.
