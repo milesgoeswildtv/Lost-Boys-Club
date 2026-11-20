@@ -105,6 +105,7 @@ var LBC = (function () {
       "!giveaway / !enter — view or enter a free room giveaway",
       "!profile — view your profile, game stats, loyalty balance, and VIP tier",
       "!vip — view your permanent room VIP tier",
+      "!story — check the live One Word Story round; contribute with !word <one word>",
       "!leaderboard wins|games|points — room leaderboards",
       "!queue / !joinqueue / !leavequeue — view and join the viewer waitlist",
       "!slots / !book 1 / !cancelbooking — scheduled viewer slots",
@@ -1542,7 +1543,8 @@ var LBC = (function () {
     "word-scramble": "gameWordScrambleEnabled",
     "would-you-rather": "gameWouldYouRatherEnabled",
     "position-impossible": "gamePositionImpossibleEnabled",
-    "dirty-charades": "gameDirtyCharadesEnabled"
+    "dirty-charades": "gameDirtyCharadesEnabled",
+    "one-word-story": "gameOneWordStoryEnabled"
   };
 
   function safeCall(fn, args, label) {
@@ -3094,7 +3096,7 @@ var LBC = (function () {
       var activeGame = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
       var baseGame = readJson("lbc_v1_game", {});
       say("GAMES" + (activeGame && activeGame.active ? "\\nActive: " + activeGame.name : baseGame && baseGame.active ? "\\nActive: Guess the Number" : "\\nNo game running") +
-        "\\n1. Codebreaker\\n2. Word Scramble\\n3. Dirty Would You Rather\\n4. Position Impossible\\n5. Dirty Charades\\n6. Guess the Number\\n7. Stop active game\\n8. Return to main menu");
+        "\\n1. Codebreaker\\n2. Word Scramble\\n3. Dirty Would You Rather\\n4. Position Impossible\\n5. Dirty Charades\\n6. Guess the Number\\n7. One Word Story\\n8. Stop active game\\n9. Return to main menu");
     } else if (name === "goals") {
       if (LBC.controlCenter) LBC.controlCenter.detail("goal");
       say("GOALS — choose an action\n1. View goal status\n2. Create an untimed goal\n3. Create a timed goal\n4. Queue a goal stage\n5. Pause / resume current goal\n6. View goal queue\n7. Return to main menu");
@@ -3136,17 +3138,17 @@ var LBC = (function () {
       if (sections[number]) { section(state, sections[number]); return { handled: true }; }
     }
     if (s === "games") {
-      var gameCommands = {1:"/ab codebreaker start",2:"/ab scramble start",3:"/ab wyr start",4:"/ab position start",5:"/ab charades start",6:"/ab start"};
+      var gameCommands = {1:"/ab codebreaker start",2:"/ab scramble start",3:"/ab wyr start",4:"/ab position start",5:"/ab charades start",6:"/ab start",7:"/ab story start"};
       if (gameCommands[number]) return {handled:true,command:gameCommands[number]};
       if (number === 7) {
         var running = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
-        var stops = {"codebreaker":"/ab codebreaker stop","word-scramble":"/ab scramble stop","would-you-rather":"/ab wyr stop","position-impossible":"/ab position stop","dirty-charades":"/ab charades stop"};
+        var stops = {"codebreaker":"/ab codebreaker stop","word-scramble":"/ab scramble stop","would-you-rather":"/ab wyr stop","position-impossible":"/ab position stop","dirty-charades":"/ab charades stop","one-word-story":"/ab story stop"};
         if (running && running.active && stops[running.id]) return {handled:true,command:stops[running.id]};
         var base = readJson("lbc_v1_game",{});
         if (base && base.active) return {handled:true,command:"/ab stop"};
         say("There is no active game to stop."); return {handled:true};
       }
-      if (number === 8) { home(state); return {handled:true}; }
+      if (number === 9) { home(state); return {handled:true}; }
     }
     if (s === "goals") {
       if (number === 1) return {handled:true,command:"/ab goal status"};
@@ -3987,4 +3989,82 @@ var LBC = (function () {
   }
   LBC.retention = { version: "1.0", enter: enter, summary: summary, milestones: MILESTONES.slice() };
   if (LBC.gameLibrary) LBC.gameLibrary.register("viewer-retention", { onChatMessage: onChatMessage });
+}());
+
+
+/* AFTERDARK BROTHERHOOD — ONE WORD STORY
+ * Cooperative room game; each viewer contributes one word to a shared story.
+ * Uses the existing Game Library, timer callbacks, and loyalty participation award.
+ */
+(function () {
+  "use strict";
+  if (!LBC.gameLibrary || LBC.__oneWordStoryInstalled) return;
+  LBC.__oneWordStoryInstalled = true;
+  var KEY = "lbc_ab_one_word_story_v1";
+  var TIMER = "lbc_ab_one_word_story_timeout";
+  var DURATION = 120, MAX_WORDS = 15, state = null;
+  function cleanName(v) { return String(v || "someone").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25) || "someone"; }
+  function cleanWord(v) { var w = String(v || "").trim(); return /^[A-Za-z][A-Za-z'-]{0,19}$/.test(w) ? w : ""; }
+  function read() {
+    try { var raw = LBC.runtime.kvGet(KEY, ""), p = raw ? JSON.parse(raw) : null; return p && p.active === true && Array.isArray(p.words) ? p : null; }
+    catch (err) { return null; }
+  }
+  function save() { LBC.runtime.kvSet(KEY, JSON.stringify(state)); }
+  function finish(reason) {
+    if (!state || !state.active) return;
+    var done = state; done.active = false; save();
+    LBC.runtime.cancelCallback(TIMER);
+    LBC.gameLibrary.release("one-word-story");
+    var story = done.words.map(function (x) { return x.word; }).join(" ");
+    LBC.notice("📖 AFTERDARK BROTHERHOOD — THE ROOM WROTE THIS\n" +
+      (story || "The room collectively chose silence. Honestly, fair.") +
+      "\n\nContributors: " + done.words.length + "/" + MAX_WORDS +
+      (reason === "full" ? "\nThe story filled up." : reason === "timeout" ? "\nTime ran out." : "\nThe round was closed."));
+    state = null; LBC.runtime.kvSet(KEY, ""); LBC.runtime.reloadPanel();
+  }
+  function schedule(seconds) {
+    state.endsAt = Math.floor(Date.now() / 1000) + seconds; save();
+    LBC.runtime.cancelCallback(TIMER); LBC.runtime.createCallback(TIMER, seconds, false);
+  }
+  function start() {
+    if (LBC.gameLibrary.isBusy()) { LBC.notice("Another game is already running. Finish it before starting One Word Story."); return; }
+    if (!LBC.gameLibrary.claim("one-word-story", "One Word Story")) return;
+    state = {active:true,words:[],contributors:{},startedAt:Math.floor(Date.now()/1000),endsAt:0};
+    schedule(DURATION);
+    LBC.notice("📖 ONE WORD STORY IS LIVE\nThe room writes one ridiculous story together. Each viewer gets ONE word.\nSend !word followed by a single word. 15 contributors maximum · 2 minutes.\nNo tips, purchases, or points are needed to join.");
+    LBC.runtime.reloadPanel();
+  }
+  function contribute(username, raw) {
+    if (!state || !state.active) { LBC.notice("There isn't a One Word Story round running.",{toUsername:cleanName(username)}); return; }
+    var word=cleanWord(raw), name=cleanName(username), key=name.toLowerCase();
+    if (!word) { LBC.notice("Use one word containing letters only (up to 20 characters).",{toUsername:name}); return; }
+    if (state.contributors[key]) { LBC.notice("You already added your word. Let someone else steer this disaster.",{toUsername:name}); return; }
+    state.contributors[key]=true; state.words.push({username:name,word:word}); save();
+    if (LBC.rewards) LBC.rewards.award(name,1,"One Word Story participation","play:one-word-story:"+state.startedAt+":"+key);
+    LBC.notice("🖤 "+name+" added word "+state.words.length+"/"+MAX_WORDS+".");
+    if(state.words.length>=MAX_WORDS) finish("full"); else LBC.runtime.reloadPanel();
+  }
+  function onChatMessage(body, username, isOwner) {
+    var t=String(body||"").trim(), lower=t.toLowerCase(), m;
+    if(isOwner && lower==="/ab story start"){start();return;}
+    if(isOwner && lower==="/ab story stop"){if(state&&state.active)finish("manual");else LBC.notice("One Word Story isn't running.");return;}
+    if(lower==="!story"){
+      var current=state||read();
+      if(!current) LBC.notice("No One Word Story is running. The room is waiting for its opening sentence.",{toUsername:cleanName(username)});
+      else LBC.notice("📖 ONE WORD STORY · "+current.words.length+"/"+MAX_WORDS+" words · "+Math.max(0,current.endsAt-Math.floor(Date.now()/1000))+"s left. Add yours with !word <one word>.",{toUsername:cleanName(username)});
+      return;
+    }
+    if((m=t.match(/^!word\s+(.+)$/i))){if(!state)state=read();contribute(username,m[1]);}
+  }
+  function onCallback(label){if(label!==TIMER)return;if(!state)state=read();if(state&&state.active)finish("timeout");}
+  var recovered=false;
+  function onAppStart(){
+    if(recovered)return;recovered=true;state=read();if(!state)return;
+    var remaining=state.endsAt-Math.floor(Date.now()/1000);
+    if(remaining<=0){finish("timeout");return;}
+    if(!LBC.gameLibrary.claim("one-word-story","One Word Story")){finish("manual");return;}
+    LBC.runtime.cancelCallback(TIMER);LBC.runtime.createCallback(TIMER,remaining,false);
+  }
+  LBC.gameLibrary.register("one-word-story",{onChatMessage:onChatMessage,onCallback:onCallback,onAppStart:onAppStart});
+  LBC.oneWordStory={version:"1.0",status:function(){return state||read();}};
 }());
