@@ -3048,6 +3048,10 @@ var LBC = (function () {
     state.expiresAt = Date.now() + MENU_TTL;
     LBC.runtime.kvSet(STATE_KEY, JSON.stringify(state));
   }
+  function readJson(key, fallback) {
+    try { var raw = LBC.runtime.kvGet(key, ""); return raw ? JSON.parse(raw) : fallback; }
+    catch (err) { return fallback; }
+  }
   function clearWizard(state) {
     state.wizard = "";
     saveState(state);
@@ -3199,10 +3203,6 @@ var LBC = (function () {
       return value(state, raw);
     }
     if ((m=lower.match(/^\/ab\s+(10|[1-9])$/))) return action(state,Number(m[1]));
-    if (state.wizard && lower.indexOf("/ab ") !== 0) {
-      say("A guided action is waiting. Use /ab value <answer>, or /ab cancel. Your message was not used.");
-      return {handled:true};
-    }
     return null;
   }
   LBC.controlMenu = { version:"1.0", route:route, open:function(){home(readState());} };
