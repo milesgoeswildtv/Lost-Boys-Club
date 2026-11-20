@@ -89,5 +89,96 @@
         "order": 0
       }
     }
+  },
+  "tip_menu_controls": {
+    "type": "fieldset",
+    "title": "Tip Menu Display",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 2,
+    "settings": {
+      "tipMenuDisplayEnabled": {
+        "type": "boolean",
+        "title": "Show informational tip menu",
+        "description": "Controls !tipmenu and !menu display. Existing menu items are preserved.",
+        "default": true,
+        "order": 0
+      },
+      "tipMenuTitle": {
+        "type": "string",
+        "title": "Tip menu heading",
+        "description": "Custom heading shown above the existing menu items.",
+        "maxLength": 70,
+        "default": "AFTERDARK BROTHERHOOD — TIP MENU",
+        "order": 1
+      },
+      "tipMenuFooter": {
+        "type": "string",
+        "title": "Tip menu footer",
+        "description": "Short note shown below menu items. Leave blank for no footer.",
+        "maxLength": 180,
+        "default": "Tips are voluntary. Menu items are requests, not guaranteed outcomes. No game access or advantage is tied to tipping.",
+        "order": 2
+      }
+    }
+  },
+  "announcement_controls": {
+    "type": "fieldset",
+    "title": "Rotating Announcements",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 3,
+    "settings": {
+      "announcementIntervalMinutes": {
+        "type": "number",
+        "title": "Announcement interval (minutes)",
+        "description": "Used when rotating announcements are enabled. Minimum 5 minutes.",
+        "minimum": 5,
+        "maximum": 1440,
+        "default": 15,
+        "order": 0
+      }
+    }
+  },
+  "giveaway_controls": {
+    "type": "fieldset",
+    "title": "Free Giveaways",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 4,
+    "settings": {
+      "giveawayEnabled": {
+        "type": "boolean",
+        "title": "Enable free giveaways",
+        "description": "Allows viewers to view and enter free giveaways. Disabling does not erase an active giveaway or its entries; broadcaster controls remain available.",
+        "default": true,
+        "order": 0
+      }
+    }
+  },
+  "queue_controls": {
+    "type": "fieldset",
+    "title": "Viewer Queue",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 5,
+    "settings": {
+      "viewerQueueEnabled": {
+        "type": "boolean",
+        "title": "Enable viewer queue",
+        "description": "Allows viewers to join, leave, view, and book queue slots. Existing queue and bookings are preserved when disabled.",
+        "default": true,
+        "order": 0
+      },
+      "viewerQueueMaxWaitlist": {
+        "type": "number",
+        "title": "Maximum waitlist size",
+        "description": "Caps the queue capacity. Existing stored entries are retained if the cap is lowered.",
+        "minimum": 1,
+        "maximum": 50,
+        "default": 50,
+        "order": 1
+      }
+    }
   }
 }
