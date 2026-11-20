@@ -2556,6 +2556,7 @@ var LBC = (function () {
     var mode = String(kind || "wins").toLowerCase();
     var label = "WINS";
     if (mode === "games" || mode === "participation") {
+      mode = "games";
       label = "GAME PARTICIPATION";
       rows.sort(function (a, b) { return b.games - a.games || b.wins - a.wins; });
     } else if (mode === "points") {
@@ -2596,6 +2597,7 @@ var LBC = (function () {
       "Rewards: " + (Array.isArray(catalog) ? catalog.length : 0) + " listed · " + pending + " pending\n" +
       "Tip menu: " + (Array.isArray(menu) ? menu.length : 0) + " items\n" +
       "Rotating announcements: " + (announcements.enabled === true ? "ON" : "OFF") + "\n" +
+      "Giveaway: " + (function () { var g = readJson("lbc_ab_giveaway_current", null); return g && g.status === "open" ? "OPEN · " + Object.keys(g.entries || {}).length + " entered" : g && g.status === "closed" ? "CLOSED · awaiting draw" : "not running"; }()) + "\n" +
       "Game modules: " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + "\n" +
       "Use /ab admin help for the control map."
     );
@@ -2638,7 +2640,17 @@ var LBC = (function () {
         "\nCommands: /ab menu add · remove · clear · show.");
       return;
     }
-    if (value === "giveaway") {\n      var giveaway = readJson("lbc_ab_giveaway_current", null);\n      LBC.notice("🎟️ GIVEAWAY CONTROL\\n" + (giveaway && giveaway.status === "open" ? "OPEN · " + giveaway.prize + " · " + Object.keys(giveaway.entries || {}).length + " entries" : giveaway && giveaway.status === "closed" ? "CLOSED · " + giveaway.prize + " · awaiting draw" : "No active giveaway.") + "\\nCommands: /ab giveaway start Prize · end · draw · cancel · history.");\n      return;\n    }\n    if (value === "announcements") {
+    if (value === "giveaway") {
+      var giveaway = readJson("lbc_ab_giveaway_current", null);
+      var giveawayStatus = giveaway && giveaway.status === "open" ?
+        "OPEN · " + giveaway.prize + " · " + Object.keys(giveaway.entries || {}).length + " entries" :
+        giveaway && giveaway.status === "closed" ? "CLOSED · " + giveaway.prize + " · awaiting draw" :
+        "No active giveaway.";
+      LBC.notice("🎟️ GIVEAWAY CONTROL\n" + giveawayStatus +
+        "\nCommands: /ab giveaway start Prize · end · draw · cancel · history.");
+      return;
+    }
+    if (value === "announcements") {
       var state = readJson("lbc_m2_announcements", {});
       LBC.notice("📣 ANNOUNCEMENTS\nRotating notices: " + (state.enabled === true ? "ON" : "OFF") +
         "\nCommands: /ab announcements on · off · status.");
@@ -2651,12 +2663,13 @@ var LBC = (function () {
     LBC.notice(
       "🖤 AFTERDARK BROTHERHOOD — ADMIN CONTROL MAP\n" +
       "/ab admin — dashboard · /ab admin status — refresh dashboard\n" +
-      "/ab admin games|goals|rewards|menu|announcements — subsystem status\n" +
+      "/ab admin games|goals|rewards|menu|announcements|giveaway — subsystem status\n" +
       "/ab admin members — member tracking summary\n" +
       "GOALS: /ab goal set 1000 Title · /ab goal queue 1500 Next\n" +
       "REWARDS: /ab rewards add 100 Reward · pending · approve 1 · deny 1\n" +
       "TIP MENU: /ab menu add 50 Request · /ab menu remove 1\n" +
       "ANNOUNCEMENTS: /ab announcements on|off\n" +
+      "GIVEAWAY: /ab giveaway start Prize · end · draw · cancel · history (free entry only)\n" +
       "GAMES: use the game's own /ab <game> start|stop command."
     );
   }
@@ -2688,7 +2701,7 @@ var LBC = (function () {
         " / " + MAX_INDEX + "\nViewer commands: !profile · !profile username · !leaderboard wins|games|points.");
       return;
     }
-    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements)$/))) {
+    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway)$/))) {
       adminDetail(match[1]);
       return;
     }
@@ -2720,7 +2733,7 @@ var LBC = (function () {
   }
 
   function cleanPrize(value) {
-    return String(value || "").replace(/[\\r\\n\\t]/g, " ").replace(/\\s+/g, " ").trim().slice(0, 80);
+    return String(value || "").replace(/[\r\n\t]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
   }
 
   function read(key, fallback) {
@@ -2760,10 +2773,10 @@ var LBC = (function () {
       return;
     }
     LBC.notice(
-      "🎟️ AFTERDARK BROTHERHOOD — FREE GIVEAWAY\\n" +
-      "Prize: " + state.prize + "\\n" +
-      "Status: " + state.status.toUpperCase() + "\\n" +
-      "Entries: " + entryCount(state) + " / " + MAX_ENTRIES + "\\n" +
+      "🎟️ AFTERDARK BROTHERHOOD — FREE GIVEAWAY\n" +
+      "Prize: " + state.prize + "\n" +
+      "Status: " + state.status.toUpperCase() + "\n" +
+      "Entries: " + entryCount(state) + " / " + MAX_ENTRIES + "\n" +
       (state.status === "open" ? "Type !enter to join. Free entry; no tip or purchase required." : "Entries are closed. The broadcaster will draw the winner."),
       username ? { toUsername: cleanName(username) } : {}
     );
@@ -2801,9 +2814,9 @@ var LBC = (function () {
       LBC.notice("No completed giveaways recorded yet.");
       return;
     }
-    LBC.notice("🎟️ GIVEAWAY HISTORY\\n" + list.slice(-5).reverse().map(function (item) {
+    LBC.notice("🎟️ GIVEAWAY HISTORY\n" + list.slice(-5).reverse().map(function (item) {
       return item.prize + " — " + (item.winner || "No winner");
-    }).join("\\n"));
+    }).join("\n"));
   }
 
   function command(body, username, isOwner) {
@@ -2820,7 +2833,7 @@ var LBC = (function () {
     }
     if (!isOwner || lower.indexOf("/ab giveaway") !== 0) return;
 
-    if ((match = raw.match(/^\\/ab giveaway start\\s+(.+)$/i))) {
+    if ((match = raw.match(/^\/ab giveaway start\s+(.+)$/i))) {
       var prize = cleanPrize(match[1]);
       if (!prize) {
         LBC.notice("Usage: /ab giveaway start Prize description.");
@@ -2844,7 +2857,7 @@ var LBC = (function () {
         LBC.notice("The giveaway could not be saved.");
         return;
       }
-      LBC.notice("🎟️ FREE GIVEAWAY OPEN: " + prize + "\\nType !giveaway for details and !enter to join. No tip or purchase required.");
+      LBC.notice("🎟️ FREE GIVEAWAY OPEN: " + prize + "\nType !giveaway for details and !enter to join. No tip or purchase required.");
       return;
     }
 
