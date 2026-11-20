@@ -3052,10 +3052,6 @@ var LBC = (function () {
     try { var raw = LBC.runtime.kvGet(key, ""); return raw ? JSON.parse(raw) : fallback; }
     catch (err) { return fallback; }
   }
-  function clearWizard(state) {
-    state.wizard = "";
-    saveState(state);
-  }
   function say(message) { LBC.notice(message); }
   function home(state) {
     state.section = "home";
@@ -3072,8 +3068,10 @@ var LBC = (function () {
     state.wizard = "";
     saveState(state);
     if (name === "games") {
-      if (LBC.controlCenter) LBC.controlCenter.detail("games");
-      say("GAME SHORTCUTS\nGuess the Number: /ab start or /ab stop\nOther registered games use their own /ab <game> start|stop command.\nSend /ab 0 to return.");
+      var activeGame = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
+      var baseGame = readJson("lbc_v1_game", {});
+      say("GAMES" + (activeGame && activeGame.active ? "\\nActive: " + activeGame.name : baseGame && baseGame.active ? "\\nActive: Guess the Number" : "\\nNo game running") +
+        "\\n1. Codebreaker\\n2. Word Scramble\\n3. Dirty Would You Rather\\n4. Position Impossible\\n5. Dirty Charades\\n6. Guess the Number\\n7. Stop active game\\n8. Return to main menu");
     } else if (name === "goals") {
       if (LBC.controlCenter) LBC.controlCenter.detail("goal");
       say("GOALS — choose an action\n1. View goal status\n2. Create an untimed goal\n3. Create a timed goal\n4. Queue a goal stage\n5. Pause / resume current goal\n6. View goal queue\n7. Return to main menu");
@@ -3113,6 +3111,19 @@ var LBC = (function () {
     if (s === "home") {
       var sections = {1:"games",2:"goals",3:"menu",4:"rewards",5:"brotherhood",6:"giveaway",7:"queue",8:"announcements",9:"dashboard",10:"settings"};
       if (sections[number]) { section(state, sections[number]); return { handled: true }; }
+    }
+    if (s === "games") {
+      var gameCommands = {1:"/ab codebreaker start",2:"/ab scramble start",3:"/ab wyr start",4:"/ab position start",5:"/ab charades start",6:"/ab start"};
+      if (gameCommands[number]) return {handled:true,command:gameCommands[number]};
+      if (number === 7) {
+        var running = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
+        var stops = {"codebreaker":"/ab codebreaker stop","word-scramble":"/ab scramble stop","would-you-rather":"/ab wyr stop","position-impossible":"/ab position stop","dirty-charades":"/ab charades stop"};
+        if (running && running.active && stops[running.id]) return {handled:true,command:stops[running.id]};
+        var base = readJson("lbc_v1_game",{});
+        if (base && base.active) return {handled:true,command:"/ab stop"};
+        say("There is no active game to stop."); return {handled:true};
+      }
+      if (number === 8) { home(state); return {handled:true}; }
     }
     if (s === "goals") {
       if (number === 1) return {handled:true,command:"/ab goal status"};
