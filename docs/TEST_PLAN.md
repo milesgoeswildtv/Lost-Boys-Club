@@ -135,3 +135,18 @@ Do not release to the public App Directory or live room until all applicable che
 - Run `/ab admin help` and verify command map.
 - As an ordinary viewer, run `/ab admin`; confirm no admin dashboard is disclosed.
 - Confirm existing `/ab goal`, `/ab rewards`, `/ab menu`, game start/stop, and announcement commands still operate unchanged.
+
+
+## Free-Entry Giveaway QA
+
+- Broadcaster starts a giveaway with `/ab giveaway start Test Prize`.
+- Viewer `!giveaway` receives current prize, status, and entry instructions.
+- Viewer `!enter` receives private confirmation and is stored once.
+- Repeating `!enter` does not create a duplicate entry.
+- A second viewer can enter independently.
+- Broadcaster `/ab giveaway end` closes entries; late `!enter` attempts are rejected.
+- Broadcaster `/ab giveaway draw` selects exactly one of the stored entrants and saves the result to history.
+- `/ab giveaway history` shows the completed draw.
+- `/ab giveaway cancel` closes an open or awaiting-draw giveaway without selecting a winner.
+- Confirm no tip or loyalty point command is required or grants additional entries.
+- Confirm only the broadcaster can run giveaway management commands.
