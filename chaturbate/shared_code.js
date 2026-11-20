@@ -168,6 +168,7 @@ var LBC = (function () {
 
     if (winner) {
       records.wins[winner] = (Number(records.wins[winner]) || 0) + 1;
+      if (LBC.rewards) LBC.rewards.award(winner, 5, "Guess the Number win", "win:guess:" + game.startedAt + ":" + winner.toLowerCase());
       records.recentWinners.unshift({ name: winner, at: now() });
       records.recentWinners = records.recentWinners.slice(0, 10);
       saveRecords(records);
@@ -203,6 +204,7 @@ var LBC = (function () {
 
     game.guesses[key] = guess;
     saveGame(game);
+    if (LBC.rewards) LBC.rewards.award(username, 1, "Guess the Number participation", "play:guess:" + game.startedAt + ":" + key);
 
     if (guess === Number(game.secret)) {
       finishGuessGame("winner");
@@ -794,6 +796,7 @@ var LBC = (function () {
       if (state.guesses[name] === correctDirection) winners.push(name);
     });
 
+    if (LBC.rewards) winners.forEach(function (name) { LBC.rewards.award(name, 5, "Higher or Lower win", "win:higher:" + state.endsAt + ":" + name.toLowerCase()); });
     var outcome = "The next number was " + state.target + " — " + correctDirection.toUpperCase() + ". ";
     if (winners.length) {
       LBC.notice(
@@ -907,6 +910,7 @@ var LBC = (function () {
 
     state.guesses[key] = body === "!higher" ? "higher" : "lower";
     saveState(state);
+    if (LBC.rewards) LBC.rewards.award(name, 1, "Higher or Lower participation", "play:higher:" + state.endsAt + ":" + key);
     LBC.notice("Your " + (body === "!higher" ? "HIGHER" : "LOWER") + " prediction is locked in. 🖤", { toUsername: name });
   };
 
@@ -1035,6 +1039,7 @@ var LBC = (function () {
     saveState(state);
 
     if (winner) {
+      if (LBC.rewards) LBC.rewards.award(winner, 5, "Couple Trivia win", "win:trivia:" + state.endsAt + ":" + String(winner).toLowerCase());
       LBC.notice(
         "🏆 COUPLE TRIVIA — " + cleanName(winner) + " got it first!\n" +
         "Answer: " + state.answer + ". Apparently somebody was paying attention. 🖤"
@@ -1693,6 +1698,7 @@ var LBC = (function () {
     }
 
     LBC.gameLibrary.release(finished.id);
+    if (winner && LBC.rewards) LBC.rewards.award(winner, 5, finished.name + " win", "win:afterhours:" + finished.startedAt + ":" + String(winner).toLowerCase());
 
     if (finished.id === "would-you-rather") {
       var a = Object.keys(finished.votes || {}).filter(function (name) {
@@ -2291,6 +2297,14 @@ var LBC = (function () {
     body = String(body || "").trim();
 
     if (stopIfLegacyGameStarts(body, isOwner)) return;
+    if (!isOwner && state && state.active && state.id === gameId && LBC.rewards) {
+      var validEntry = (gameId === "codebreaker" && /^!code\s+[0-9]{4}$/i.test(body)) ||
+        (gameId === "word-scramble" && /^!word\s+\S[\s\S]*$/i.test(body)) ||
+        (gameId === "would-you-rather" && /^!(a|b)$/i.test(body)) ||
+        (gameId === "position-impossible" && /^!position\s+\S[\s\S]*$/i.test(body)) ||
+        (gameId === "dirty-charades" && /^!charade\s+\S[\s\S]*$/i.test(body));
+      if (validEntry) LBC.rewards.award(username, 1, gameId + " participation", "play:afterhours:" + state.startedAt + ":" + gameId + ":" + String(username).toLowerCase());
+    }
 
     if (gameId === "codebreaker") {
       handleCodebreaker(body, username, isOwner);
