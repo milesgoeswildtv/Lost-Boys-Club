@@ -1,5 +1,5 @@
 /*
- * LOST BOYS CLUB — Shared Code
+ * AFTERDARK BROTHERHOOD — Shared Code
  * Version: 0.1.1
  * Paste into the Chaturbate Developer Portal "Shared Code" editor.
  *
@@ -88,7 +88,7 @@ var LBC = (function () {
 
   function helpText() {
     return [
-      "🖤 LOST BOYS CLUB — CLUBHOUSE",
+      "🖤 AFTERDARK BROTHERHOOD — BROTHERHOOD",
       "No map. No supervision. Questionable decisions.",
       "",
       "FREE GAME: GUESS THE NUMBER",
@@ -96,19 +96,20 @@ var LBC = (function () {
       "Pick a whole number from 1 to 100. One guess per person.",
       "",
       "Room commands:",
-      "!lbc — show this help",
+      "!ab — show this help",
       "!game — show the current game",
-      "!scoreboard — show club records",
+      "!scoreboard — show brotherhood records",
+      "!points / !rewards — free-play loyalty points and reward shelf",
       "",
       "Broadcaster controls:",
-      "/lbc start — start a 90-second round",
-      "/lbc stop — end the current round"
+      "/ab start — start a 90-second round",
+      "/ab stop — end the current round"
     ].join("\n");
   }
 
   function statusText() {
     var game = getGame();
-    if (!game.active) return "🎮 No game running. The clubhouse is unsupervised.";
+    if (!game.active) return "🎮 No game running. The brotherhood is unsupervised.";
     var count = Object.keys(game.guesses || {}).length;
     return "🎯 GUESS THE NUMBER is live! Pick 1–100 with !guess <number>. " +
       count + " player" + (count === 1 ? "" : "s") + " entered. " +
@@ -118,7 +119,7 @@ var LBC = (function () {
   function startGuessGame() {
     var current = getGame();
     if (current.active) {
-      notice("The current round is already running. Please don't make the clubhouse manage two disasters at once.");
+      notice("The current round is already running. Please don't make the brotherhood manage two disasters at once.");
       return;
     }
 
@@ -141,7 +142,7 @@ var LBC = (function () {
     }
 
     notice(
-      "🖤 LOST BOYS CLUB GAME TIME 🖤\n" +
+      "🖤 AFTERDARK BROTHERHOOD GAME TIME 🖤\n" +
       "GUESS THE NUMBER: I'm thinking of a number from 1 to 100.\n" +
       "Type !guess followed by your number. One guess each.\n" +
       "You have " + GAME_SECONDS + " seconds. No tips, entry fees, or purchases required.\n" +
@@ -167,16 +168,17 @@ var LBC = (function () {
 
     if (winner) {
       records.wins[winner] = (Number(records.wins[winner]) || 0) + 1;
+      if (LBC.rewards) LBC.rewards.award(winner, 5, "Guess the Number win", "win:guess:" + game.startedAt + ":" + winner.toLowerCase());
       records.recentWinners.unshift({ name: winner, at: now() });
       records.recentWinners = records.recentWinners.slice(0, 10);
       saveRecords(records);
-      notice("🏆 CLUBHOUSE WINNER: " + winner + " got it. The number was " + game.secret + ". Enjoy your wildly temporary superiority.");
+      notice("🏆 BROTHERHOOD WINNER: " + winner + " got it. The number was " + game.secret + ". Enjoy your wildly temporary superiority.");
     } else {
       saveRecords(records);
       notice(
         (reason === "timeout" ? "⏰ Time's up." : "🛑 Round ended.") +
         " Nobody nailed it. The number was " + game.secret +
-        ". " + guessers.length + " guess" + (guessers.length === 1 ? "" : "es") + " submitted. The clubhouse remains intellectually unsupervised."
+        ". " + guessers.length + " guess" + (guessers.length === 1 ? "" : "es") + " submitted. The brotherhood remains intellectually unsupervised."
       );
     }
   }
@@ -202,6 +204,7 @@ var LBC = (function () {
 
     game.guesses[key] = guess;
     saveGame(game);
+    if (LBC.rewards) LBC.rewards.award(username, 1, "Guess the Number participation", "play:guess:" + game.startedAt + ":" + key);
 
     if (guess === Number(game.secret)) {
       finishGuessGame("winner");
@@ -215,7 +218,7 @@ var LBC = (function () {
     var records = getRecords();
     var lines = getScoreboardLines(records, 5);
     notice(
-      "🏚️ LOST BOYS CLUB — HALL OF SHAME / FAME\n" +
+      "🏚️ AFTERDARK BROTHERHOOD — HALL OF SHAME / FAME\n" +
       "Rounds played: " + (Number(records.rounds) || 0) + "\n" +
       (lines.length ? lines.join("\n") : "No winners yet. A clean slate of questionable potential.")
     );
@@ -231,7 +234,7 @@ var LBC = (function () {
     if (current - last < 21600) return;
     LBC.runtime.kvSet(PREFIX + key, String(current), 86400);
 
-    notice("🖤 " + safe + " wandered into LOST BOYS CLUB. No map, no supervision, questionable decisions. Make yourself comfortable.");
+    notice("🖤 " + safe + " wandered into AFTERDARK BROTHERHOOD. No map, no supervision, questionable decisions. Make yourself comfortable.");
   }
 
   function onChatMessage(rawBody, rawUsername, isOwner) {
@@ -241,16 +244,16 @@ var LBC = (function () {
     var username = cleanName(rawUsername);
     var lower = body.toLowerCase();
 
-    if (isOwner && lower === "/lbc start") {
+    if (isOwner && lower === "/ab start") {
       startGuessGame();
       return;
     }
-    if (isOwner && lower === "/lbc stop") {
+    if (isOwner && lower === "/ab stop") {
       finishGuessGame("manual");
       return;
     }
 
-    if (lower === "!lbc" || lower === "!lbc help") {
+    if (lower === "!ab" || lower === "!ab help") {
       notice(helpText(), { toUsername: username });
       return;
     }
@@ -270,7 +273,7 @@ var LBC = (function () {
     }
 
     // Broadcaster-only command help. Do not react to ordinary conversation.
-    if (isOwner && lower === "/lbc help") {
+    if (isOwner && lower === "/ab help") {
       notice(helpText(), { toUsername: username });
     }
   }
@@ -283,7 +286,7 @@ var LBC = (function () {
     // Tips are acknowledged, never treated as paid game entry or a wager.
     var safe = isAnon ? "A generous mystery human" : cleanName(username);
     if (Number(tokens) > 0) {
-      notice("🖤 " + safe + " tossed " + Number(tokens) + " tokens into the clubhouse. Much appreciated. No game advantage attached.");
+      notice("🖤 " + safe + " tossed " + Number(tokens) + " tokens into the brotherhood. Much appreciated. No game advantage attached.");
     }
   }
 
@@ -314,7 +317,7 @@ var LBC = (function () {
 }());
 
 /*
- * LOST BOYS CLUB — EVENT HANDLER BRIDGE
+ * AFTERDARK BROTHERHOOD — EVENT HANDLER BRIDGE
  * Shared Code never calls the Chaturbate SDK directly. Event handlers
  * inject platform methods through this runtime facade.
  */
@@ -334,156 +337,74 @@ var LBC = (function () {
 }());
 
 /*
- * LOST BOYS CLUB — Modular Room Utilities
- * M2.2 room-goal helpers. Appended after the existing LBC core.
- * Event handlers call these small public methods; feature logic stays here.
+ * AFTERDARK BROTHERHOOD — ADVANCED GOAL ENGINE
+ * Multi-stage goals, configurable milestones, pause/resume, extensions and queued goals.
  */
 (function () {
   "use strict";
-
-  var GOAL_KEY = "lbc_m2_room_goal";
-  var STATS_KEY = "lbc_m2_tip_stats";
-
-  function readStoredJson(key, fallback) {
-    try {
-      var raw = LBC.runtime.kvGet(key, "");
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (err) {
-      return fallback;
-    }
-  }
-
-  function readGoalSnapshot() {
-    var goal = readStoredJson(GOAL_KEY, null);
-    var stats = readStoredJson(STATS_KEY, {});
-    if (!goal || !(Number(goal.target) > 0)) return null;
-
-    var target = Number(goal.target);
-    var total = Number(stats.totalTokens) || 0;
-    var progress = Math.max(0, total - (Number(goal.startTotal) || 0));
-
-    return {
-      goal: goal,
-      target: target,
-      progress: progress,
-      displayedProgress: Math.min(progress, target),
-      percent: Math.min(100, Math.floor(progress / target * 100)),
-      active: goal.active === true,
-      completed: goal.completed === true
-    };
-  }
-
-  LBC.handleRoomGoalCommand = function (rawBody, isOwner) {
-    var body = String(rawBody || "").trim();
-    var lower = body.toLowerCase();
-
-    if (lower === "!clubgoal") {
-      var snapshot = readGoalSnapshot();
-      if (!snapshot) {
-        LBC.notice("No room goal is set right now. The clubhouse is financially irresponsible but emotionally available.");
-        return;
-      }
-
-      LBC.notice(
-        "🏚️ LOST BOYS CLUB — ROOM GOAL\n" +
-        (snapshot.active ? "Progress: " : "Last goal: ") +
-        snapshot.displayedProgress + " / " + snapshot.target +
-        " tokens (" + snapshot.percent + "%)" +
-        (snapshot.active
-          ? "\nVoluntary support only. No perks or game advantage."
-          : (snapshot.completed ? "\nGoal reached. Thanks, troublemakers." : "\nGoal is not currently active."))
-      );
-      return;
-    }
-
-    if (!isOwner || lower.indexOf("/lbc goal") !== 0) return;
-
-    var match = lower.match(/^\/lbc goal (off|[1-9][0-9]{0,6})$/);
-    if (!match) {
-      LBC.notice("Use /lbc goal 500 to set a goal, or /lbc goal off to turn it off.");
-      return;
-    }
-
-    if (match[1] === "off") {
-      LBC.runtime.kvSet(GOAL_KEY, JSON.stringify({
-        target: 0, startTotal: 0, active: false, completed: false, milestones: {}
-      }));
-      LBC.notice("Room goal switched off. The clubhouse returns to its regularly scheduled nonsense.");
-    } else {
-      var stats = readStoredJson(STATS_KEY, {});
-      var baseline = Number(stats.totalTokens) || 0;
-      var target = Number(match[1]);
-      LBC.runtime.kvSet(GOAL_KEY, JSON.stringify({
-        target: target,
-        startTotal: baseline,
-        active: true,
-        completed: false,
-        milestones: {}
-      }));
-      LBC.notice("🏚️ New clubhouse goal set: " + target + " tokens. Progress starts now. Support is voluntary; nothing is locked behind it.");
-    }
-
-LBC.runtime.reloadPanel()  };
-
-  LBC.processRoomGoalTip = function (rawTokens) {
-    var tokens = Math.max(0, Math.floor(Number(rawTokens) || 0));
-    if (!tokens) return;
-
-    // The M2.1 Tip Received handler updates aggregate totals before calling this.
-    var snapshot = readGoalSnapshot();
-    if (!snapshot || !snapshot.active) return;
-
-    var goal = snapshot.goal;
-    var milestones = goal.milestones && typeof goal.milestones === "object"
-      ? goal.milestones : {};
-
-    [25, 50, 75, 100].forEach(function (mark) {
-      var key = String(mark);
-      if (snapshot.percent >= mark && !milestones[key]) {
-        milestones[key] = true;
-        LBC.notice(
-          mark === 100
-            ? "🏁 CLUBHOUSE GOAL REACHED. " + snapshot.target + " tokens. You beautiful bunch of questionable decisions. Thank you."
-            : "🏚️ Clubhouse goal update: " + mark + "% reached. " +
-            snapshot.displayedProgress + " / " + snapshot.target +
-            " tokens. Voluntary support, always."
-        );
-      }
-    });
-
-    goal.milestones = milestones;
-    if (snapshot.percent >= 100) {
-      goal.active = false;
-      goal.completed = true;
-    }
-    LBC.runtime.kvSet(GOAL_KEY, JSON.stringify(goal));
-    LBC.runtime.reloadPanel()
+  var KEY="lbc_m2_room_goal", STATS="lbc_m2_tip_stats", DEFAULTS=[25,50,75,100];
+  function json(k,d){try{var r=LBC.runtime.kvGet(k,"");return r?JSON.parse(r):d;}catch(e){return d;}}
+  function total(){return Math.max(0,Number(json(STATS,{}).totalTokens)||0);}
+  function cleanTitle(v){return String(v||"Brotherhood Goal").replace(/[\r\n\t]/g," ").replace(/\s+/g," ").trim().slice(0,48)||"Brotherhood Goal";}
+  function read(){var g=json(KEY,{});return {version:2,target:Math.max(0,Number(g.target)||0),title:cleanTitle(g.title),startTotal:Math.max(0,Number(g.startTotal)||0),active:g.active===true,paused:g.paused===true,pausedTotal:Math.max(0,Number(g.pausedTotal)||0),completed:g.completed===true,milestones:Array.isArray(g.milestones)&&g.milestones.length?g.milestones:DEFAULTS.slice(),reached:g.reached&&typeof g.reached==="object"?g.reached:{},queue:Array.isArray(g.queue)?g.queue.slice(0,10):[],lastCompleted:g.lastCompleted||null};}
+  function save(g){LBC.runtime.kvSet(KEY,JSON.stringify(g));LBC.runtime.reloadPanel();}
+  function snap(g){if(!g||!g.target)return null;var p=Math.max(0,total()-g.startTotal);return {shown:Math.min(p,g.target),percent:Math.min(100,Math.floor(p/g.target*100))};}
+  function activate(g,t,n){g.target=t;g.title=cleanTitle(n);g.startTotal=total();g.active=true;g.paused=false;g.pausedTotal=0;g.completed=false;g.reached={};}
+  function status(){var g=read(),s=snap(g);if(!s){LBC.notice("No room goal is active. Use /ab goal set 1000 Title to launch one.");return;}LBC.notice("🏁 "+g.title.toUpperCase()+"\n"+(g.paused?"PAUSED":g.active?"LIVE":g.completed?"REACHED":"OFF")+" · "+s.shown+" / "+g.target+" tokens · "+s.percent+"%"+(g.queue.length?"\nQueued goals: "+g.queue.length:"")+"\nSupport is voluntary. Tipping does not award points or game advantages.");}
+  LBC.handleRoomGoalCommand=function(raw,isOwner){
+    var body=String(raw||"").trim(),low=body.toLowerCase(),m,g=read();
+    if(low==="!goal"||low==="!clubgoal"){status();return;}
+    if(!isOwner||low.indexOf("/ab goal")!==0)return;
+    if((m=body.match(/^\/ab goal(?:\s+set)?\s+([1-9][0-9]{0,6})(?:\s+(.+))?$/i))){activate(g,Number(m[1]),m[2]);save(g);LBC.notice("🏁 Goal started: "+g.title+" · "+g.target+" tokens.");return;}
+    if((m=body.match(/^\/ab goal queue\s+([1-9][0-9]{0,6})(?:\s+(.+))?$/i))){if(g.queue.length>=10){LBC.notice("Goal queue is full (10).");return;}g.queue.push({target:Number(m[1]),title:cleanTitle(m[2])});save(g);LBC.notice("Queued goal #"+g.queue.length+": "+g.queue[g.queue.length-1].title+".");return;}
+    if(low==="/ab goal queue list"){LBC.notice(g.queue.length?"UPCOMING GOALS\n"+g.queue.map(function(x,i){return (i+1)+". "+x.title+" — "+x.target+" tokens";}).join("\n"):"No queued goals.");return;}
+    if(low==="/ab goal queue clear"){g.queue=[];save(g);LBC.notice("Goal queue cleared.");return;}
+    if((m=low.match(/^\/ab goal milestones\s+(.+)$/))){var p=m[1].split(/[,\s]+/),marks=[];for(var i=0;i<p.length;i++){var n=Number(p[i]);if(!Number.isInteger(n)||n<1||n>100){LBC.notice("Use whole percentages from 1 to 100.");return;}if(marks.indexOf(n)<0)marks.push(n);}if(marks.indexOf(100)<0)marks.push(100);marks.sort(function(a,b){return a-b;});g.milestones=marks.slice(0,10);g.reached={};save(g);LBC.notice("Milestones set: "+g.milestones.join("%, ")+"%.");return;}
+    if((m=low.match(/^\/ab goal extend\s+([1-9][0-9]{0,6})$/))){if(!g.active){LBC.notice("No active goal to extend.");return;}g.target+=Number(m[1]);g.paused=false;g.completed=false;save(g);LBC.notice("Goal extended. New target: "+g.target+" tokens.");return;}
+    if(low==="/ab goal pause"){if(!g.active){LBC.notice("No active goal to pause.");return;}if(g.paused){LBC.notice("The room goal is already paused.");return;}g.paused=true;g.pausedTotal=total();save(g);LBC.notice("Goal paused. Tips received while paused will not count.");return;}
+    if(low==="/ab goal resume"){if(!g.active){LBC.notice("No active goal to resume.");return;}g.startTotal+=Math.max(0,total()-g.pausedTotal);g.pausedTotal=0;g.paused=false;save(g);LBC.notice("Goal resumed. Tips received during the pause were excluded.");return;}
+    if(low==="/ab goal reset"){if(!g.target){LBC.notice("Set a goal first.");return;}g.startTotal=total();g.active=true;g.paused=false;g.pausedTotal=0;g.completed=false;g.reached={};save(g);LBC.notice("Goal reset to 0 / "+g.target+".");return;}
+    if(low==="/ab goal off"){g.active=false;g.paused=false;g.pausedTotal=0;g.completed=false;save(g);LBC.notice("Current goal switched off. Queue preserved.");return;}
+    if(low==="/ab goal status"){status();return;}
+    LBC.notice("GOAL: /ab goal set 1000 Title · queue 1500 Next Goal · pause · resume · reset · extend 250 · milestones 10 25 50 75 100 · queue list · queue clear · off. Viewers: !goal.");
   };
+  LBC.processRoomGoalTip=function(tokens){if(!(Number(tokens)>0))return;var g=read();if(!g.active||g.paused)return;var s=snap(g);if(!s)return;g.milestones.forEach(function(mark){var k=String(mark);if(s.percent>=mark&&!g.reached[k]){g.reached[k]=true;LBC.notice(mark===100?"🏁 GOAL REACHED — "+g.title+" · "+g.target+" tokens. Thank you.":"🏚️ "+g.title+" reached "+mark+"% · "+s.shown+" / "+g.target+" tokens.");}});if(s.percent>=100){g.active=false;g.completed=true;g.paused=false;g.lastCompleted={title:g.title,target:g.target,at:Date.now()};if(g.queue.length){var next=g.queue.shift();activate(g,Number(next.target),next.title);LBC.notice("🏁 NEXT GOAL: "+g.title+" · "+g.target+" tokens. Progress starts now.");}}save(g);};
+  LBC.updateGoalPanel=function(){var g=read(),s=snap(g);if(!s)return;var p=LBC.panelData();LBC.runtime.setPanelTemplate({template:"3_rows_of_labels",row1_label:"AFTERDARK BROTHERHOOD",row1_value:(p.game&&p.game.active)?"GAME LIVE":"BROTHERHOOD OPEN",row2_label:cleanTitle(g.title).toUpperCase().slice(0,18),row2_value:(g.paused?"PAUSED · ":g.active?"":g.completed?"REACHED · ":"OFF · ")+s.shown+"/"+g.target+" · "+s.percent+"%",row3_label:"HALL OF FAME",row3_value:(p.leader||"No champion yet")+" · "+(Number(p.rounds)||0)+" rounds"});};
+}());
 
-  LBC.updateGoalPanel = function () {
-    var snapshot = readGoalSnapshot();
-    if (!snapshot) return;
-
-    var panel = LBC.panelData();
-    var row2Value = (snapshot.active ? "" : (snapshot.completed ? "REACHED · " : "PAUSED · ")) +
-      snapshot.displayedProgress + "/" + snapshot.target + " TOKENS · " + snapshot.percent + "%";
-
-    LBC.runtime.setPanelTemplate({
-      template: "3_rows_of_labels",
-      row1_label: "LOST BOYS CLUB",
-      row1_value: (panel.game && panel.game.active) ? "GUESS THE NUMBER — LIVE" : "CLUBHOUSE OPEN",
-      row2_label: "ROOM GOAL",
-      row2_value: row2Value,
-      row3_label: "CLUB RECORD",
-      row3_value: (panel.leader || "No champion yet") + " · " +
-        (Number(panel.rounds) || 0) +
-        ((Number(panel.rounds) || 0) === 1 ? " round" : " rounds")
-    });
+/*
+ * AFTERDARK BROTHERHOOD — LOYALTY & REWARDS
+ * Points come from free game participation and wins, never from tips.
+ * Redemption requests are broadcaster-reviewed; no cash value or random prizes.
+ */
+(function () {
+  "use strict";
+  var USER="lbc_ab_rewards_user_",CAT="lbc_ab_rewards_catalog",REQ="lbc_ab_rewards_requests",NEXT="lbc_ab_rewards_next_id";
+  function clean(v){return String(v||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,25);}
+  function read(k,d){try{var x=LBC.runtime.kvGet(k,"");return x?JSON.parse(x):d;}catch(e){return d;}}
+  function write(k,v){return LBC.runtime.kvSet(k,JSON.stringify(v));}
+  function getUser(name){var n=clean(name);if(!n)return null;var p=read(USER+n.toLowerCase(),{});return {username:n,balance:Math.max(0,Number(p.balance)||0),earned:Math.max(0,Number(p.earned)||0),spent:Math.max(0,Number(p.spent)||0),ids:Array.isArray(p.ids)?p.ids.slice(-30):[],history:Array.isArray(p.history)?p.history.slice(0,8):[]};}
+  function saveUser(p){return p?write(USER+p.username.toLowerCase(),p):false;}
+  function catalog(){var a=read(CAT,[]);return Array.isArray(a)?a.slice(0,12):[];}
+  function requests(){var a=read(REQ,[]);return Array.isArray(a)?a.slice(-50):[];}
+  function award(name,amount,reason,id){var p=getUser(name),n=Math.floor(Number(amount)||0),key=String(id||"");if(!p||n<1||n>1000||(key&&p.ids.indexOf(key)>=0))return false;p.balance=Math.min(1000000,p.balance+n);p.earned+=n;p.history.unshift({kind:"earned",points:n,reason:String(reason||"Free game activity").slice(0,45),at:Date.now()});p.history=p.history.slice(0,8);if(key){p.ids.push(key);p.ids=p.ids.slice(-30);}return saveUser(p);}
+  function showCatalog(){var a=catalog();LBC.notice(a.length?"🖤 BROTHERHOOD REWARDS\n"+a.map(function(x){return "#"+x.id+" · "+x.cost+" pts — "+x.name;}).join("\n")+"\nRedeem with !redeem <number>. Points are earned by free game participation.":"Rewards shelf empty. Broadcaster: /ab rewards add 100 Reward name.");}
+  function review(id,approve){var a=requests(),r=null;for(var i=0;i<a.length;i++)if(Number(a[i].id)===id){r=a[i];break;}if(!r||r.status!=="pending"){LBC.notice("Pending reward request not found.");return;}r.status=approve?"approved":"denied";if(!approve){var p=getUser(r.user);if(p){p.balance+=r.cost;p.spent=Math.max(0,p.spent-r.cost);p.history.unshift({kind:"refund",points:r.cost,reason:"Request #"+id+" denied",at:Date.now()});saveUser(p);}}write(REQ,a);LBC.notice(approve?"Approved #"+id+": "+r.user+" — "+r.name+". Broadcaster fulfillment is now due.":"Denied #"+id+"; "+r.cost+" points refunded to "+r.user+".");LBC.notice(approve?"Your reward request #"+id+" was approved: "+r.name+".":"Your reward request #"+id+" was declined; points refunded.",{toUsername:r.user});}
+  function redeem(user,itemId){var name=clean(user),a=catalog(),item=null;for(var i=0;i<a.length;i++)if(Number(a[i].id)===Number(itemId)){item=a[i];break;}if(!item){LBC.notice("That reward is not available.",{toUsername:name});return;}var p=getUser(name),list=requests(),pending=list.filter(function(r){return r.user.toLowerCase()===name.toLowerCase()&&r.status==="pending";});if(pending.length>=3){LBC.notice("You have three pending reward requests already.",{toUsername:name});return;}if(!p||p.balance<item.cost){LBC.notice("You need "+item.cost+" points. Your balance is "+(p?p.balance:0)+".",{toUsername:name});return;}var id=Math.max(1,Number(LBC.runtime.kvGet(NEXT,"1"))||1);LBC.runtime.kvSet(NEXT,String(id+1));p.balance-=item.cost;p.spent+=item.cost;p.history.unshift({kind:"reserved",points:item.cost,reason:"Request #"+id,at:Date.now()});saveUser(p);list.push({id:id,user:name,itemId:item.id,name:item.name,cost:item.cost,status:"pending",at:Date.now()});write(REQ,list.slice(-50));LBC.notice("Reward request #"+id+" submitted: "+item.name+". The broadcaster will review it.",{toUsername:name});LBC.notice(name+" requested reward #"+id+": "+item.name+" ("+item.cost+" points).");}
+  LBC.rewards={version:"1.0",award:award,balance:function(name){var p=getUser(name);return p?p.balance:0;}};
+  LBC.handleRewardsCommand=function(raw,user,isOwner){var body=String(raw||"").trim(),low=body.toLowerCase(),m;if(low==="!points"){var p=getUser(user);if(p)LBC.notice(p.username+" · "+p.balance+" BROTHERHOOD POINTS\nEarned: "+p.earned+" · Redeemed: "+p.spent+"\nPoints cannot be purchased or earned by tipping.",{toUsername:p.username});return;}if(low==="!rewards"){showCatalog();return;}if((m=body.match(/^!redeem\s+([1-9][0-9]{0,3})$/i))){redeem(user,Number(m[1]));return;}if(!isOwner||(low.indexOf("/ab rewards")!==0&&low.indexOf("/ab points")!==0))return;
+    if((m=body.match(/^\/ab rewards add\s+([1-9][0-9]{0,5})\s+(.{2,60})$/i))){var a=catalog();if(a.length>=12){LBC.notice("Rewards shelf is full (12 items).");return;}var id=a.reduce(function(max,x){return Math.max(max,Number(x.id)||0);},0)+1;var name=String(m[2]).replace(/[\r\n\t]/g," ").replace(/\s+/g," ").trim().slice(0,60);a.push({id:id,cost:Number(m[1]),name:name});write(CAT,a);LBC.notice("Added reward #"+id+": "+name+" · "+m[1]+" points.");return;}
+    if((m=low.match(/^\/ab rewards remove\s+([1-9][0-9]{0,3})$/))){var rid=Number(m[1]),old=catalog(),next=old.filter(function(x){return Number(x.id)!==rid;});if(next.length===old.length){LBC.notice("Reward not found.");return;}write(CAT,next);LBC.notice("Reward #"+rid+" removed.");return;}
+    if((m=low.match(/^\/ab rewards (approve|deny)\s+([1-9][0-9]{0,4})$/))){review(Number(m[2]),m[1]==="approve");return;}
+    if(low==="/ab rewards pending"){var q=requests().filter(function(x){return x.status==="pending";});LBC.notice(q.length?"PENDING REWARDS\n"+q.map(function(x){return "#"+x.id+" "+x.user+" — "+x.name+" ("+x.cost+" pts)";}).join("\n"):"No pending reward requests.");return;}
+    if(low==="/ab rewards"||low==="/ab rewards list"){showCatalog();return;}
+    if((m=body.match(/^\/ab points grant\s+([A-Za-z0-9_-]{1,25})\s+([1-9][0-9]{0,2})$/i))){if(award(m[1],Number(m[2]),"Broadcaster bonus","admin:"+Date.now()+":"+Math.random()))LBC.notice("Granted "+m[2]+" points to "+clean(m[1])+".");return;}
+    LBC.notice("REWARDS: /ab rewards add 100 Reward name · remove 1 · pending · approve 1 · deny 1 · list. POINTS: /ab points grant username 10. VIEWERS: !points · !rewards · !redeem 1.");
   };
 }());
 
 /*
- * LOST BOYS CLUB — Configurable Tip Menu
+ * AFTERDARK BROTHERHOOD — Configurable Tip Menu
  * Informational display only.
  */
 (function () {
@@ -522,7 +443,7 @@ LBC.runtime.reloadPanel()  };
     var items = readMenu();
 
     if (!items.length) {
-      LBC.notice("🏚️ The LOST BOYS CLUB tip menu is empty.");
+      LBC.notice("🏚️ The AFTERDARK BROTHERHOOD tip menu is empty.");
       return;
     }
 
@@ -532,7 +453,7 @@ LBC.runtime.reloadPanel()  };
     });
 
     LBC.notice(
-      "🖤 LOST BOYS CLUB — TIP MENU\n" +
+      "🖤 AFTERDARK BROTHERHOOD — TIP MENU\n" +
       lines.join("\n") +
       "\n\nTips are voluntary. Menu items are requests, not guaranteed outcomes. No game access or advantage is tied to tipping."
     );
@@ -547,9 +468,9 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    if (!isOwner || lower.indexOf("/lbc menu") !== 0) return;
+    if (!isOwner || lower.indexOf("/ab menu") !== 0) return;
 
-    var addMatch = body.match(/^\/lbc menu add ([1-9][0-9]{0,4}) (.{1,200})$/i);
+    var addMatch = body.match(/^\/ab menu add ([1-9][0-9]{0,4}) (.{1,200})$/i);
 
     if (addMatch) {
       var amount = Number(addMatch[1]);
@@ -584,7 +505,7 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    var removeMatch = lower.match(/^\/lbc menu remove ([1-9][0-9]?)$/);
+    var removeMatch = lower.match(/^\/ab menu remove ([1-9][0-9]?)$/);
 
     if (removeMatch) {
       var removeIndex = Number(removeMatch[1]) - 1;
@@ -601,27 +522,27 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    if (lower === "/lbc menu clear") {
+    if (lower === "/ab menu clear") {
       saveMenu([]);
       LBC.notice("Tip menu cleared.");
       return;
     }
 
-    if (lower === "/lbc menu" || lower === "/lbc menu show") {
+    if (lower === "/ab menu" || lower === "/ab menu show") {
       showMenu();
       return;
     }
 
     LBC.notice(
-      "Tip menu controls: /lbc menu add 50 Song request · " +
-      "/lbc menu remove 1 · /lbc menu clear · /lbc menu show. " +
+      "Tip menu controls: /ab menu add 50 Song request · " +
+      "/ab menu remove 1 · /ab menu clear · /ab menu show. " +
       "Viewers use !tipmenu."
     );
   };
 }());
 
 /*
- * LOST BOYS CLUB — Rotating Room Announcements
+ * AFTERDARK BROTHERHOOD — Rotating Room Announcements
  * Broadcaster-controlled, low-frequency informational notices.
  * Starts disabled; one notice every 15 minutes while enabled.
  */
@@ -632,9 +553,9 @@ LBC.runtime.reloadPanel()  };
   var CALLBACK_PREFIX = "lbc_m2_announce_";
   var INTERVAL_SECONDS = 900;
   var MESSAGES = [
-    "🖤 Welcome to LOST BOYS CLUB. No map. No supervision. Questionable decisions. Type !lbc for the clubhouse guide.",
-    "🎮 The clubhouse game is free to join. Type !game to see whether a round is running.",
-    "🏚️ New around here? Type !lbc for the room guide, or !scoreboard to see the clubhouse records.",
+    "🖤 Welcome to AFTERDARK BROTHERHOOD. No map. No supervision. Questionable decisions. Type !ab for the brotherhood guide.",
+    "🎮 The brotherhood game is free to join. Type !game to see whether a round is running.",
+    "🏚️ New around here? Type !ab for the room guide, or !scoreboard to see the brotherhood records.",
     "🖤 Curious what's on the informational tip menu? Type !tipmenu. Requests are voluntary and aren't guaranteed.",
     "Make yourself comfortable, say hello, and enjoy the chaos. No purchase or tip is needed to join the games."
   ];
@@ -673,11 +594,11 @@ LBC.runtime.reloadPanel()  };
 
   LBC.handleAnnouncementCommand = function (rawBody, isOwner) {
     var body = String(rawBody || "").trim().toLowerCase();
-    if (!isOwner || body.indexOf("/lbc announcements") !== 0) return;
+    if (!isOwner || body.indexOf("/ab announcements") !== 0) return;
 
     var state = readState();
 
-    if (body === "/lbc announcements on") {
+    if (body === "/ab announcements on") {
       if (state.enabled) {
         LBC.notice("Rotating announcements are already on. One short notice every 15 minutes.");
         return;
@@ -691,7 +612,7 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    if (body === "/lbc announcements off") {
+    if (body === "/ab announcements off") {
       state.enabled = false;
       state.callbackLabel = "";
       saveState(state);
@@ -699,12 +620,12 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    if (body === "/lbc announcements status") {
+    if (body === "/ab announcements status") {
       LBC.notice("Rotating announcements are " + (state.enabled ? "ON" : "OFF") + ". Cadence: one notice every 15 minutes.");
       return;
     }
 
-    LBC.notice("Announcement controls: /lbc announcements on · /lbc announcements off · /lbc announcements status. Default: off.");
+    LBC.notice("Announcement controls: /ab announcements on · /ab announcements off · /ab announcements status. Default: off.");
   };
 
   LBC.onAnnouncementsCallback = function (label) {
@@ -721,7 +642,7 @@ LBC.runtime.reloadPanel()  };
 }());
 
 /*
- * LOST BOYS CLUB — Custom Broadcaster Announcements
+ * AFTERDARK BROTHERHOOD — Custom Broadcaster Announcements
  * One-off broadcaster message; no scheduling or automatic repetition.
  */
 (function () {
@@ -740,13 +661,13 @@ LBC.runtime.reloadPanel()  };
     if (!isOwner) return;
 
     var body = String(rawBody || "").trim();
-    var match = body.match(/^\/lbc\s+say(?:\s+([\s\S]*))?$/i);
+    var match = body.match(/^\/ab\s+say(?:\s+([\s\S]*))?$/i);
     if (!match) return;
 
     var message = cleanAnnouncement(match[1] || "");
 
     if (!message) {
-      LBC.notice("Usage: /lbc say Your announcement goes here.", {
+      LBC.notice("Usage: /ab say Your announcement goes here.", {
         toUsername: String(username || "")
       });
       return;
@@ -759,7 +680,7 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    LBC.notice("📣 LOST BOYS CLUB — " + message);
+    LBC.notice("📣 AFTERDARK BROTHERHOOD — " + message);
 
     LBC.notice("Your announcement was posted.", {
       toUsername: String(username || "")
@@ -768,7 +689,7 @@ LBC.runtime.reloadPanel()  };
 }());
 
 /*
- * LOST BOYS CLUB — Guess the Number Player Guidance
+ * AFTERDARK BROTHERHOOD — Guess the Number Player Guidance
  * Clear private instructions and recovery guidance for malformed commands.
  */
 (function () {
@@ -807,7 +728,7 @@ LBC.runtime.reloadPanel()  };
 }());
 
 /*
- * LOST BOYS CLUB — Higher or Lower
+ * AFTERDARK BROTHERHOOD — Higher or Lower
  * Free prediction game. One prediction per viewer; no voting or paid entry.
  */
 (function () {
@@ -875,6 +796,7 @@ LBC.runtime.reloadPanel()  };
       if (state.guesses[name] === correctDirection) winners.push(name);
     });
 
+    if (LBC.rewards) winners.forEach(function (name) { LBC.rewards.award(name, 5, "Higher or Lower win", "win:higher:" + state.endsAt + ":" + name.toLowerCase()); });
     var outcome = "The next number was " + state.target + " — " + correctDirection.toUpperCase() + ". ";
     if (winners.length) {
       LBC.notice(
@@ -895,7 +817,7 @@ LBC.runtime.reloadPanel()  };
   function startRound() {
     var state = readState();
     if (state.active) {
-      LBC.notice("Higher or Lower is already running. One clubhouse disaster at a time.");
+      LBC.notice("Higher or Lower is already running. One brotherhood disaster at a time.");
       return;
     }
     if (coreGameIsActive()) {
@@ -918,7 +840,7 @@ LBC.runtime.reloadPanel()  };
     schedule(state, ROUND_SECONDS);
 
     LBC.notice(
-      "🎲 LOST BOYS CLUB — HIGHER OR LOWER\n" +
+      "🎲 AFTERDARK BROTHERHOOD — HIGHER OR LOWER\n" +
       "The number is " + current + ". The next number is hidden.\n" +
       "Will it be HIGHER or LOWER? Type !higher or !lower.\n" +
       "One prediction per person. " + ROUND_SECONDS + " seconds. Free to play — no tips or purchases."
@@ -932,7 +854,7 @@ LBC.runtime.reloadPanel()  };
 
     // If the broadcaster starts the core game, close this round first.
     // Chat Message invokes the core handler before this additive module.
-    if (isOwner && body === "/lbc start" && state.active) {
+    if (isOwner && body === "/ab start" && state.active) {
       finish("manual");
       return;
     }
@@ -958,17 +880,17 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    if (isOwner && body === "/lbc higher start") {
+    if (isOwner && body === "/ab higher start") {
       startRound();
       return;
     }
 
-    if (isOwner && body === "/lbc higher stop") {
+    if (isOwner && body === "/ab higher stop") {
       finish("manual");
       return;
     }
 
-    if (isOwner && body === "/lbc higher status") {
+    if (isOwner && body === "/ab higher status") {
       LBC.notice("Higher or Lower is " + (state.active ? "ON" : "OFF") + ".");
       return;
     }
@@ -988,6 +910,7 @@ LBC.runtime.reloadPanel()  };
 
     state.guesses[key] = body === "!higher" ? "higher" : "lower";
     saveState(state);
+    if (LBC.rewards) LBC.rewards.award(name, 1, "Higher or Lower participation", "play:higher:" + state.endsAt + ":" + key);
     LBC.notice("Your " + (body === "!higher" ? "HIGHER" : "LOWER") + " prediction is locked in. 🖤", { toUsername: name });
   };
 
@@ -1011,7 +934,7 @@ LBC.runtime.reloadPanel()  };
 }());
 
 /*
- * LOST BOYS CLUB — Couple Trivia
+ * AFTERDARK BROTHERHOOD — Couple Trivia
  * Broadcaster-managed questions; free, first-correct-answer wins.
  */
 (function () {
@@ -1116,6 +1039,7 @@ LBC.runtime.reloadPanel()  };
     saveState(state);
 
     if (winner) {
+      if (LBC.rewards) LBC.rewards.award(winner, 5, "Couple Trivia win", "win:trivia:" + state.endsAt + ":" + String(winner).toLowerCase());
       LBC.notice(
         "🏆 COUPLE TRIVIA — " + cleanName(winner) + " got it first!\n" +
         "Answer: " + state.answer + ". Apparently somebody was paying attention. 🖤"
@@ -1134,17 +1058,17 @@ LBC.runtime.reloadPanel()  };
   function startRound() {
     var state = readState();
     if (state.active) {
-      LBC.notice("Couple Trivia is already running. One clubhouse disaster at a time.");
+      LBC.notice("Couple Trivia is already running. One brotherhood disaster at a time.");
       return;
     }
     if (otherGameIsActive()) {
-      LBC.notice("Another clubhouse game is already running. Finish it before starting Couple Trivia.");
+      LBC.notice("Another brotherhood game is already running. Finish it before starting Couple Trivia.");
       return;
     }
 
     var questions = readQuestions();
     if (!questions.length) {
-      LBC.notice("The trivia deck is empty. Add a question first: /lbc trivia add Question :: Answer");
+      LBC.notice("The trivia deck is empty. Add a question first: /ab trivia add Question :: Answer");
       return;
     }
 
@@ -1165,7 +1089,7 @@ LBC.runtime.reloadPanel()  };
     schedule(state, ROUND_SECONDS);
 
     LBC.notice(
-      "🧠 LOST BOYS CLUB — COUPLE TRIVIA\n" +
+      "🧠 AFTERDARK BROTHERHOOD — COUPLE TRIVIA\n" +
       selected.question + "\n" +
       "Type !answer followed by your answer. One attempt each. " +
       ROUND_SECONDS + " seconds. Free to play — no tips or purchases."
@@ -1179,7 +1103,7 @@ LBC.runtime.reloadPanel()  };
     var state = readState();
 
     // Other game-start handlers run before this appended module.
-    if (isOwner && (lower === "/lbc start" || lower === "/lbc higher start") && state.active) {
+    if (isOwner && (lower === "/ab start" || lower === "/ab higher start") && state.active) {
       finish("manual");
       return;
     }
@@ -1205,23 +1129,23 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    if (isOwner && lower === "/lbc trivia start") {
+    if (isOwner && lower === "/ab trivia start") {
       startRound();
       return;
     }
 
-    if (isOwner && lower === "/lbc trivia stop") {
+    if (isOwner && lower === "/ab trivia stop") {
       finish("manual");
       return;
     }
 
-    if (isOwner && lower === "/lbc trivia status") {
+    if (isOwner && lower === "/ab trivia status") {
       LBC.notice("Couple Trivia is " + (state.active ? "ON" : "OFF") + ". " +
         readQuestions().length + " question(s) saved.");
       return;
     }
 
-    if (isOwner && lower === "/lbc trivia list") {
+    if (isOwner && lower === "/ab trivia list") {
       var listed = readQuestions();
       if (!listed.length) {
         LBC.notice("No trivia questions saved yet.");
@@ -1234,7 +1158,7 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    if (isOwner && lower === "/lbc trivia clear") {
+    if (isOwner && lower === "/ab trivia clear") {
       if (state.active) {
         LBC.notice("Stop the active trivia round before clearing the question deck.");
         return;
@@ -1244,10 +1168,10 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    if (isOwner && lower.indexOf("/lbc trivia add") === 0) {
-      var addMatch = body.match(/^\/lbc trivia add\s+([\s\S]+?)\s+::\s+([\s\S]+)$/i);
+    if (isOwner && lower.indexOf("/ab trivia add") === 0) {
+      var addMatch = body.match(/^\/ab trivia add\s+([\s\S]+?)\s+::\s+([\s\S]+)$/i);
       if (!addMatch) {
-        LBC.notice("Use: /lbc trivia add Your question? :: Correct answer");
+        LBC.notice("Use: /ab trivia add Your question? :: Correct answer");
         return;
       }
       var question = cleanText(addMatch[1]);
@@ -1264,14 +1188,14 @@ LBC.runtime.reloadPanel()  };
       }
       deck.push({ question: question, answer: answer });
       saveQuestions(deck);
-      LBC.notice("Trivia question added (" + deck.length + "/" + MAX_QUESTIONS + "). Use /lbc trivia list to review the deck.");
+      LBC.notice("Trivia question added (" + deck.length + "/" + MAX_QUESTIONS + "). Use /ab trivia list to review the deck.");
       return;
     }
 
-    if (isOwner && lower.indexOf("/lbc trivia remove") === 0) {
-      var removeMatch = lower.match(/^\/lbc trivia remove ([1-9][0-9]?)$/);
+    if (isOwner && lower.indexOf("/ab trivia remove") === 0) {
+      var removeMatch = lower.match(/^\/ab trivia remove ([1-9][0-9]?)$/);
       if (!removeMatch) {
-        LBC.notice("Use: /lbc trivia remove <number>. Check positions with /lbc trivia list.");
+        LBC.notice("Use: /ab trivia remove <number>. Check positions with /ab trivia list.");
         return;
       }
       if (state.active) {
@@ -1290,11 +1214,11 @@ LBC.runtime.reloadPanel()  };
       return;
     }
 
-    if (isOwner && lower.indexOf("/lbc trivia") === 0) {
+    if (isOwner && lower.indexOf("/ab trivia") === 0) {
       LBC.notice(
-        "TRIVIA CONTROLS: /lbc trivia add Question :: Answer · " +
-        "/lbc trivia remove 1 · /lbc trivia list · /lbc trivia clear · " +
-        "/lbc trivia start · /lbc trivia stop · /lbc trivia status"
+        "TRIVIA CONTROLS: /ab trivia add Question :: Answer · " +
+        "/ab trivia remove 1 · /ab trivia list · /ab trivia clear · " +
+        "/ab trivia start · /ab trivia stop · /ab trivia status"
       );
       return;
     }
@@ -1346,7 +1270,7 @@ LBC.runtime.reloadPanel()  };
 }());
 
 /*
- * LOST BOYS CLUB — UNIFIED GAME LIBRARY
+ * AFTERDARK BROTHERHOOD — UNIFIED GAME LIBRARY
  * Version 1.0
  *
  * Central event routing for all LBC games.
@@ -1370,7 +1294,7 @@ LBC.runtime.reloadPanel()  };
       fn.apply(null, args || []);
     } catch (err) {
       LBC.notice(
-        "The clubhouse had a small technical issue while processing " +
+        "The brotherhood had a small technical issue while processing " +
         label + ". The rest of the room is still running."
       );
     }
@@ -1449,6 +1373,7 @@ LBC.runtime.reloadPanel()  };
 
     // Existing room systems.
     safeCall(originals.roomGoal, [body, isOwner], "Room Goal");
+    safeCall(originals.rewards, [body, username, isOwner], "Rewards");
     safeCall(originals.tipMenu, [body, isOwner], "Tip Menu");
     safeCall(originals.announcements, [body, isOwner], "Announcements");
     safeCall(originals.customAnnouncement, [body, isOwner, username], "Custom Announcements");
@@ -1491,6 +1416,7 @@ LBC.runtime.reloadPanel()  };
     coreCallback: LBC.onCallback,
 
     roomGoal: LBC.handleRoomGoalCommand,
+    rewards: LBC.handleRewardsCommand,
     tipMenu: LBC.handleTipMenuCommand,
     announcements: LBC.handleAnnouncementCommand,
     customAnnouncement: LBC.handleCustomAnnouncementCommand,
@@ -1521,6 +1447,7 @@ LBC.runtime.reloadPanel()  };
    */
   [
     "handleRoomGoalCommand",
+    "handleRewardsCommand",
     "handleTipMenuCommand",
     "handleAnnouncementCommand",
     "handleCustomAnnouncementCommand",
@@ -1630,12 +1557,12 @@ LBC.runtime.reloadPanel()  };
     }
   };
 
-  LBC.notice("🖤 LOST BOYS CLUB — Game Library online.");
+  LBC.notice("🖤 AFTERDARK BROTHERHOOD — Game Library online.");
 
 }());
 
 /*
- * LOST BOYS CLUB — AFTER HOURS GAME PACK
+ * AFTERDARK BROTHERHOOD — AFTER HOURS GAME PACK
  * Version 1.0
  *
  * Games:
@@ -1771,6 +1698,7 @@ LBC.runtime.reloadPanel()  };
     }
 
     LBC.gameLibrary.release(finished.id);
+    if (winner && LBC.rewards) LBC.rewards.award(winner, 5, finished.name + " win", "win:afterhours:" + finished.startedAt + ":" + String(winner).toLowerCase());
 
     if (finished.id === "would-you-rather") {
       var a = Object.keys(finished.votes || {}).filter(function (name) {
@@ -1836,7 +1764,7 @@ LBC.runtime.reloadPanel()  };
 
     if (legacyGameIsActive()) {
       LBC.notice(
-        "Another clubhouse game is already running. Finish it before starting " +
+        "Another brotherhood game is already running. Finish it before starting " +
         name + "."
       );
       return false;
@@ -1868,9 +1796,9 @@ LBC.runtime.reloadPanel()  };
     var command = String(body || "").trim().toLowerCase();
 
     var legacyStarts = [
-      "/lbc start",
-      "/lbc higher start",
-      "/lbc trivia start"
+      "/ab start",
+      "/ab higher start",
+      "/ab trivia start"
     ];
 
     if (legacyStarts.indexOf(command) !== -1) {
@@ -1927,7 +1855,7 @@ LBC.runtime.reloadPanel()  };
   function handleCodebreaker(body, username, isOwner) {
     var lower = body.toLowerCase();
 
-    if (isOwner && lower === "/lbc codebreaker start") {
+    if (isOwner && lower === "/ab codebreaker start") {
       var secret = createCode();
 
       if (startGame("codebreaker", "Codebreaker", {
@@ -1936,7 +1864,7 @@ LBC.runtime.reloadPanel()  };
         answer: secret
       }, 90)) {
         startNotice(
-          "🔐 LOST BOYS CLUB — CODEBREAKER\n" +
+          "🔐 AFTERDARK BROTHERHOOD — CODEBREAKER\n" +
           randomItem(codebreakerPrompts) + "\n" +
           "Send !code followed by four unique digits.\n" +
           "Example: !code 4821\n" +
@@ -1946,7 +1874,7 @@ LBC.runtime.reloadPanel()  };
       return true;
     }
 
-    if (isOwner && lower === "/lbc codebreaker stop") {
+    if (isOwner && lower === "/ab codebreaker stop") {
       if (state && state.id === "codebreaker") finish("manual");
       else LBC.notice("Codebreaker isn't running.");
       return true;
@@ -2029,7 +1957,7 @@ LBC.runtime.reloadPanel()  };
   function handleWordScramble(body, username, isOwner) {
     var lower = body.toLowerCase();
 
-    if (isOwner && lower === "/lbc scramble start") {
+    if (isOwner && lower === "/ab scramble start") {
       var selected = randomItem(wordDeck);
 
       var started = startGame("word-scramble", "Word Scramble", {
@@ -2040,7 +1968,7 @@ LBC.runtime.reloadPanel()  };
 
       if (started) {
         startNotice(
-          "🔤 LOST BOYS CLUB — WORD SCRAMBLE\n" +
+          "🔤 AFTERDARK BROTHERHOOD — WORD SCRAMBLE\n" +
           "Unscramble this word:\n\n" +
           state.scrambled + "\nHint: " + state.hint +
           "\nFirst correct answer wins. Send !word <answer>."
@@ -2057,7 +1985,7 @@ LBC.runtime.reloadPanel()  };
       return true;
     }
 
-    if (isOwner && lower === "/lbc scramble stop") {
+    if (isOwner && lower === "/ab scramble stop") {
       if (state && state.id === "word-scramble") finish("manual");
       else LBC.notice("Word Scramble isn't running.");
       return true;
@@ -2115,7 +2043,7 @@ LBC.runtime.reloadPanel()  };
   function handleWouldYouRather(body, username, isOwner) {
     var lower = body.toLowerCase();
 
-    if (isOwner && lower === "/lbc wyr start") {
+    if (isOwner && lower === "/ab wyr start") {
       var options = randomItem(wyrDeck);
 
       if (startGame("would-you-rather", "Dirty Would You Rather", {
@@ -2134,7 +2062,7 @@ LBC.runtime.reloadPanel()  };
       return true;
     }
 
-    if (isOwner && lower === "/lbc wyr stop") {
+    if (isOwner && lower === "/ab wyr stop") {
       if (state && state.id === "would-you-rather") finish("manual");
       else LBC.notice("Would You Rather isn't running.");
       return true;
@@ -2227,7 +2155,7 @@ LBC.runtime.reloadPanel()  };
   function handlePosition(body, username, isOwner) {
     var lower = body.toLowerCase();
 
-    if (isOwner && lower === "/lbc position start") {
+    if (isOwner && lower === "/ab position start") {
       var selected = randomItem(positionDeck);
 
       if (startGame("position-impossible", "Position Impossible", {
@@ -2245,7 +2173,7 @@ LBC.runtime.reloadPanel()  };
       return true;
     }
 
-    if (isOwner && lower === "/lbc position stop") {
+    if (isOwner && lower === "/ab position stop") {
       if (state && state.id === "position-impossible") finish("manual");
       else LBC.notice("Position Impossible isn't running.");
       return true;
@@ -2305,7 +2233,7 @@ LBC.runtime.reloadPanel()  };
   function handleCharades(body, username, isOwner) {
     var lower = body.toLowerCase();
 
-    if (isOwner && lower === "/lbc charades start") {
+    if (isOwner && lower === "/ab charades start") {
       var selected = randomItem(charadesDeck);
 
       if (startGame("dirty-charades", "Dirty Charades", {
@@ -2323,7 +2251,7 @@ LBC.runtime.reloadPanel()  };
       return true;
     }
 
-    if (isOwner && lower === "/lbc charades stop") {
+    if (isOwner && lower === "/ab charades stop") {
       if (state && state.id === "dirty-charades") finish("manual");
       else LBC.notice("Dirty Charades isn't running.");
       return true;
@@ -2369,6 +2297,14 @@ LBC.runtime.reloadPanel()  };
     body = String(body || "").trim();
 
     if (stopIfLegacyGameStarts(body, isOwner)) return;
+    if (!isOwner && state && state.active && state.id === gameId && LBC.rewards) {
+      var validEntry = (gameId === "codebreaker" && /^!code\s+[0-9]{4}$/i.test(body)) ||
+        (gameId === "word-scramble" && /^!word\s+\S[\s\S]*$/i.test(body)) ||
+        (gameId === "would-you-rather" && /^!(a|b)$/i.test(body)) ||
+        (gameId === "position-impossible" && /^!position\s+\S[\s\S]*$/i.test(body)) ||
+        (gameId === "dirty-charades" && /^!charade\s+\S[\s\S]*$/i.test(body));
+      if (validEntry) LBC.rewards.award(username, 1, gameId + " participation", "play:afterhours:" + state.startedAt + ":" + gameId + ":" + String(username).toLowerCase());
+    }
 
     if (gameId === "codebreaker") {
       handleCodebreaker(body, username, isOwner);
@@ -2415,7 +2351,7 @@ LBC.runtime.reloadPanel()  };
     schedule(remaining);
 
     LBC.notice(
-      "🖤 " + state.name + " resumed after the clubhouse restart."
+      "🖤 " + state.name + " resumed after the brotherhood restart."
     );
   }
 

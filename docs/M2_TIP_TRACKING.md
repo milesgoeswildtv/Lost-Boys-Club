@@ -37,3 +37,7 @@ Existing tip totals are not imported; tracking begins when this handler version 
 - Actual Testbed tip event delivery and token payload.
 - Actual Testbed notice throttling.
 - Persistence across app restart/broadcast.
+
+
+## Rewards integration
+The loyalty system is separate from tip accounting. Tips update the existing aggregate statistics and may advance the room goal, but they never award loyalty points or game advantages. Free-game participation and wins award points through the Shared Code game hooks. See `docs/GOALS_AND_REWARDS.md`.

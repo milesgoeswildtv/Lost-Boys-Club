@@ -1,4 +1,4 @@
-# Test Plan — LOST BOYS CLUB
+# Test Plan — AFTERDARK BROTHERHOOD
 
 ## Test environments
 - Chaturbate Testbed desktop/web environment.
@@ -65,3 +65,34 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] App restart reschedules one callback when announcements were enabled.
 - [ ] Ordinary chat does not trigger announcements.
 - [ ] Announcement copy contains no tipping pressure or paid-entry language.
+
+
+## Advanced Goal Engine
+- [ ] `/ab goal set 100 Main Goal` creates a goal and captures the current aggregate tip total as baseline.
+- [ ] `!goal` and legacy `!clubgoal` report the same progress.
+- [ ] Default milestones announce once at 25%, 50%, 75%, and 100%.
+- [ ] Custom milestones accept valid whole percentages and always include 100%.
+- [ ] Pausing excludes tips received during the pause after resuming.
+- [ ] Reset restarts progress from the current total without changing the target.
+- [ ] Extend increases the target without resetting already-earned progress.
+- [ ] Queued goals persist, activate sequentially, and are removed from the queue once activated.
+- [ ] Queue limit is enforced at 10; clear removes queued goals only.
+- [ ] Turning the goal off preserves queued goals.
+- [ ] Native panel reflects live, paused, completed, and inactive goal states.
+- [ ] Existing tip totals and the existing Broadcast Panel Update handler remain intact.
+
+## Loyalty & Rewards
+- [ ] A valid free-game participation event awards one point once per viewer per round.
+- [ ] A game win awards five bonus points; repeat delivery does not duplicate the award.
+- [ ] Tips never award points, redemption entries, game access, or game advantages.
+- [ ] `!points` displays the viewer's balance and totals privately.
+- [ ] `!rewards` displays the reward shelf.
+- [ ] Broadcaster can add, remove, and list reward items; the 12-item limit is enforced.
+- [ ] `!redeem <id>` deducts the listed cost and creates a persistent pending request.
+- [ ] A viewer cannot have more than three pending requests.
+- [ ] Broadcaster can list, approve, and deny pending requests.
+- [ ] Denial refunds the exact points deducted.
+- [ ] Non-owner users cannot administer rewards or grant points.
+- [ ] Balances and requests persist across app restart.
+- [ ] Invalid usernames, amounts, IDs, and malformed stored data fail safely.
+- [ ] Approved rewards are manually fulfilled by the broadcaster; no cash value or random prize claim is implied.
