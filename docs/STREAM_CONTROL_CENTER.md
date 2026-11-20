@@ -41,3 +41,44 @@ The existing Chaturbate Broadcast Panel Update handler remains intact. It contin
 ## Verification
 
 The Shared Code file passed JavaScript syntax compilation after the changes. A mocked runtime exercise verified dashboard rendering, goal create/pause, announcement toggle, tip-menu add, reward add, queue pause, giveaway start, and native panel refresh command. This is code-level mock verification only; Chaturbate Developer Portal synchronization, Testbed QA, and live-room behavior have not been verified by this change.
+
+
+## Advanced goal engine
+
+The goal engine now supports:
+
+- Unlimited-duration goals or timed goals from 1 to 1,440 minutes.
+- Up to 10 queued stages, including individually timed stages.
+- Automatic next-stage launch when a goal is reached.
+- Token overflow carryover between stages (on by default; configurable).
+- Custom milestone percentages (up to 10 marks; 100% is always included).
+- Pause/resume that freezes the timer and excludes tips received while paused.
+- Optional automatic repeat when the queue is empty.
+- Timer recovery on app start and deadline expiry through the existing callback dispatcher.
+- Stream Control Center goal status shows remaining time, queue depth, carryover, and repeat state.
+
+### Goal commands
+
+All of these are available through the broadcaster namespace:
+
+| Action | Command |
+|---|---|
+| Start untimed goal | `/ab admin goal set 1000 Main Goal` |
+| Start 30-minute goal | `/ab admin goal timed 1000 30 Main Goal` |
+| Queue untimed stage | `/ab admin goal queue 1500 Next Stage` |
+| Queue 20-minute stage | `/ab admin goal queue timed 2000 20 Final Stage` |
+| Set milestones | `/ab admin goal milestones 10 25 50 75 100` |
+| Pause / resume | `/ab admin goal pause` / `/ab admin goal resume` |
+| Extend target | `/ab admin goal extend 250` |
+| Overflow carryover | `/ab admin goal carryover on` or `off` |
+| Repeat completed goal | `/ab admin goal repeat on` or `off` |
+| Check timer | `/ab admin goal time` |
+| Queue status | `/ab admin goal queue list` |
+| Clear queued stages | `/ab admin goal queue clear` |
+| Reset / switch off | `/ab admin goal reset` / `/ab admin goal off` |
+
+Timed goals expire automatically. If another stage is queued, it launches after the prior stage completes or expires. Overflow is carried only after successful completion, never after timeout. Paused tips are excluded from goal progress; the underlying room-wide support total remains unchanged.
+
+### Verification
+
+JavaScript syntax compilation passed. Mock-runtime tests verified timed goal creation and callback scheduling, queued-stage auto-advance with 25-token overflow carryover, milestone notices, pause/resume with paused tips excluded, timer restoration, and automatic expiry. These are code-level tests; Chaturbate Developer Portal synchronization, Testbed QA, and live-room behavior remain outstanding.
