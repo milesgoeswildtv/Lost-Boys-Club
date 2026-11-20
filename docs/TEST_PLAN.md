@@ -226,3 +226,21 @@ Do not release to the public App Directory or live room until all applicable che
 - Verify `!profile` includes daily/weekly completion and streak summary.
 - Verify `/ab admin missions` and the admin dashboard report current totals; ordinary viewers cannot access admin detail.
 - Verify user state persists across app restart and period rollovers use UTC, independent of local room timezone.
+
+
+## Viewer Reputation & Rank Progression QA
+
+- A successful participation award adds exactly 10 reputation XP and one reputation game count.
+- A successful win award adds exactly 25 reputation XP and one reputation win count.
+- Duplicate award IDs do not add XP, games, wins, badges, or rank progress twice.
+- Confirm thresholds promote a viewer through New Face, Regular (100), Known Face (300), After Hours (750), Room Fixture (1,500), Heavyweight (3,000), and Room Legend (6,000).
+- Confirm rank is permanent and does not decrease after app restart or inactivity.
+- Confirm participation badges unlock at 1/10/25/50/100 games and win badges at 1/5/25/50 wins, exactly once each.
+- Confirm rank and badge titles unlock at their thresholds; locked titles cannot be selected.
+- Confirm `!rank`, `!badges`, `!titles`, `!title`, `!title set <id>`, and `!rankings` work and private member details are sent only to the requesting viewer.
+- Confirm `!profile` includes rank, XP, and active title.
+- Confirm the broadcaster-only `/ab admin reputation` reports member count, total XP, and badges; ordinary viewers cannot access it.
+- Confirm tips, manual bonus grants, mission/streak rewards, purchases, giveaways, queue activity, and reward redemptions add zero reputation XP.
+- Confirm reputation does not change loyalty balances, game odds, queue priority, Team Wars, Vault, or Hall of Fame.
+- Confirm reputation state and selected title persist across app restart.
+- Confirm existing game, reward, mission, profile, and admin commands continue to operate without duplicate routing.
