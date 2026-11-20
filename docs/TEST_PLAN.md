@@ -184,3 +184,26 @@ Do not release to the public App Directory or live room until all applicable che
 - Confirm duplicate award IDs do not change records.
 - Confirm `/ab admin vault` and `/ab admin halloffame` show broadcaster status.
 - Confirm ordinary viewers cannot access broadcaster admin status.
+
+
+## Advanced Viewer Queue QA
+
+- Fresh storage reports an empty queue and available capacity.
+- Viewer joins; FIFO position and public queue count update.
+- Duplicate join is rejected without creating another entry.
+- Viewer leaves; following positions close the gap.
+- Queue capacity is enforced at the configured limit and cannot exceed 50.
+- Pausing blocks new joins; resuming permits them.
+- Broadcaster calls next; exactly one active viewer is set and removed from waitlist.
+- Calling next while a turn is active is rejected.
+- Done closes the active turn and records completion history.
+- Skip moves the active viewer to the end of the waitlist.
+- Clear removes waiting and active turns but preserves scheduled bookings.
+- Broadcaster-only controls reject ordinary viewers.
+- Future ISO slots require explicit timezone and reject invalid/past times.
+- A slot can be booked once; another viewer cannot double-book it.
+- One viewer cannot book multiple slots; cancellation frees the slot.
+- Slot removal frees a booking and cancels reminders as appropriate.
+- Five-minute reminder fires once for each booked slot and does not repeat after restart.
+- Queue, active turn, slot bookings, pause state, and capacity persist across app restart.
+- Tips, loyalty points, and paid actions do not affect queue position or slot booking.
