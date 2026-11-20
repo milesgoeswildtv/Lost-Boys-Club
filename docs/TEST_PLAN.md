@@ -1,4 +1,4 @@
-# Test Plan — LOST BOYS CLUB
+# Test Plan — AFTERDARK BROTHERHOOD
 
 ## Test environments
 - Chaturbate Testbed desktop/web environment.
