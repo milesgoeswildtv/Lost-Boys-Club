@@ -6,7 +6,6 @@ LBC.setRuntime({
   kvGet: function (key, fallback) { try { var value = $kv.get(key); return value === undefined || value === null || value === "" ? fallback : value; } catch (err) { return fallback; } },
   kvSet: function (key, value, ttlSeconds) { try { if (typeof ttlSeconds === "number" && ttlSeconds > 0) return $kv.set(key, value, ttlSeconds); return $kv.set(key, value); } catch (err) { return false; } },
   sendNotice: function (message, options) { try { return $room.sendNotice(String(message), options || {}); } catch (err) { return false; } },
-  reloadPanel: function () { try { return $room.reloadPanel(); } catch (err) { return false; } },
   setPanelTemplate: function (template) { try { return $room.setPanelTemplate(template); } catch (err) { return false; } }
 });
 
