@@ -164,3 +164,23 @@ Do not release to the public App Directory or live room until all applicable che
 - Broadcaster assign/unassign works; team deletion is blocked while members remain.
 - Season start archives the prior champion and resets scores while preserving memberships.
 - Confirm only the broadcaster can create, delete, assign, reset, or start seasons.
+
+
+## Brotherhood Vault QA
+
+- Start with an empty Vault and confirm `!vault` reports 0 shared game points and the first milestone.
+- Award successful game participation and win points; confirm only those points advance shared progress.
+- Confirm a manual broadcaster bonus grant does not advance Vault totals.
+- Replay an award with the same idempotency key; confirm the Vault does not advance twice.
+- Cross each milestone threshold; confirm it unlocks once and is persisted.
+- Confirm `!achievements` privately shows personal achievements and new achievements unlock once.
+- Confirm a new app session reads the same Vault and member achievement data.
+
+## Hall of Fame QA
+
+- `!halloffame wins`, `games`, and `points` show correctly sorted top-five records.
+- Confirm participation, win, and free-game point records match successful awards.
+- Confirm manual bonus grants and tips do not inflate Hall of Fame points.
+- Confirm duplicate award IDs do not change records.
+- Confirm `/ab admin vault` and `/ab admin halloffame` show broadcaster status.
+- Confirm ordinary viewers cannot access broadcaster admin status.
