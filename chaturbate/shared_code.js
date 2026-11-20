@@ -108,6 +108,7 @@ var LBC = (function () {
       "!vault — shared Brotherhood progression",
       "!halloffame — permanent member records",
       "!achievements — your unlocked milestones",
+      "!missions / !streak / !missionhistory — daily, weekly, and streak rewards",
       "!queue / !joinqueue / !leavequeue — view and join the viewer waitlist",
       "!slots / !book 1 / !cancelbooking — scheduled viewer slots",
       "",
@@ -3947,7 +3948,7 @@ var LBC = (function () {
       } else { remaining.push(item); }
     });
     if (remaining.length !== s.pending.length) changed = true;
-    s.pending = remaining.slice(-20);
+    s.pending = remaining;
     if (changed) saveState(s);
     return changed;
   }
