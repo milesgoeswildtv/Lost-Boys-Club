@@ -2746,7 +2746,7 @@ var LBC = (function () {
         " / " + MAX_INDEX + "\nViewer commands: !profile · !profile username · !leaderboard wins|games|points.");
       return;
     }
-    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame)$/))) {
+    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue)$/))) {
       adminDetail(match[1]);
       return;
     }
