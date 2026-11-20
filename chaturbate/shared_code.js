@@ -3482,7 +3482,7 @@ var LBC = (function () {
         username: p.username,
         games: Math.max(p.gamesPlayed, v.games),
         wins: Math.max(p.wins, v.wins),
-        points: Math.max(p.pointsEarned, v.gamePoints)
+        points: v.gamePoints
       };
     }).filter(Boolean);
     function top(key) {
