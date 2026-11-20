@@ -33,7 +33,7 @@ $room.setPanelTemplate({
   row1_value: gameActive ? "GUESS THE NUMBER — LIVE" : "BROTHERHOOD OPEN",
   row2_label: gameActive ? "GAME STATUS" : "STATUS",
   row2_value: status,
-  row3_label: "CLUB RECORD",
+  row3_label: "ROOM RECORD",
   row3_value: leader + " · " + rounds + (rounds === 1 ? " round" : " rounds")
 });
 
