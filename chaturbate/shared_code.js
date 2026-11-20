@@ -3937,7 +3937,7 @@ var LBC = (function () {
       var delivered = rawAwardHasId(item.username, item.id);
       if (!delivered) {
         var ok = LBC.rewards.award(item.username, item.points,
-          (item.kind === "streak" ? "Mission streak reward: " : "Mission reward: ") + item.label, item.id);
+          (item.kind === "streak" ? "Mission streak bonus" : "Mission reward bonus"), item.id);
         delivered = ok === true || rawAwardHasId(item.username, item.id);
       }
       if (delivered) {
