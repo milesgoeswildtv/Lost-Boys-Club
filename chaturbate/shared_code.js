@@ -4026,8 +4026,16 @@ var LBC = (function () {
     state.endsAt = Math.floor(Date.now() / 1000) + seconds; save();
     LBC.runtime.cancelCallback(TIMER); LBC.runtime.createCallback(TIMER, seconds, false);
   }
+  function legacyBusy() {
+    var keys=["lbc_v1_game","lbc_m3_higher_lower","lbc_m3_trivia_state"];
+    for(var i=0;i<keys.length;i++) {
+      try { var raw=LBC.runtime.kvGet(keys[i],""); if(raw && JSON.parse(raw).active===true) return true; }
+      catch(err) { /* Ignore malformed legacy state. */ }
+    }
+    return false;
+  }
   function start() {
-    if (LBC.gameLibrary.isBusy()) { LBC.notice("Another game is already running. Finish it before starting One Word Story."); return; }
+    if (LBC.gameLibrary.isBusy() || legacyBusy()) { LBC.notice("Another game is already running. Finish it before starting One Word Story."); return; }
     if (!LBC.gameLibrary.claim("one-word-story", "One Word Story")) return;
     state = {active:true,words:[],contributors:{},startedAt:Math.floor(Date.now()/1000),endsAt:0};
     schedule(DURATION);
