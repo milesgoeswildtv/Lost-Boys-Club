@@ -72,7 +72,7 @@ if (tokens > 0) {
 LBC.processRoomGoalTip($tip.tokens);
 
 // Permanent VIP records only direct tips received in this room.
-if (LBC.vip) {
+if (LBC.vip && !$tip.isAnon) {
   var vipEventId = $tip.id || $tip.eventId || $tip.event_id || "";
   LBC.vip.recordTip($user.username, $tip.tokens, vipEventId);
 }
