@@ -3552,3 +3552,244 @@ var LBC = (function () {
     onChatMessage: onChatMessage
   });
 }());
+
+
+/*
+ * AFTERDARK BROTHERHOOD — ADVANCED VIEWER QUEUE
+ * Persistent FIFO waitlist, active turn controls, and bookable scheduled slots.
+ * Reservations are free and never affect loyalty points or game odds.
+ */
+(function () {
+  "use strict";
+
+  var KEY = "lbc_ab_viewer_queue_v1";
+  var TICK = "lbc_ab_queue_slot_tick";
+  var MAX_WAIT = 50;
+  var MAX_SLOTS = 30;
+  var HISTORY = 20;
+
+  function cleanName(value) {
+    return String(value || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25);
+  }
+  function cleanLabel(value) {
+    return String(value || "").replace(/[\r\n\t]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
+  }
+  function read() {
+    try {
+      var raw = LBC.runtime.kvGet(KEY, "");
+      var s = raw ? JSON.parse(raw) : {};
+      return {
+        version: 1,
+        paused: s.paused === true,
+        limit: Math.max(1, Math.min(MAX_WAIT, Number(s.limit) || MAX_WAIT)),
+        nextId: Math.max(1, Number(s.nextId) || 1),
+        waiting: Array.isArray(s.waiting) ? s.waiting.slice(0, MAX_WAIT) : [],
+        current: s.current && typeof s.current === "object" ? s.current : null,
+        slots: Array.isArray(s.slots) ? s.slots.slice(0, MAX_SLOTS) : [],
+        history: Array.isArray(s.history) ? s.history.slice(0, HISTORY) : []
+      };
+    } catch (err) {
+      return { version: 1, paused: false, limit: MAX_WAIT, nextId: 1, waiting: [], current: null, slots: [], history: [] };
+    }
+  }
+  function save(s) {
+    try {
+      LBC.runtime.kvSet(KEY, JSON.stringify(s));
+      LBC.runtime.reloadPanel();
+      return true;
+    } catch (err) { return false; }
+  }
+  function findUser(list, name) {
+    var key = cleanName(name).toLowerCase();
+    return list.some(function (x) { return x && cleanName(x.user).toLowerCase() === key; });
+  }
+  function slotTickNeeded(s) {
+    return s.slots.some(function (x) { return x && x.user && !x.announced && Number(x.at) > Date.now(); });
+  }
+  function syncTick(s) {
+    try {
+      if (slotTickNeeded(s)) LBC.runtime.createCallback(TICK, 60, true);
+      else LBC.runtime.cancelCallback(TICK);
+    } catch (err) {}
+  }
+  function position(name, s) {
+    var key = cleanName(name).toLowerCase();
+    for (var i = 0; i < s.waiting.length; i++) {
+      if (cleanName(s.waiting[i].user).toLowerCase() === key) return i + 1;
+    }
+    return 0;
+  }
+  function publicStatus() {
+    var s = read();
+    var lines = [];
+    if (s.current) lines.push("NOW UP: " + s.current.user);
+    if (s.paused) lines.push("WAITLIST PAUSED");
+    lines.push("WAITING: " + s.waiting.length + " / " + s.limit);
+    s.waiting.slice(0, 8).forEach(function (x, i) { lines.push((i + 1) + ". " + x.user); });
+    if (s.waiting.length > 8) lines.push("+" + (s.waiting.length - 8) + " more waiting");
+    LBC.notice("🖤 AFTERDARK — VIEWER QUEUE\n" + lines.join("\n") +
+      "\nJoin: !joinqueue · Leave: !leavequeue · Book a slot: !slots");
+  }
+  function slotsText() {
+    var s = read(), now = Date.now();
+    var rows = s.slots.filter(function (x) { return x && Number(x.at) > now; })
+      .sort(function (a, b) { return a.at - b.at; }).slice(0, 10);
+    if (!rows.length) {
+      LBC.notice("No scheduled slots are currently available. Check back later.", { toUsername: "" });
+      return;
+    }
+    LBC.notice("🗓️ AFTERDARK — AVAILABLE SLOTS\n" + rows.map(function (x) {
+      return "#" + x.id + " · " + new Date(x.at).toISOString() + " · " +
+        (x.user ? "BOOKED: " + x.user : "AVAILABLE") + (x.label ? " · " + x.label : "");
+    }).join("\n") + "\nBook: !book 1 · Times are shown in ISO format with timezone offset.");
+  }
+  function join(name) {
+    var s = read(), user = cleanName(name);
+    if (!user) return;
+    if (s.paused) { LBC.notice("The viewer queue is paused right now.", { toUsername: user }); return; }
+    if (s.current && cleanName(s.current.user).toLowerCase() === user.toLowerCase()) {
+      LBC.notice("You're already the active turn.", { toUsername: user }); return;
+    }
+    if (findUser(s.waiting, user)) {
+      LBC.notice("You're already in the queue at position #" + position(user, s) + ".", { toUsername: user }); return;
+    }
+    if (s.waiting.length >= s.limit) {
+      LBC.notice("The viewer queue is full (" + s.limit + ").", { toUsername: user }); return;
+    }
+    s.waiting.push({ id: s.nextId++, user: user, joinedAt: Date.now() });
+    save(s);
+    LBC.notice("You're in. Queue position: #" + s.waiting.length + ".", { toUsername: user });
+    LBC.notice("🖤 " + user + " joined the viewer queue · " + s.waiting.length + " waiting.");
+  }
+  function leave(name) {
+    var s = read(), user = cleanName(name), before = s.waiting.length;
+    s.waiting = s.waiting.filter(function (x) { return cleanName(x.user).toLowerCase() !== user.toLowerCase(); });
+    if (s.waiting.length === before) {
+      LBC.notice("You're not currently waiting in the queue.", { toUsername: user }); return;
+    }
+    save(s);
+    LBC.notice("You've left the viewer queue.", { toUsername: user });
+  }
+  function nextTurn() {
+    var s = read();
+    if (s.current) { LBC.notice(s.current.user + " is still the active turn. Use /ab queue done or skip first."); return; }
+    if (!s.waiting.length) { LBC.notice("The viewer queue is empty."); return; }
+    var item = s.waiting.shift();
+    s.current = { id: item.id, user: item.user, startedAt: Date.now() };
+    save(s);
+    LBC.notice("🎤 YOU'RE UP: " + item.user + " — your turn starts now. Everyone else, hold your place.");
+  }
+  function closeTurn(skipped) {
+    var s = read();
+    if (!s.current) { LBC.notice("There isn't an active viewer turn."); return; }
+    var item = s.current;
+    s.history.unshift({ user: item.user, startedAt: item.startedAt, endedAt: Date.now(), result: skipped ? "skipped" : "completed" });
+    s.history = s.history.slice(0, HISTORY);
+    s.current = null;
+    if (skipped) s.waiting.push({ id: item.id, user: item.user, joinedAt: Date.now() });
+    save(s);
+    LBC.notice((skipped ? "⏭️ " : "✅ ") + item.user + (skipped ? " was moved to the back of the queue." : " finished their turn."));
+  }
+  function addSlot(match) {
+    var s = read(), iso = match[1], label = cleanLabel(match[2]);
+    var at = Date.parse(iso);
+    if (!isFinite(at) || at <= Date.now()) { LBC.notice("Use a future ISO date/time with timezone, e.g. /ab queue slot add 2026-11-21T20:30:00-05:00 Late slot."); return; }
+    if (s.slots.length >= MAX_SLOTS) { LBC.notice("Scheduled slot list is full (" + MAX_SLOTS + ")."); return; }
+    if (s.slots.some(function (x) { return x && x.at === at; })) { LBC.notice("That time slot already exists."); return; }
+    var id = s.slots.reduce(function (n, x) { return Math.max(n, Number(x.id) || 0); }, 0) + 1;
+    s.slots.push({ id: id, at: at, label: label, user: "", announced: false, createdAt: Date.now() });
+    s.slots.sort(function (a, b) { return a.at - b.at; });
+    save(s); syncTick(s);
+    LBC.notice("🗓️ Slot #" + id + " added: " + new Date(at).toISOString() + (label ? " · " + label : ""));
+  }
+  function book(name, id) {
+    var s = read(), user = cleanName(name), slot = null;
+    s.slots.forEach(function (x) { if (Number(x.id) === Number(id)) slot = x; });
+    if (!slot || slot.at <= Date.now()) { LBC.notice("That slot isn't available.", { toUsername: user }); return; }
+    if (slot.user) { LBC.notice("That slot has already been booked.", { toUsername: user }); return; }
+    if (s.slots.some(function (x) { return x.user && cleanName(x.user).toLowerCase() === user.toLowerCase(); })) {
+      LBC.notice("You already have a scheduled slot. Cancel it before booking another.", { toUsername: user }); return;
+    }
+    slot.user = user;
+    save(s); syncTick(s);
+    LBC.notice("Your slot is booked for " + new Date(slot.at).toISOString() + ".", { toUsername: user });
+    LBC.notice("🗓️ " + user + " booked a scheduled viewer slot.");
+  }
+  function cancelBooking(name) {
+    var s = read(), user = cleanName(name), found = false;
+    s.slots.forEach(function (x) {
+      if (x.user && cleanName(x.user).toLowerCase() === user.toLowerCase()) { x.user = ""; x.announced = false; found = true; }
+    });
+    if (!found) { LBC.notice("You don't have a scheduled slot to cancel.", { toUsername: user }); return; }
+    save(s); syncTick(s);
+    LBC.notice("Your scheduled slot was cancelled.", { toUsername: user });
+  }
+  function adminHelp() {
+    LBC.notice("QUEUE CONTROLS\n/ab queue status · next · done · skip · pause · resume · clear · announce · limit 25\n/ab queue slot add 2026-11-21T20:30:00-05:00 Label · slot remove 1 · slot list");
+  }
+  function adminCommand(body) {
+    var s = read(), low = body.toLowerCase(), m;
+    if (low === "/ab queue" || low === "/ab queue status") { publicStatus(); return; }
+    if (low === "/ab queue next") { nextTurn(); return; }
+    if (low === "/ab queue done") { closeTurn(false); return; }
+    if (low === "/ab queue skip") { closeTurn(true); return; }
+    if (low === "/ab queue pause") { s.paused = true; save(s); LBC.notice("Viewer queue paused. Current turn is unchanged."); return; }
+    if (low === "/ab queue resume") { s.paused = false; save(s); LBC.notice("Viewer queue resumed."); return; }
+    if (low === "/ab queue clear") { s.waiting = []; s.current = null; save(s); LBC.notice("Waitlist cleared and active turn closed. Scheduled bookings were preserved."); return; }
+    if (low === "/ab queue announce") { publicStatus(); return; }
+    if ((m = low.match(/^\/ab queue limit\s+([1-9][0-9]?)$/))) {
+      var n = Number(m[1]);
+      if (n > MAX_WAIT) { LBC.notice("Queue limit cannot exceed " + MAX_WAIT + "."); return; }
+      s.limit = n; s.waiting = s.waiting.slice(0, n); save(s);
+      LBC.notice("Queue capacity set to " + n + "."); return;
+    }
+    if ((m = body.match(/^\/ab queue slot add\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2}))(?:\s+(.+))?$/i))) { addSlot(m); return; }
+    if ((m = low.match(/^\/ab queue slot remove\s+([1-9][0-9]{0,3})$/))) {
+      var id = Number(m[1]), old = s.slots.length;
+      s.slots = s.slots.filter(function (x) { return Number(x.id) !== id; });
+      if (s.slots.length === old) { LBC.notice("Slot not found."); return; }
+      save(s); syncTick(s); LBC.notice("Scheduled slot #" + id + " removed."); return;
+    }
+    if (low === "/ab queue slot list") { slotsText(); return; }
+    adminHelp();
+  }
+  function onChatMessage(body, username, isOwner) {
+    var text = String(body || "").trim(), low = text.toLowerCase(), m;
+    if (isOwner && low.indexOf("/ab queue") === 0) { adminCommand(text); return; }
+    if (low === "!queue") { publicStatus(); return; }
+    if (low === "!joinqueue") { join(username); return; }
+    if (low === "!leavequeue") { leave(username); return; }
+    if (low === "!slots") { slotsText(); return; }
+    if ((m = low.match(/^!book\s+([1-9][0-9]{0,3})$/))) { book(username, Number(m[1])); return; }
+    if (low === "!cancelbooking") { cancelBooking(username); return; }
+  }
+  function onCallback(label) {
+    if (label !== TICK) return;
+    var s = read(), now = Date.now(), changed = false;
+    s.slots.forEach(function (x) {
+      if (x && x.user && !x.announced && x.at > now && x.at - now <= 5 * 60 * 1000) {
+        x.announced = true; changed = true;
+        LBC.notice("⏰ SCHEDULED TURN IN 5 MINUTES: " + x.user + (x.label ? " · " + x.label : "") + ".");
+        LBC.notice(x.user + ", your booked slot is coming up. Be ready.");
+      }
+    });
+    if (changed) save(s);
+    if (!slotTickNeeded(s)) LBC.runtime.cancelCallback(TICK);
+  }
+  function onAppStart() { syncTick(read()); }
+
+  LBC.viewerQueue = {
+    version: "1.0",
+    status: function () {
+      var s = read();
+      return { paused: s.paused, waiting: s.waiting.length, limit: s.limit,
+        current: s.current ? s.current.user : null,
+        bookedSlots: s.slots.filter(function (x) { return !!x.user; }).length };
+    }
+  };
+  LBC.gameLibrary.register("advanced-viewer-queue", {
+    onChatMessage: onChatMessage,
+    onCallback: onCallback,
+    onAppStart: onAppStart
+  });
+}());
