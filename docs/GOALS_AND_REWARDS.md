@@ -139,3 +139,26 @@ Viewer commands:
 - `!leaveteam` — leave your current team.
 
 Each viewer may belong to one team at a time. A successful free-game participation award adds 1 team point; a successful game-win award adds 5. Duplicate loyalty awards do not score twice. Tips and purchases never add team points. Up to 8 teams and 250 members per team are supported.
+
+
+## Brotherhood Vault — Shared Progression
+
+The Vault tracks cumulative points from successful free-game participation and game-win awards only. Tips, purchases, manual bonus grants, and reward redemptions do not advance shared progress.
+
+Viewer commands:
+
+- `!vault` — see total shared game points, unlocked milestones, and progress to the next milestone.
+- `!achievements` — privately see personal achievement unlocks.
+
+Milestones unlock at 100, 250, 500, 1,000, 2,500, 5,000, and 10,000 shared free-game points. Unlocks are permanent and announced in chat. These are community recognition milestones, not purchased perks or gameplay advantages.
+
+Broadcaster status: `/ab admin vault`.
+
+## Hall of Fame — Permanent Records
+
+- `!halloffame` or `!halloffame wins` — top game victories.
+- `!halloffame games` — most free-game participations.
+- `!halloffame points` — most points earned from free games.
+- `/ab admin halloffame` — broadcaster overview.
+
+Personal achievements currently recognize first game, 10 and 25 games, first win, 5 and 25 wins, and 10, 50, and 100 free-game points. Hall of Fame and Vault point totals exclude manual bonus grants. These systems record successful loyalty awards and do not change the underlying reward balance.
