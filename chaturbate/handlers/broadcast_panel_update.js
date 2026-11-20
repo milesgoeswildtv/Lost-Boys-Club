@@ -35,6 +35,8 @@ var status = gameActive ?
 
 var leader = panel.leader || "No champion yet";
 var rounds = Number(panel.rounds) || 0;
+var analytics = LBC.analytics && typeof LBC.analytics.aggregate === "function" ? LBC.analytics.aggregate(7) : null;
+var analyticsLine = analytics ? (analytics.uniqueVisitors + " visitors · " + analytics.visits + " visits · " + analytics.tips + " tips · " + analytics.tipTokens + " tokens") : "Analytics initializing";
 
 $room.setPanelTemplate({
   template: "3_rows_of_labels",
@@ -42,8 +44,8 @@ $room.setPanelTemplate({
   row1_value: gameActive ? activityName.toUpperCase().slice(0, 32) + " — LIVE" : "BROTHERHOOD OPEN",
   row2_label: gameActive ? "LIVE ACTIVITY" : "RETENTION",
   row2_value: status,
-  row3_label: "ROOM RECORD",
-  row3_value: leader + " · " + rounds + (rounds === 1 ? " round" : " rounds")
+  row3_label: "AFTERDARK ANALYTICS · 7D",
+  row3_value: analyticsLine.slice(0, 80)
 });
 
 // M2.2 modular extension: override row two only when a room goal exists.
