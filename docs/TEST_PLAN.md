@@ -150,3 +150,17 @@ Do not release to the public App Directory or live room until all applicable che
 - `/ab giveaway cancel` closes an open or awaiting-draw giveaway without selecting a winner.
 - Confirm no tip or loyalty point command is required or grants additional entries.
 - Confirm only the broadcaster can run giveaway management commands.
+
+
+## Brotherhood Wars QA
+
+- Broadcaster creates two teams; duplicate names and a ninth team are rejected.
+- Viewers join teams; duplicate membership and joining a second team without leaving are rejected.
+- `!team` privately displays current team and score; `!teams` displays standings.
+- Award a game participation point to a team member; confirm exactly 1 team point.
+- Award a game win to a team member; confirm exactly 5 additional team points.
+- Replay an award with the same idempotency key; confirm no duplicate team score.
+- Confirm tips and broadcaster bonus point grants do not add team score.
+- Broadcaster assign/unassign works; team deletion is blocked while members remain.
+- Season start archives the prior champion and resets scores while preserving memberships.
+- Confirm only the broadcaster can create, delete, assign, reset, or start seasons.
