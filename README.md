@@ -1,4 +1,4 @@
-# LOST BOYS CLUB
+# AFTERDARK BROTHERHOOD
 
 **Tagline:** NO MAP. NO SUPERVISION. QUESTIONABLE DECISIONS.
 
@@ -25,7 +25,7 @@ An interactive Chaturbate room experience built around two adult boyfriends with
 
 ## Brand
 
-**LOST BOYS CLUB**  
+**AFTERDARK BROTHERHOOD**  
 NO MAP. NO SUPERVISION. QUESTIONABLE DECISIONS.
 
 Visual direction: underground alternative club / photocopied punk-flyer / worn zine. Black, dirty white, muted red. Avoid glossy casino styling, purple/gold palettes, excessive neon, and generic influencer aesthetics.
