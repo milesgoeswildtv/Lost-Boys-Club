@@ -29,3 +29,8 @@ An interactive Chaturbate room experience built around two adult boyfriends with
 NO MAP. NO SUPERVISION. QUESTIONABLE DECISIONS.
 
 Visual direction: underground alternative club / photocopied punk-flyer / worn zine. Black, dirty white, muted red. Avoid glossy casino styling, purple/gold palettes, excessive neon, and generic influencer aesthetics.
+
+
+## New source implementation
+
+The current feature branch adds an advanced sequential room-goal engine and a free-play loyalty/rewards system. See `docs/GOALS_AND_REWARDS.md`. These source changes still require portal deployment and Testbed/mobile QA.
