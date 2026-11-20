@@ -102,10 +102,12 @@ var LBC = (function () {
       "!supportstats — show room support totals",
       "!points / !rewards — free-play loyalty points and reward shelf",
       "!redeem 1 — request a reward using points",
+      "!giveaway / !enter — view or enter a free room giveaway",
       "",
       "Broadcaster controls:",
       "/ab start — start a 90-second round",
-      "/ab stop — end the current round"
+      "/ab stop — end the current round",
+      "/ab giveaway start Prize — open a free-entry giveaway"
     ].join("\n");
   }
 
@@ -2636,7 +2638,7 @@ var LBC = (function () {
         "\nCommands: /ab menu add · remove · clear · show.");
       return;
     }
-    if (value === "announcements") {
+    if (value === "giveaway") {\n      var giveaway = readJson("lbc_ab_giveaway_current", null);\n      LBC.notice("🎟️ GIVEAWAY CONTROL\\n" + (giveaway && giveaway.status === "open" ? "OPEN · " + giveaway.prize + " · " + Object.keys(giveaway.entries || {}).length + " entries" : giveaway && giveaway.status === "closed" ? "CLOSED · " + giveaway.prize + " · awaiting draw" : "No active giveaway.") + "\\nCommands: /ab giveaway start Prize · end · draw · cancel · history.");\n      return;\n    }\n    if (value === "announcements") {
       var state = readJson("lbc_m2_announcements", {});
       LBC.notice("📣 ANNOUNCEMENTS\nRotating notices: " + (state.enabled === true ? "ON" : "OFF") +
         "\nCommands: /ab announcements on · off · status.");
@@ -2701,5 +2703,235 @@ var LBC = (function () {
 
   LBC.gameLibrary.register("member-admin-center", {
     onChatMessage: onChatMessage
+  });
+}());
+
+
+/* AFTERDARK BROTHERHOOD — FREE-ENTRY GIVEAWAY ENGINE */
+(function () {
+  "use strict";
+
+  var STATE_KEY = "lbc_ab_giveaway_current";
+  var HISTORY_KEY = "lbc_ab_giveaway_history";
+  var MAX_ENTRIES = 500;
+
+  function cleanName(value) {
+    return String(value || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25);
+  }
+
+  function cleanPrize(value) {
+    return String(value || "").replace(/[\\r\\n\\t]/g, " ").replace(/\\s+/g, " ").trim().slice(0, 80);
+  }
+
+  function read(key, fallback) {
+    try {
+      var raw = LBC.runtime.kvGet(key, "");
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (err) {
+      return fallback;
+    }
+  }
+
+  function save(state) {
+    try {
+      LBC.runtime.kvSet(STATE_KEY, JSON.stringify(state));
+      LBC.runtime.reloadPanel();
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function current() {
+    var state = read(STATE_KEY, null);
+    if (!state || typeof state !== "object") return null;
+    if (!state.entries || typeof state.entries !== "object") state.entries = {};
+    return state;
+  }
+
+  function entryCount(state) {
+    return Object.keys(state && state.entries ? state.entries : {}).length;
+  }
+
+  function showStatus(username) {
+    var state = current();
+    if (!state || (state.status !== "open" && state.status !== "closed")) {
+      LBC.notice("🎟️ No free giveaway is running right now.", { toUsername: cleanName(username) });
+      return;
+    }
+    LBC.notice(
+      "🎟️ AFTERDARK BROTHERHOOD — FREE GIVEAWAY\\n" +
+      "Prize: " + state.prize + "\\n" +
+      "Status: " + state.status.toUpperCase() + "\\n" +
+      "Entries: " + entryCount(state) + " / " + MAX_ENTRIES + "\\n" +
+      (state.status === "open" ? "Type !enter to join. Free entry; no tip or purchase required." : "Entries are closed. The broadcaster will draw the winner."),
+      username ? { toUsername: cleanName(username) } : {}
+    );
+  }
+
+  function enter(username) {
+    var name = cleanName(username);
+    var state = current();
+    if (!name) return;
+    if (!state || state.status !== "open") {
+      LBC.notice("There isn't an open giveaway to enter. Type !giveaway for status.", { toUsername: name });
+      return;
+    }
+    var key = name.toLowerCase();
+    if (state.entries[key]) {
+      LBC.notice("You're already entered in this giveaway.", { toUsername: name });
+      return;
+    }
+    if (entryCount(state) >= MAX_ENTRIES) {
+      LBC.notice("This giveaway has reached its entry limit.", { toUsername: name });
+      return;
+    }
+    state.entries[key] = name;
+    if (!save(state)) {
+      delete state.entries[key];
+      LBC.notice("Your entry couldn't be saved. Please try again.", { toUsername: name });
+      return;
+    }
+    LBC.notice("You're entered for " + state.prize + ". Good luck. 🖤", { toUsername: name });
+  }
+
+  function history() {
+    var list = read(HISTORY_KEY, []);
+    if (!Array.isArray(list) || !list.length) {
+      LBC.notice("No completed giveaways recorded yet.");
+      return;
+    }
+    LBC.notice("🎟️ GIVEAWAY HISTORY\\n" + list.slice(-5).reverse().map(function (item) {
+      return item.prize + " — " + (item.winner || "No winner");
+    }).join("\\n"));
+  }
+
+  function command(body, username, isOwner) {
+    var raw = String(body || "").trim();
+    var lower = raw.toLowerCase();
+    var match;
+    if (lower === "!giveaway") {
+      showStatus(username);
+      return;
+    }
+    if (lower === "!enter") {
+      enter(username);
+      return;
+    }
+    if (!isOwner || lower.indexOf("/ab giveaway") !== 0) return;
+
+    if ((match = raw.match(/^\\/ab giveaway start\\s+(.+)$/i))) {
+      var prize = cleanPrize(match[1]);
+      if (!prize) {
+        LBC.notice("Usage: /ab giveaway start Prize description.");
+        return;
+      }
+      var existing = current();
+      if (existing && (existing.status === "open" || existing.status === "closed")) {
+        LBC.notice("A giveaway is already open or awaiting its draw. Finish or cancel it first.");
+        return;
+      }
+      var state = {
+        id: Date.now(),
+        prize: prize,
+        status: "open",
+        entries: {},
+        startedAt: Date.now(),
+        endedAt: 0,
+        winner: ""
+      };
+      if (!save(state)) {
+        LBC.notice("The giveaway could not be saved.");
+        return;
+      }
+      LBC.notice("🎟️ FREE GIVEAWAY OPEN: " + prize + "\\nType !giveaway for details and !enter to join. No tip or purchase required.");
+      return;
+    }
+
+    if (lower === "/ab giveaway status") {
+      showStatus("");
+      return;
+    }
+
+    if (lower === "/ab giveaway end") {
+      var ending = current();
+      if (!ending || ending.status !== "open") {
+        LBC.notice("There is no open giveaway to close.");
+        return;
+      }
+      ending.status = "closed";
+      ending.endedAt = Date.now();
+      save(ending);
+      LBC.notice("🎟️ Entries closed for " + ending.prize + ". " + entryCount(ending) + " entries. Use /ab giveaway draw.");
+      return;
+    }
+
+    if (lower === "/ab giveaway draw") {
+      var drawing = current();
+      if (!drawing || drawing.status !== "closed") {
+        LBC.notice("Close the giveaway before drawing: /ab giveaway end.");
+        return;
+      }
+      var entries = Object.keys(drawing.entries || {}).map(function (key) { return drawing.entries[key]; });
+      if (!entries.length) {
+        drawing.status = "completed";
+        drawing.winner = "";
+        save(drawing);
+        LBC.notice("No entries were received for " + drawing.prize + ". Giveaway closed without a winner.");
+        return;
+      }
+      var winner = entries[Math.floor(Math.random() * entries.length)];
+      drawing.status = "completed";
+      drawing.winner = winner;
+      drawing.drawnAt = Date.now();
+      save(drawing);
+      var records = read(HISTORY_KEY, []);
+      if (!Array.isArray(records)) records = [];
+      records.push({ id: drawing.id, prize: drawing.prize, winner: winner, entries: entries.length, drawnAt: drawing.drawnAt });
+      writeHistory(records.slice(-20));
+      LBC.notice("🏆 GIVEAWAY WINNER: " + winner + " won " + drawing.prize + ". Congratulations!");
+      return;
+    }
+
+    if (lower === "/ab giveaway cancel") {
+      var cancelling = current();
+      if (!cancelling || (cancelling.status !== "open" && cancelling.status !== "closed")) {
+        LBC.notice("There is no active giveaway to cancel.");
+        return;
+      }
+      cancelling.status = "cancelled";
+      cancelling.endedAt = Date.now();
+      save(cancelling);
+      LBC.notice("Giveaway cancelled. No winner was selected.");
+      return;
+    }
+
+    if (lower === "/ab giveaway history") {
+      history();
+      return;
+    }
+
+    LBC.notice("GIVEAWAY: /ab giveaway start Prize · status · end · draw · cancel · history. VIEWERS: !giveaway · !enter. Free entry only; no tips or purchases for entry.");
+  }
+
+  function writeHistory(list) {
+    try {
+      LBC.runtime.kvSet(HISTORY_KEY, JSON.stringify(list));
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  LBC.giveaway = {
+    version: "1.0",
+    status: function () {
+      var state = current();
+      return state ? { status: state.status, prize: state.prize, entries: entryCount(state), winner: state.winner || "" } : null;
+    }
+  };
+
+  LBC.gameLibrary.register("free-giveaway", {
+    onChatMessage: command
   });
 }());
