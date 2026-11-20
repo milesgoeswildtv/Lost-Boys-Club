@@ -109,6 +109,8 @@ var LBC = (function () {
       "!halloffame — permanent member records",
       "!achievements — your unlocked milestones",
       "!missions / !streak / !missionhistory — daily, weekly, and streak rewards",
+      "!rank / !badges / !titles / !rankings — permanent reputation and recognition",
+      "!title set regular — select an unlocked profile title",
       "!queue / !joinqueue / !leavequeue — view and join the viewer waitlist",
       "!slots / !book 1 / !cancelbooking — scheduled viewer slots",
       "",
