@@ -642,9 +642,9 @@ var LBC = (function () {
   function award(name,amount,reason,id){var p=getUser(name),n=Math.floor(Number(amount)||0),key=String(id||"");if(!p||n<1||n>1000||(key&&p.ids.indexOf(key)>=0))return false;p.balance=Math.min(1000000,p.balance+n);p.earned+=n;p.history.unshift({kind:"earned",points:n,reason:String(reason||"Free game activity").slice(0,45),at:Date.now()});p.history=p.history.slice(0,8);if(key){p.ids.push(key);p.ids=p.ids.slice(-30);}return saveUser(p);}
   function showCatalog(){var a=catalog();LBC.notice(a.length?"🖤 BROTHERHOOD REWARDS\n"+a.map(function(x){return "#"+x.id+" · "+x.cost+" pts — "+x.name;}).join("\n")+"\nRedeem with !redeem <number>. Points are earned by free game participation.":"Rewards shelf empty. Broadcaster: /ab rewards add 100 Reward name.");}
   function review(id,approve){var a=requests(),r=null;for(var i=0;i<a.length;i++)if(Number(a[i].id)===id){r=a[i];break;}if(!r||r.status!=="pending"){LBC.notice("Pending reward request not found.");return;}r.status=approve?"approved":"denied";if(!approve){var p=getUser(r.user);if(p){p.balance+=r.cost;p.spent=Math.max(0,p.spent-r.cost);p.history.unshift({kind:"refund",points:r.cost,reason:"Request #"+id+" denied",at:Date.now()});saveUser(p);}}write(REQ,a);LBC.notice(approve?"Approved #"+id+": "+r.user+" — "+r.name+". Broadcaster fulfillment is now due.":"Denied #"+id+"; "+r.cost+" points refunded to "+r.user+".");LBC.notice(approve?"Your reward request #"+id+" was approved: "+r.name+".":"Your reward request #"+id+" was declined; points refunded.",{toUsername:r.user});}
-  function redeem(user,itemId){var name=clean(user),a=catalog(),item=null;for(var i=0;i<a.length;i++)if(Number(a[i].id)===Number(itemId)){item=a[i];break;}if(!item){LBC.notice("That reward is not available.",{toUsername:name});return;}var p=getUser(name),list=requests(),pending=list.filter(function(r){return r.user.toLowerCase()===name.toLowerCase()&&r.status==="pending";});if(pending.length>=3){LBC.notice("You have three pending reward requests already.",{toUsername:name});return;}if(!p||p.balance<item.cost){LBC.notice("You need "+item.cost+" points. Your balance is "+(p?p.balance:0)+".",{toUsername:name});return;}var id=Math.max(1,Number(LBC.runtime.kvGet(NEXT,"1"))||1);LBC.runtime.kvSet(NEXT,String(id+1));p.balance-=item.cost;p.spent+=item.cost;p.history.unshift({kind:"reserved",points:item.cost,reason:"Request #"+id,at:Date.now()});saveUser(p);list.push({id:id,user:name,itemId:item.id,name:item.name,cost:item.cost,status:"pending",at:Date.now()});write(REQ,list.slice(-50));LBC.notice("Reward request #"+id+" submitted: "+item.name+". The broadcaster will review it.",{toUsername:name});LBC.notice(name+" requested reward #"+id+": "+item.name+" ("+item.cost+" points).");}
+  function redeem(user,itemId){var name=clean(user),a=catalog(),item=null;for(var i=0;i<a.length;i++)if(Number(a[i].id)===Number(itemId)){item=a[i];break;}if(!item){LBC.notice("That reward is not available.",{toUsername:name});return;}var p=getUser(name),list=requests(),pending=list.filter(function(r){return r.user.toLowerCase()===name.toLowerCase()&&r.status==="pending";});var maxPending=Math.max(1,Math.min(10,Math.floor(Number(LBC.getSetting("rewardMaxPendingRequests",3))||3)));if(pending.length>=maxPending){LBC.notice("You have "+maxPending+" pending reward request"+(maxPending===1?"":"s")+" already.",{toUsername:name});return;}if(!p||p.balance<item.cost){LBC.notice("You need "+item.cost+" points. Your balance is "+(p?p.balance:0)+".",{toUsername:name});return;}var id=Math.max(1,Number(LBC.runtime.kvGet(NEXT,"1"))||1);LBC.runtime.kvSet(NEXT,String(id+1));p.balance-=item.cost;p.spent+=item.cost;p.history.unshift({kind:"reserved",points:item.cost,reason:"Request #"+id,at:Date.now()});saveUser(p);list.push({id:id,user:name,itemId:item.id,name:item.name,cost:item.cost,status:"pending",at:Date.now()});write(REQ,list.slice(-50));LBC.notice("Reward request #"+id+" submitted: "+item.name+". The broadcaster will review it.",{toUsername:name});LBC.notice(name+" requested reward #"+id+": "+item.name+" ("+item.cost+" points).");}
   LBC.rewards={version:"1.0",award:award,balance:function(name){var p=getUser(name);return p?p.balance:0;}};
-  LBC.handleRewardsCommand=function(raw,user,isOwner){var body=String(raw||"").trim(),low=body.toLowerCase(),m;if(low==="!points"){var p=getUser(user);if(p)LBC.notice(p.username+" · "+p.balance+" BROTHERHOOD POINTS\nEarned: "+p.earned+" · Redeemed: "+p.spent+"\nPoints cannot be purchased or earned by tipping.",{toUsername:p.username});return;}if(low==="!rewards"){showCatalog();return;}if((m=body.match(/^!redeem\s+([1-9][0-9]{0,3})$/i))){redeem(user,Number(m[1]));return;}if(!isOwner||(low.indexOf("/ab rewards")!==0&&low.indexOf("/ab points")!==0))return;
+  LBC.handleRewardsCommand=function(raw,user,isOwner){var body=String(raw||"").trim(),low=body.toLowerCase(),m;if(low==="!points"){var p=getUser(user);if(p)LBC.notice(p.username+" · "+p.balance+" BROTHERHOOD POINTS\nEarned: "+p.earned+" · Redeemed: "+p.spent+"\nPoints cannot be purchased or earned by tipping.",{toUsername:p.username});return;}if(low==="!rewards"){if(LBC.getSetting("rewardRedemptionEnabled",true)===false){LBC.notice("Reward redemptions are currently disabled.",{toUsername:user});return;}showCatalog();return;}if((m=body.match(/^!redeem\s+([1-9][0-9]{0,3})$/i))){if(LBC.getSetting("rewardRedemptionEnabled",true)===false){LBC.notice("Reward redemptions are currently disabled.",{toUsername:user});return;}redeem(user,Number(m[1]));return;}if(!isOwner||(low.indexOf("/ab rewards")!==0&&low.indexOf("/ab points")!==0))return;
     if((m=body.match(/^\/ab rewards add\s+([1-9][0-9]{0,5})\s+(.{2,60})$/i))){var a=catalog();if(a.length>=12){LBC.notice("Rewards shelf is full (12 items).");return;}var id=a.reduce(function(max,x){return Math.max(max,Number(x.id)||0);},0)+1;var name=String(m[2]).replace(/[\r\n\t]/g," ").replace(/\s+/g," ").trim().slice(0,60);a.push({id:id,cost:Number(m[1]),name:name});write(CAT,a);LBC.notice("Added reward #"+id+": "+name+" · "+m[1]+" points.");return;}
     if((m=low.match(/^\/ab rewards remove\s+([1-9][0-9]{0,3})$/))){var rid=Number(m[1]),old=catalog(),next=old.filter(function(x){return Number(x.id)!==rid;});if(next.length===old.length){LBC.notice("Reward not found.");return;}write(CAT,next);LBC.notice("Reward #"+rid+" removed.");return;}
     if((m=low.match(/^\/ab rewards (approve|deny)\s+([1-9][0-9]{0,4})$/))){review(Number(m[2]),m[1]==="approve");return;}
@@ -3729,14 +3729,22 @@ var LBC = (function () {
   var DAILY_VISIT_POINTS = 2;
   var WATCH_POINTS_PER_INTERVAL = 1;
   var CHAT_POINTS = 1;
-  var TIERS = [
-    { usd: 5000, name: "Brotherhood Royalty" },
-    { usd: 1000, name: "The Obsession" },
-    { usd: 500, name: "House Favorite" },
-    { usd: 250, name: "Bad Habit" },
-    { usd: 100, name: "Little Tease" },
-    { usd: 50, name: "The Curious" }
-  ];
+  function tiers() {
+    var curious = Math.max(1, Math.floor(Number(LBC.getSetting("vipCuriousThresholdUsd", 50)) || 50));
+    var tease = Math.max(curious + 1, Math.floor(Number(LBC.getSetting("vipLittleTeaseThresholdUsd", 100)) || 100));
+    var habit = Math.max(tease + 1, Math.floor(Number(LBC.getSetting("vipBadHabitThresholdUsd", 250)) || 250));
+    var favorite = Math.max(habit + 1, Math.floor(Number(LBC.getSetting("vipHouseFavoriteThresholdUsd", 500)) || 500));
+    var obsession = Math.max(favorite + 1, Math.floor(Number(LBC.getSetting("vipObsessionThresholdUsd", 1000)) || 1000));
+    var royalty = Math.max(obsession + 1, Math.floor(Number(LBC.getSetting("vipRoyaltyThresholdUsd", 5000)) || 5000));
+    return [
+      { usd: royalty, name: "Brotherhood Royalty" },
+      { usd: obsession, name: "The Obsession" },
+      { usd: favorite, name: "House Favorite" },
+      { usd: habit, name: "Bad Habit" },
+      { usd: tease, name: "Little Tease" },
+      { usd: curious, name: "The Curious" }
+    ];
+  }
   function clean(value) { return String(value || "").replace(/^@/, "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0,25); }
   function keyName(value) { return clean(value).toLowerCase(); }
   function read(key, fallback) {
@@ -3811,7 +3819,7 @@ var LBC = (function () {
     return v;
   }
   function tierFor(usd) {
-    for(var i=0;i<TIERS.length;i++) if(usd>=TIERS[i].usd) return TIERS[i].name;
+    var list=tiers(); for(var i=0;i<list.length;i++) if(usd>=list[i].usd) return list[i].name;
     return "Not yet VIP";
   }
   function summary(username) {
@@ -3840,7 +3848,7 @@ var LBC = (function () {
   function adminStatus() {
     var v=vipState(), names=Object.keys(v.members), total=0;
     names.forEach(function(k){total+=Number(v.members[k].usd)||0;});
-    return {members:names.filter(function(k){return (Number(v.members[k].usd)||0)>=50;}).length,totalUsd:Math.round(total*100)/100};
+    return {members:names.filter(function(k){return (Number(v.members[k].usd)||0)>=tiers()[tiers().length-1].usd;}).length,totalUsd:Math.round(total*100)/100};
   }
   function onChatMessage(body,username,isOwner) {
     var text=String(body||"").trim(), lower=text.toLowerCase(), m;
@@ -3850,6 +3858,6 @@ var LBC = (function () {
   LBC.loyalty={version:"2.0",enter:enter,exit:exit,chat:chat,resetSessions:resetSessions,settings:{
     watchPointsPerFiveMinutes:WATCH_POINTS_PER_INTERVAL,chatPoints:CHAT_POINTS,chatCooldownSeconds:CHAT_COOLDOWN_SECONDS,dailyVisitPoints:DAILY_VISIT_POINTS
   }};
-  LBC.vip={version:"1.0",summary:summary,recordTip:recordTip,tiers:function(){return TIERS.slice();},adminStatus:adminStatus};
+  LBC.vip={version:"1.0",summary:summary,recordTip:recordTip,tiers:function(){return tiers();},adminStatus:adminStatus};
   LBC.gameLibrary.register("unified-loyalty-vip",{onChatMessage:onChatMessage});
 }());
