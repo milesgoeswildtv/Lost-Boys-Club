@@ -207,3 +207,22 @@ Do not release to the public App Directory or live room until all applicable che
 - Five-minute reminder fires once for each booked slot and does not repeat after restart.
 - Queue, active turn, slot bookings, pause state, and capacity persist across app restart.
 - Tips, loyalty points, and paid actions do not affect queue position or slot booking.
+
+
+## Daily & Weekly Missions QA
+
+- First successful free-game participation increments daily/weekly games and points exactly once.
+- A successful win increments wins and free-game points; a duplicate award ID changes no mission counters.
+- Complete each daily mission and verify exactly one loyalty reward for each claim.
+- Complete each weekly mission and verify exactly one loyalty reward for each claim.
+- Verify daily progress resets at 00:00 UTC and weekly progress resets Monday at 00:00 UTC, preserving history and lifetime streak milestones.
+- Verify one active UTC day increments the streak once even when the viewer receives both participation and win awards on that day.
+- Verify missing a UTC day resets the active streak to zero; best streak remains.
+- Verify 3-, 7-, 14-, and 30-day streak rewards each unlock once and do not repeat after a later streak.
+- Verify tips, purchases, giveaways, queue bookings, and broadcaster bonus grants do not advance mission counters or streaks.
+- Verify mission rewards increase the existing loyalty balance but do not recursively advance mission progress, Team Wars, Vault, or Hall of Fame totals.
+- Simulate a failed mission reward KV write; confirm the pending delivery survives and retries on app start using the same idempotency key.
+- Verify `!missions`, `!streak`, and `!missionhistory` are private viewer responses.
+- Verify `!profile` includes daily/weekly completion and streak summary.
+- Verify `/ab admin missions` and the admin dashboard report current totals; ordinary viewers cannot access admin detail.
+- Verify user state persists across app restart and period rollovers use UTC, independent of local room timezone.
