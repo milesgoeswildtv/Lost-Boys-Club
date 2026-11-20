@@ -103,11 +103,14 @@ var LBC = (function () {
       "!points / !rewards — free-play loyalty points and reward shelf",
       "!redeem 1 — request a reward using points",
       "!giveaway / !enter — view or enter a free room giveaway",
+      "!teams / !team — Brotherhood Wars standings and your team",
+      "!jointeam Name / !leaveteam — manage your free team membership",
       "",
       "Broadcaster controls:",
       "/ab start — start a 90-second round",
       "/ab stop — end the current round",
-      "/ab giveaway start Prize — open a free-entry giveaway"
+      "/ab giveaway start Prize — open a free-entry giveaway",
+      "/ab teams create Name — create a Brotherhood Wars team"
     ].join("\n");
   }
 
@@ -2598,6 +2601,7 @@ var LBC = (function () {
       "Tip menu: " + (Array.isArray(menu) ? menu.length : 0) + " items\n" +
       "Rotating announcements: " + (announcements.enabled === true ? "ON" : "OFF") + "\n" +
       "Giveaway: " + (function () { var g = readJson("lbc_ab_giveaway_current", null); return g && g.status === "open" ? "OPEN · " + Object.keys(g.entries || {}).length + " entered" : g && g.status === "closed" ? "CLOSED · awaiting draw" : "not running"; }()) + "\n" +
+      "Team Wars: " + (function () { var t = readJson("lbc_ab_teams_state", {}); return (Array.isArray(t.teams) ? t.teams.length : 0) + " teams · " + String(t.seasonName || "No season"); }()) + "\n" +
       "Game modules: " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + "\n" +
       "Use /ab admin help for the control map."
     );
@@ -2650,6 +2654,15 @@ var LBC = (function () {
         "\nCommands: /ab giveaway start Prize · end · draw · cancel · history.");
       return;
     }
+    if (value === "teams") {
+      var teamState = readJson("lbc_ab_teams_state", {});
+      var teamRows = Array.isArray(teamState.teams) ? teamState.teams.slice() : [];
+      teamRows.sort(function (a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
+      LBC.notice("⚔️ BROTHERHOOD WARS\nSeason: " + String(teamState.seasonName || "No season") +
+        "\n" + (teamRows.length ? teamRows.map(function (t, i) { return (i + 1) + ". " + t.name + " — " + (Number(t.score) || 0) + " points · " + (Array.isArray(t.members) ? t.members.length : 0) + " members"; }).join("\n") : "No teams created.") +
+        "\nCommands: /ab teams create Name · delete Name · reset · season start Name.");
+      return;
+    }
     if (value === "announcements") {
       var state = readJson("lbc_m2_announcements", {});
       LBC.notice("📣 ANNOUNCEMENTS\nRotating notices: " + (state.enabled === true ? "ON" : "OFF") +
@@ -2663,13 +2676,14 @@ var LBC = (function () {
     LBC.notice(
       "🖤 AFTERDARK BROTHERHOOD — ADMIN CONTROL MAP\n" +
       "/ab admin — dashboard · /ab admin status — refresh dashboard\n" +
-      "/ab admin games|goals|rewards|menu|announcements|giveaway — subsystem status\n" +
+      "/ab admin games|goals|rewards|menu|announcements|giveaway|teams — subsystem status\n" +
       "/ab admin members — member tracking summary\n" +
       "GOALS: /ab goal set 1000 Title · /ab goal queue 1500 Next\n" +
       "REWARDS: /ab rewards add 100 Reward · pending · approve 1 · deny 1\n" +
       "TIP MENU: /ab menu add 50 Request · /ab menu remove 1\n" +
       "ANNOUNCEMENTS: /ab announcements on|off\n" +
       "GIVEAWAY: /ab giveaway start Prize · end · draw · cancel · history (free entry only)\n" +
+      "TEAMS: /ab teams create Name · !jointeam Name · !leaveteam · !teams · !team\n" +
       "GAMES: use the game's own /ab <game> start|stop command."
     );
   }
@@ -2701,7 +2715,7 @@ var LBC = (function () {
         " / " + MAX_INDEX + "\nViewer commands: !profile · !profile username · !leaderboard wins|games|points.");
       return;
     }
-    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway)$/))) {
+    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|teams)$/))) {
       adminDetail(match[1]);
       return;
     }
@@ -2946,5 +2960,288 @@ var LBC = (function () {
 
   LBC.gameLibrary.register("free-giveaway", {
     onChatMessage: command
+  });
+}());
+
+
+/* AFTERDARK BROTHERHOOD — BROTHERHOOD WARS */
+(function () {
+  "use strict";
+
+  var STATE_KEY = "lbc_ab_teams_state";
+  var HISTORY_KEY = "lbc_ab_teams_history";
+  var MAX_TEAMS = 8;
+  var MAX_HISTORY = 10;
+
+  function cleanName(value) {
+    return String(value || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25);
+  }
+
+  function cleanTeamName(value) {
+    return String(value || "").replace(/[\r\n\t]/g, " ").replace(/\s+/g, " ").trim().replace(/[^A-Za-z0-9 _-]/g, "").slice(0, 24);
+  }
+
+  function slug(value) {
+    return cleanTeamName(value).toLowerCase().replace(/\s+/g, "-");
+  }
+
+  function read(key, fallback) {
+    try {
+      var raw = LBC.runtime.kvGet(key, "");
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (err) {
+      return fallback;
+    }
+  }
+
+  function save(state) {
+    try {
+      return LBC.runtime.kvSet(STATE_KEY, JSON.stringify(state)) !== false;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function state() {
+    var s = read(STATE_KEY, {});
+    if (!Array.isArray(s.teams)) s.teams = [];
+    s.seasonName = String(s.seasonName || "Founding Season");
+    s.startedAt = Number(s.startedAt) || Date.now();
+    s.teams = s.teams.slice(0, MAX_TEAMS).map(function (t) {
+      return {
+        id: String(t.id || slug(t.name)),
+        name: cleanTeamName(t.name),
+        score: Math.max(0, Number(t.score) || 0),
+        members: Array.isArray(t.members) ? t.members.map(cleanName).filter(Boolean).slice(0, 250) : []
+      };
+    }).filter(function (t) { return t.id && t.name; });
+    return s;
+  }
+
+  function findTeam(s, name) {
+    var id = slug(name);
+    for (var i = 0; i < s.teams.length; i++) {
+      if (s.teams[i].id === id || s.teams[i].name.toLowerCase() === cleanTeamName(name).toLowerCase()) return s.teams[i];
+    }
+    return null;
+  }
+
+  function memberTeam(s, username) {
+    var key = cleanName(username).toLowerCase();
+    for (var i = 0; i < s.teams.length; i++) {
+      if (s.teams[i].members.some(function (name) { return name.toLowerCase() === key; })) return s.teams[i];
+    }
+    return null;
+  }
+
+  function removeMember(s, username) {
+    var key = cleanName(username).toLowerCase();
+    s.teams.forEach(function (team) {
+      team.members = team.members.filter(function (name) { return name.toLowerCase() !== key; });
+    });
+  }
+
+  function showTeams() {
+    var s = state();
+    var rows = s.teams.slice().sort(function (a, b) { return b.score - a.score || a.name.localeCompare(b.name); });
+    LBC.notice("⚔️ BROTHERHOOD WARS — " + s.seasonName + "\n" +
+      (rows.length ? rows.map(function (team, i) {
+        return (i + 1) + ". " + team.name + " — " + team.score + " points · " + team.members.length + " members";
+      }).join("\n") : "No teams yet. The broadcaster can create teams with /ab teams create Name.") +
+      "\nGame participation earns 1 team point; a game win earns 5. Tips never add team points.");
+  }
+
+  function showTeam(username) {
+    var s = state();
+    var team = memberTeam(s, username);
+    if (!team) {
+      LBC.notice("You're not on a team yet. Type !teams to see the standings.", { toUsername: cleanName(username) });
+      return;
+    }
+    LBC.notice("⚔️ YOUR TEAM — " + team.name + "\n" +
+      "Season points: " + team.score + "\n" +
+      "Members: " + team.members.length + "\n" +
+      "Game participation = 1 point; game wins = 5 points.",
+      { toUsername: cleanName(username) });
+  }
+
+  function join(username, teamName) {
+    var name = cleanName(username);
+    var s = state();
+    var team = findTeam(s, teamName);
+    if (!name || !team) {
+      LBC.notice("That team doesn't exist. Type !teams to see available teams.", { toUsername: name });
+      return;
+    }
+    var current = memberTeam(s, name);
+    if (current) {
+      LBC.notice(current.id === team.id ? "You're already on " + team.name + "." : "You're already on " + current.name + ". Leave that team before joining another.", { toUsername: name });
+      return;
+    }
+    if (team.members.length >= 250) {
+      LBC.notice("That team has reached its 250-member limit.", { toUsername: name });
+      return;
+    }
+    team.members.push(name);
+    if (!save(s)) {
+      team.members.pop();
+      LBC.notice("Your team membership couldn't be saved. Please try again.", { toUsername: name });
+      return;
+    }
+    LBC.notice("You're now on " + team.name + ". Let the wars begin. ⚔️", { toUsername: name });
+  }
+
+  function awardTeamPoints(username, reason) {
+    var why = String(reason || "");
+    var amount = /participation/i.test(why) ? 1 : /\bwin\b/i.test(why) ? 5 : 0;
+    if (!amount) return;
+    var s = state();
+    var team = memberTeam(s, username);
+    if (!team) return;
+    team.score += amount;
+    save(s);
+  }
+
+  if (LBC.rewards && typeof LBC.rewards.award === "function" && !LBC.rewards.award.__teamWars) {
+    var originalAward = LBC.rewards.award;
+    var teamAward = function (username, amount, reason, id) {
+      var ok = originalAward.apply(null, arguments);
+      if (ok) awardTeamPoints(username, reason);
+      return ok;
+    };
+    teamAward.__teamWars = true;
+    LBC.rewards.award = teamAward;
+  }
+
+  function history() {
+    var list = read(HISTORY_KEY, []);
+    if (!Array.isArray(list) || !list.length) {
+      LBC.notice("No previous Brotherhood Wars seasons recorded.");
+      return;
+    }
+    LBC.notice("⚔️ BROTHERHOOD WARS HISTORY\n" + list.slice(-5).reverse().map(function (season) {
+      return season.name + " — " + (season.winner || "No champion") + " (" + season.score + " points)";
+    }).join("\n"));
+  }
+
+  function onChatMessage(body, username, isOwner) {
+    var raw = String(body || "").trim();
+    var lower = raw.toLowerCase();
+    var match;
+
+    if (lower === "!teams") { showTeams(); return; }
+    if (lower === "!team") { showTeam(username); return; }
+    if ((match = raw.match(/^!jointeam\s+(.+)$/i))) { join(username, match[1]); return; }
+    if (lower === "!leaveteam") {
+      var s = state();
+      var old = memberTeam(s, username);
+      if (!old) {
+        LBC.notice("You're not on a team.", { toUsername: cleanName(username) });
+        return;
+      }
+      removeMember(s, username);
+      save(s);
+      LBC.notice("You left " + old.name + ".", { toUsername: cleanName(username) });
+      return;
+    }
+
+    if (!isOwner || lower.indexOf("/ab teams") !== 0) return;
+
+    if ((match = raw.match(/^\/ab teams create\s+(.+)$/i))) {
+      var name = cleanTeamName(match[1]);
+      var sCreate = state();
+      if (!name) { LBC.notice("Give the team a name."); return; }
+      if (sCreate.teams.length >= MAX_TEAMS) { LBC.notice("The league is full. Maximum: " + MAX_TEAMS + " teams."); return; }
+      if (findTeam(sCreate, name)) { LBC.notice("That team already exists."); return; }
+      sCreate.teams.push({ id: slug(name), name: name, score: 0, members: [] });
+      save(sCreate);
+      LBC.notice("⚔️ Team created: " + name + ". View standings with !teams.");
+      return;
+    }
+
+    if ((match = raw.match(/^\/ab teams delete\s+(.+)$/i))) {
+      var sDelete = state();
+      var target = findTeam(sDelete, match[1]);
+      if (!target) { LBC.notice("Team not found."); return; }
+      if (target.members.length) { LBC.notice("That team still has members. Remove them before deleting it."); return; }
+      sDelete.teams = sDelete.teams.filter(function (t) { return t.id !== target.id; });
+      save(sDelete);
+      LBC.notice("Team deleted: " + target.name + ".");
+      return;
+    }
+
+    if ((match = raw.match(/^\/ab teams assign\s+([A-Za-z0-9_-]{1,25})\s+(.+)$/i))) {
+      var sAssign = state();
+      var targetTeam = findTeam(sAssign, match[2]);
+      if (!targetTeam) { LBC.notice("Team not found."); return; }
+      removeMember(sAssign, match[1]);
+      targetTeam.members.push(cleanName(match[1]));
+      save(sAssign);
+      LBC.notice("Assigned " + cleanName(match[1]) + " to " + targetTeam.name + ".");
+      return;
+    }
+
+    if ((match = raw.match(/^\/ab teams unassign\s+([A-Za-z0-9_-]{1,25})$/i))) {
+      var sUnassign = state();
+      var assigned = memberTeam(sUnassign, match[1]);
+      if (!assigned) { LBC.notice("That viewer isn't assigned to a team."); return; }
+      removeMember(sUnassign, match[1]);
+      save(sUnassign);
+      LBC.notice("Removed " + cleanName(match[1]) + " from " + assigned.name + ".");
+      return;
+    }
+
+    if (lower === "/ab teams list" || lower === "/ab teams") { showTeams(); return; }
+
+    if (lower === "/ab teams reset") {
+      var sReset = state();
+      sReset.teams.forEach(function (team) { team.score = 0; });
+      save(sReset);
+      LBC.notice("Brotherhood Wars scores reset. Team memberships are unchanged.");
+      return;
+    }
+
+    if ((match = raw.match(/^\/ab teams season start\s+(.+)$/i))) {
+      var seasonName = cleanTeamName(match[1]);
+      if (!seasonName) { LBC.notice("Give the season a name."); return; }
+      var sSeason = state();
+      var sorted = sSeason.teams.slice().sort(function (a, b) { return b.score - a.score; });
+      var previous = read(HISTORY_KEY, []);
+      if (!Array.isArray(previous)) previous = [];
+      previous.push({
+        name: sSeason.seasonName,
+        winner: sorted.length && sorted[0].score > 0 ? sorted[0].name : "",
+        score: sorted.length ? sorted[0].score : 0,
+        endedAt: Date.now()
+      });
+      LBC.runtime.kvSet(HISTORY_KEY, JSON.stringify(previous.slice(-MAX_HISTORY)));
+      sSeason.seasonName = seasonName;
+      sSeason.startedAt = Date.now();
+      sSeason.teams.forEach(function (team) { team.score = 0; });
+      save(sSeason);
+      LBC.notice("⚔️ New Brotherhood Wars season started: " + seasonName + ". Scores reset; memberships preserved.");
+      return;
+    }
+
+    if (lower === "/ab teams season history") { history(); return; }
+    if (lower === "/ab teams status") { showTeams(); return; }
+
+    LBC.notice("TEAMS: /ab teams create Name · delete Name · list · reset · assign username Team · unassign username · season start Name · season history. VIEWERS: !teams · !team · !jointeam Name · !leaveteam.");
+  }
+
+  LBC.teams = {
+    version: "1.0",
+    standings: function () {
+      var s = state();
+      return s.teams.slice().sort(function (a, b) { return b.score - a.score; });
+    },
+    memberTeam: function (username) {
+      var team = memberTeam(state(), username);
+      return team ? { id: team.id, name: team.name, score: team.score } : null;
+    }
+  };
+
+  LBC.gameLibrary.register("brotherhood-wars", {
+    onChatMessage: onChatMessage
   });
 }());
