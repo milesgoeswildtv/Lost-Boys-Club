@@ -336,6 +336,7 @@ var LBC = (function () {
   "use strict";
   var runtime = {};
   LBC.setRuntime = function (api) { runtime = api || {}; };
+  LBC.getSetting = function (name, fallback) { return LBC.runtime.getSetting(name, fallback); };
   LBC.runtime = {
     kvGet: function (key, fallback) { try { return typeof runtime.kvGet === "function" ? runtime.kvGet(key, fallback) : fallback; } catch (err) { return fallback; } },
     kvSet: function (key, value, ttlSeconds) { try { return typeof runtime.kvSet === "function" ? runtime.kvSet(key, value, ttlSeconds) : false; } catch (err) { return false; } },
@@ -343,7 +344,8 @@ var LBC = (function () {
     createCallback: function (label, seconds, repeat) { try { return typeof runtime.createCallback === "function" ? runtime.createCallback(label, seconds, repeat) : false; } catch (err) { return false; } },
     cancelCallback: function (label) { try { return typeof runtime.cancelCallback === "function" ? runtime.cancelCallback(label) : false; } catch (err) { return false; } },
     reloadPanel: function () { try { return typeof runtime.reloadPanel === "function" ? runtime.reloadPanel() : false; } catch (err) { return false; } },
-    setPanelTemplate: function (template) { try { return typeof runtime.setPanelTemplate === "function" ? runtime.setPanelTemplate(template) : false; } catch (err) { return false; } }
+    setPanelTemplate: function (template) { try { return typeof runtime.setPanelTemplate === "function" ? runtime.setPanelTemplate(template) : false; } catch (err) { return false; } },
+    getSetting: function (name, fallback) { try { return typeof runtime.getSetting === "function" ? runtime.getSetting(name, fallback) : fallback; } catch (err) { return fallback; } }
   };
 }());
 
@@ -3729,6 +3731,7 @@ var LBC = (function () {
   }
   function dayKey() { return new Date().toISOString().slice(0,10); }
   function enter(username) {
+    if (LBC.getSetting("loyaltyEnabled", true) === false) return;
     var name=clean(username), k=keyName(username), now=Math.floor(Date.now()/1000);
     if(!name || k===keyName(LBC.runtime.kvGet("lbc_room_owner",""))) return;
     var sessionKey=SESSION_PREFIX+k;
@@ -3737,12 +3740,14 @@ var LBC = (function () {
     if(!existing) { LBC.runtime.kvSet(sessionKey,String(now)); if(s.sessions.indexOf(k)<0) s.sessions.push(k); write(LOYALTY_KEY,s); }
     var today=dayKey();
     if(s.daily[k]!==today) {
-      if(award(name,DAILY_VISIT_POINTS,"Daily room visit","loyalty:daily:"+k+":"+today)) {
+      var dailyPoints=Math.max(0,Math.min(20,Math.floor(Number(LBC.getSetting("dailyVisitPoints", DAILY_VISIT_POINTS))||0)));
+      if(dailyPoints>0 && award(name,dailyPoints,"Daily room visit","loyalty:daily:"+k+":"+today)) {
         s.daily[k]=today; write(LOYALTY_KEY,s);
       }
     }
   }
   function exit(username) {
+    if (LBC.getSetting("loyaltyEnabled", true) === false) return;
     var name=clean(username), k=keyName(username);
     if(!name) return;
     var sessionKey=SESSION_PREFIX+k;
@@ -3751,9 +3756,11 @@ var LBC = (function () {
     LBC.runtime.kvSet(sessionKey,"");
     var sessionState=activity(); sessionState.sessions=sessionState.sessions.filter(function(x){return x!==k;}); write(LOYALTY_KEY,sessionState);
     var elapsed=Math.max(0,Math.min(86400,Math.floor(Date.now()/1000)-started));
-    var intervals=Math.floor(elapsed/WATCH_INTERVAL_SECONDS);
+    var watchInterval=300;
+    var intervals=Math.floor(elapsed/watchInterval);
     if(intervals>0) {
-      var points=Math.min(288,intervals*WATCH_POINTS_PER_INTERVAL);
+      var watchPoints=Math.max(0,Math.min(20,Math.floor(Number(LBC.getSetting("watchPointsPerFiveMinutes", WATCH_POINTS_PER_INTERVAL))||0)));
+      var points=Math.min(5760,intervals*watchPoints);
       award(name,points,"Verified room viewing time","loyalty:watch:"+k+":"+started);
     }
   }
@@ -3764,10 +3771,14 @@ var LBC = (function () {
   }
   function chat(username, body) {
     var name=clean(username), k=keyName(username), text=String(body||"").trim();
+    if(LBC.getSetting("loyaltyEnabled", true) === false) return;
     if(!name || text.length<12 || text.split(/\s+/).length<3 || /^(!|\/)/.test(text)) return;
+    var chatPoints=Math.max(0,Math.min(20,Math.floor(Number(LBC.getSetting("meaningfulChatPoints", CHAT_POINTS))||0)));
+    var cooldown=Math.max(1,Math.min(1440,Math.floor(Number(LBC.getSetting("meaningfulChatCooldownMinutes", 10))||10)))*60;
+    if(chatPoints<1) return;
     var s=activity(), now=Math.floor(Date.now()/1000), last=Number(s.chat[k])||0;
-    if(now-last<CHAT_COOLDOWN_SECONDS) return;
-    if(award(name,CHAT_POINTS,"Meaningful chat engagement","loyalty:chat:"+k+":"+now)) {
+    if(now-last<cooldown) return;
+    if(award(name,chatPoints,"Meaningful chat engagement","loyalty:chat:"+k+":"+now)) {
       s.chat[k]=now; write(LOYALTY_KEY,s);
     }
   }
