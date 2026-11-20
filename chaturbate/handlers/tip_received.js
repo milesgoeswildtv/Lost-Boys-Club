@@ -1,5 +1,5 @@
 /*
- * LOST BOYS CLUB — EVENT HANDLER RUNTIME BRIDGE
+ * AFTERDARK BROTHERHOOD — EVENT HANDLER RUNTIME BRIDGE
  * Chaturbate SDK access stays in event handlers, never Shared Code.
  */
 LBC.setRuntime({
@@ -13,8 +13,8 @@ LBC.setRuntime({
 });
 
 
-// LOST BOYS CLUB — Tip Received
-// M2: persistent clubhouse tip stats + restrained thank-you notices.
+// AFTERDARK BROTHERHOOD — Tip Received
+// M2: persistent brotherhood tip stats + restrained thank-you notices.
 // Every tip is counted. Thank-you notices are throttled per supporter.
 
 var TIP_STATS_KEY = "lbc_m2_tip_stats";
@@ -40,7 +40,7 @@ function readTipStats() {
 var tokens = Math.max(0, Math.floor(Number($tip.tokens) || 0));
 var isAnonymous = !!$tip.isAnon;
 var username = isAnonymous ? "Anonymous supporter" :
-  String($user.username || "A club supporter").replace(/[^a-zA-Z0-9_\-]/g, "").slice(0, 25);
+  String($user.username || "A brotherhood supporter").replace(/[^a-zA-Z0-9_\-]/g, "").slice(0, 25);
 
 if (tokens > 0) {
   var stats = readTipStats();
@@ -63,7 +63,7 @@ if (tokens > 0) {
     $kv.set(ackKey, String(nowSeconds), ACK_COOLDOWN_SECONDS);
     $room.sendNotice(
       "🖤 " + (isAnonymous ? "A mystery supporter" : username) +
-      " threw " + tokens + " tokens into the clubhouse. Much appreciated. No game advantage attached."
+      " threw " + tokens + " tokens into the brotherhood. Much appreciated. No game advantage attached."
     );
   }
 }
