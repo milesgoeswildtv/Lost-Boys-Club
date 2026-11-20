@@ -99,6 +99,7 @@ var LBC = (function () {
       "!ab — show this help",
       "!game — show the current game",
       "!scoreboard — show brotherhood records",
+      "!points / !rewards — free-play loyalty points and reward shelf",
       "",
       "Broadcaster controls:",
       "/ab start — start a 90-second round",
@@ -334,151 +335,69 @@ var LBC = (function () {
 }());
 
 /*
- * AFTERDARK BROTHERHOOD — Modular Room Utilities
- * M2.2 room-goal helpers. Appended after the existing LBC core.
- * Event handlers call these small public methods; feature logic stays here.
+ * AFTERDARK BROTHERHOOD — ADVANCED GOAL ENGINE
+ * Multi-stage goals, configurable milestones, pause/resume, extensions and queued goals.
  */
 (function () {
   "use strict";
-
-  var GOAL_KEY = "lbc_m2_room_goal";
-  var STATS_KEY = "lbc_m2_tip_stats";
-
-  function readStoredJson(key, fallback) {
-    try {
-      var raw = LBC.runtime.kvGet(key, "");
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (err) {
-      return fallback;
-    }
-  }
-
-  function readGoalSnapshot() {
-    var goal = readStoredJson(GOAL_KEY, null);
-    var stats = readStoredJson(STATS_KEY, {});
-    if (!goal || !(Number(goal.target) > 0)) return null;
-
-    var target = Number(goal.target);
-    var total = Number(stats.totalTokens) || 0;
-    var progress = Math.max(0, total - (Number(goal.startTotal) || 0));
-
-    return {
-      goal: goal,
-      target: target,
-      progress: progress,
-      displayedProgress: Math.min(progress, target),
-      percent: Math.min(100, Math.floor(progress / target * 100)),
-      active: goal.active === true,
-      completed: goal.completed === true
-    };
-  }
-
-  LBC.handleRoomGoalCommand = function (rawBody, isOwner) {
-    var body = String(rawBody || "").trim();
-    var lower = body.toLowerCase();
-
-    if (lower === "!clubgoal") {
-      var snapshot = readGoalSnapshot();
-      if (!snapshot) {
-        LBC.notice("No room goal is set right now. The brotherhood is financially irresponsible but emotionally available.");
-        return;
-      }
-
-      LBC.notice(
-        "🏚️ AFTERDARK BROTHERHOOD — ROOM GOAL\n" +
-        (snapshot.active ? "Progress: " : "Last goal: ") +
-        snapshot.displayedProgress + " / " + snapshot.target +
-        " tokens (" + snapshot.percent + "%)" +
-        (snapshot.active
-          ? "\nVoluntary support only. No perks or game advantage."
-          : (snapshot.completed ? "\nGoal reached. Thanks, troublemakers." : "\nGoal is not currently active."))
-      );
-      return;
-    }
-
-    if (!isOwner || lower.indexOf("/ab goal") !== 0) return;
-
-    var match = lower.match(/^\/ab goal (off|[1-9][0-9]{0,6})$/);
-    if (!match) {
-      LBC.notice("Use /ab goal 500 to set a goal, or /ab goal off to turn it off.");
-      return;
-    }
-
-    if (match[1] === "off") {
-      LBC.runtime.kvSet(GOAL_KEY, JSON.stringify({
-        target: 0, startTotal: 0, active: false, completed: false, milestones: {}
-      }));
-      LBC.notice("Room goal switched off. The brotherhood returns to its regularly scheduled nonsense.");
-    } else {
-      var stats = readStoredJson(STATS_KEY, {});
-      var baseline = Number(stats.totalTokens) || 0;
-      var target = Number(match[1]);
-      LBC.runtime.kvSet(GOAL_KEY, JSON.stringify({
-        target: target,
-        startTotal: baseline,
-        active: true,
-        completed: false,
-        milestones: {}
-      }));
-      LBC.notice("🏚️ New brotherhood goal set: " + target + " tokens. Progress starts now. Support is voluntary; nothing is locked behind it.");
-    }
-
-LBC.runtime.reloadPanel()  };
-
-  LBC.processRoomGoalTip = function (rawTokens) {
-    var tokens = Math.max(0, Math.floor(Number(rawTokens) || 0));
-    if (!tokens) return;
-
-    // The M2.1 Tip Received handler updates aggregate totals before calling this.
-    var snapshot = readGoalSnapshot();
-    if (!snapshot || !snapshot.active) return;
-
-    var goal = snapshot.goal;
-    var milestones = goal.milestones && typeof goal.milestones === "object"
-      ? goal.milestones : {};
-
-    [25, 50, 75, 100].forEach(function (mark) {
-      var key = String(mark);
-      if (snapshot.percent >= mark && !milestones[key]) {
-        milestones[key] = true;
-        LBC.notice(
-          mark === 100
-            ? "🏁 BROTHERHOOD GOAL REACHED. " + snapshot.target + " tokens. You beautiful bunch of questionable decisions. Thank you."
-            : "🏚️ Brotherhood goal update: " + mark + "% reached. " +
-            snapshot.displayedProgress + " / " + snapshot.target +
-            " tokens. Voluntary support, always."
-        );
-      }
-    });
-
-    goal.milestones = milestones;
-    if (snapshot.percent >= 100) {
-      goal.active = false;
-      goal.completed = true;
-    }
-    LBC.runtime.kvSet(GOAL_KEY, JSON.stringify(goal));
-    LBC.runtime.reloadPanel()
+  var KEY="lbc_m2_room_goal", STATS="lbc_m2_tip_stats", DEFAULTS=[25,50,75,100];
+  function json(k,d){try{var r=LBC.runtime.kvGet(k,"");return r?JSON.parse(r):d;}catch(e){return d;}}
+  function total(){return Math.max(0,Number(json(STATS,{}).totalTokens)||0);}
+  function cleanTitle(v){return String(v||"Brotherhood Goal").replace(/[\r\n\t]/g," ").replace(/\s+/g," ").trim().slice(0,48)||"Brotherhood Goal";}
+  function read(){var g=json(KEY,{});return {version:2,target:Math.max(0,Number(g.target)||0),title:cleanTitle(g.title),startTotal:Math.max(0,Number(g.startTotal)||0),active:g.active===true,paused:g.paused===true,completed:g.completed===true,milestones:Array.isArray(g.milestones)&&g.milestones.length?g.milestones:DEFAULTS.slice(),reached:g.reached&&typeof g.reached==="object"?g.reached:{},queue:Array.isArray(g.queue)?g.queue.slice(0,10):[],lastCompleted:g.lastCompleted||null};}
+  function save(g){LBC.runtime.kvSet(KEY,JSON.stringify(g));LBC.runtime.reloadPanel();}
+  function snap(g){if(!g||!g.target)return null;var p=Math.max(0,total()-g.startTotal);return {shown:Math.min(p,g.target),percent:Math.min(100,Math.floor(p/g.target*100))};}
+  function activate(g,t,n){g.target=t;g.title=cleanTitle(n);g.startTotal=total();g.active=true;g.paused=false;g.completed=false;g.reached={};}
+  function status(){var g=read(),s=snap(g);if(!s){LBC.notice("No room goal is active. Use /ab goal set 1000 Title to launch one.");return;}LBC.notice("🏁 "+g.title.toUpperCase()+"\n"+(g.paused?"PAUSED":g.active?"LIVE":g.completed?"REACHED":"OFF")+" · "+s.shown+" / "+g.target+" tokens · "+s.percent+"%"+(g.queue.length?"\nQueued goals: "+g.queue.length:"")+"\nSupport is voluntary. Tipping does not award points or game advantages.");}
+  LBC.handleRoomGoalCommand=function(raw,isOwner){
+    var body=String(raw||"").trim(),low=body.toLowerCase(),m,g=read();
+    if(low==="!goal"||low==="!clubgoal"){status();return;}
+    if(!isOwner||low.indexOf("/ab goal")!==0)return;
+    if((m=body.match(/^\/ab goal(?:\s+set)?\s+([1-9][0-9]{0,6})(?:\s+(.+))?$/i))){activate(g,Number(m[1]),m[2]);save(g);LBC.notice("🏁 Goal started: "+g.title+" · "+g.target+" tokens.");return;}
+    if((m=body.match(/^\/ab goal queue\s+([1-9][0-9]{0,6})(?:\s+(.+))?$/i))){if(g.queue.length>=10){LBC.notice("Goal queue is full (10).");return;}g.queue.push({target:Number(m[1]),title:cleanTitle(m[2])});save(g);LBC.notice("Queued goal #"+g.queue.length+": "+g.queue[g.queue.length-1].title+".");return;}
+    if(low==="/ab goal queue list"){LBC.notice(g.queue.length?"UPCOMING GOALS\n"+g.queue.map(function(x,i){return (i+1)+". "+x.title+" — "+x.target+" tokens";}).join("\n"):"No queued goals.");return;}
+    if(low==="/ab goal queue clear"){g.queue=[];save(g);LBC.notice("Goal queue cleared.");return;}
+    if((m=low.match(/^\/ab goal milestones\s+(.+)$/))){var p=m[1].split(/[,\s]+/),marks=[];for(var i=0;i<p.length;i++){var n=Number(p[i]);if(!Number.isInteger(n)||n<1||n>100){LBC.notice("Use whole percentages from 1 to 100.");return;}if(marks.indexOf(n)<0)marks.push(n);}if(marks.indexOf(100)<0)marks.push(100);marks.sort(function(a,b){return a-b;});g.milestones=marks.slice(0,10);g.reached={};save(g);LBC.notice("Milestones set: "+g.milestones.join("%, ")+"%.");return;}
+    if((m=low.match(/^\/ab goal extend\s+([1-9][0-9]{0,6})$/))){if(!g.active){LBC.notice("No active goal to extend.");return;}g.target+=Number(m[1]);g.paused=false;g.completed=false;save(g);LBC.notice("Goal extended. New target: "+g.target+" tokens.");return;}
+    if(low==="/ab goal pause"){if(!g.active){LBC.notice("No active goal to pause.");return;}g.paused=true;save(g);LBC.notice("Goal paused. Tips received while paused will not count.");return;}
+    if(low==="/ab goal resume"){if(!g.active){LBC.notice("No active goal to resume.");return;}g.paused=false;save(g);LBC.notice("Goal resumed.");return;}
+    if(low==="/ab goal reset"){if(!g.target){LBC.notice("Set a goal first.");return;}g.startTotal=total();g.active=true;g.paused=false;g.completed=false;g.reached={};save(g);LBC.notice("Goal reset to 0 / "+g.target+".");return;}
+    if(low==="/ab goal off"){g.active=false;g.paused=false;g.completed=false;save(g);LBC.notice("Current goal switched off. Queue preserved.");return;}
+    if(low==="/ab goal status"){status();return;}
+    LBC.notice("GOAL: /ab goal set 1000 Title · queue 1500 Next Goal · pause · resume · reset · extend 250 · milestones 10 25 50 75 100 · queue list · queue clear · off. Viewers: !goal.");
   };
+  LBC.processRoomGoalTip=function(tokens){if(!(Number(tokens)>0))return;var g=read();if(!g.active||g.paused)return;var s=snap(g);if(!s)return;g.milestones.forEach(function(mark){var k=String(mark);if(s.percent>=mark&&!g.reached[k]){g.reached[k]=true;LBC.notice(mark===100?"🏁 GOAL REACHED — "+g.title+" · "+g.target+" tokens. Thank you.":"🏚️ "+g.title+" reached "+mark+"% · "+s.shown+" / "+g.target+" tokens.");}});if(s.percent>=100){g.active=false;g.completed=true;g.paused=false;g.lastCompleted={title:g.title,target:g.target,at:Date.now()};if(g.queue.length){var next=g.queue.shift();activate(g,Number(next.target),next.title);LBC.notice("🏁 NEXT GOAL: "+g.title+" · "+g.target+" tokens. Progress starts now.");}}save(g);};
+  LBC.updateGoalPanel=function(){var g=read(),s=snap(g);if(!s)return;var p=LBC.panelData();LBC.runtime.setPanelTemplate({template:"3_rows_of_labels",row1_label:"AFTERDARK BROTHERHOOD",row1_value:(p.game&&p.game.active)?"GAME LIVE":"BROTHERHOOD OPEN",row2_label:cleanTitle(g.title).toUpperCase().slice(0,18),row2_value:(g.paused?"PAUSED · ":g.active?"":g.completed?"REACHED · ":"OFF · ")+s.shown+"/"+g.target+" · "+s.percent+"%",row3_label:"HALL OF FAME",row3_value:(p.leader||"No champion yet")+" · "+(Number(p.rounds)||0)+" rounds"});};
+}());
 
-  LBC.updateGoalPanel = function () {
-    var snapshot = readGoalSnapshot();
-    if (!snapshot) return;
-
-    var panel = LBC.panelData();
-    var row2Value = (snapshot.active ? "" : (snapshot.completed ? "REACHED · " : "PAUSED · ")) +
-      snapshot.displayedProgress + "/" + snapshot.target + " TOKENS · " + snapshot.percent + "%";
-
-    LBC.runtime.setPanelTemplate({
-      template: "3_rows_of_labels",
-      row1_label: "AFTERDARK BROTHERHOOD",
-      row1_value: (panel.game && panel.game.active) ? "GUESS THE NUMBER — LIVE" : "BROTHERHOOD OPEN",
-      row2_label: "ROOM GOAL",
-      row2_value: row2Value,
-      row3_label: "CLUB RECORD",
-      row3_value: (panel.leader || "No champion yet") + " · " +
-        (Number(panel.rounds) || 0) +
-        ((Number(panel.rounds) || 0) === 1 ? " round" : " rounds")
-    });
+/*
+ * AFTERDARK BROTHERHOOD — LOYALTY & REWARDS
+ * Points come from free game participation and wins, never from tips.
+ * Redemption requests are broadcaster-reviewed; no cash value or random prizes.
+ */
+(function () {
+  "use strict";
+  var USER="lbc_ab_rewards_user_",CAT="lbc_ab_rewards_catalog",REQ="lbc_ab_rewards_requests",NEXT="lbc_ab_rewards_next_id";
+  function clean(v){return String(v||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,25);}
+  function read(k,d){try{var x=LBC.runtime.kvGet(k,"");return x?JSON.parse(x):d;}catch(e){return d;}}
+  function write(k,v){return LBC.runtime.kvSet(k,JSON.stringify(v));}
+  function getUser(name){var n=clean(name);if(!n)return null;var p=read(USER+n.toLowerCase(),{});return {username:n,balance:Math.max(0,Number(p.balance)||0),earned:Math.max(0,Number(p.earned)||0),spent:Math.max(0,Number(p.spent)||0),ids:Array.isArray(p.ids)?p.ids.slice(-100):[],history:Array.isArray(p.history)?p.history.slice(0,8):[]};}
+  function saveUser(p){return p?write(USER+p.username.toLowerCase(),p):false;}
+  function catalog(){var a=read(CAT,[]);return Array.isArray(a)?a.slice(0,12):[];}
+  function requests(){var a=read(REQ,[]);return Array.isArray(a)?a.slice(-50):[];}
+  function award(name,amount,reason,id){var p=getUser(name),n=Math.floor(Number(amount)||0),key=String(id||"");if(!p||n<1||n>1000||(key&&p.ids.indexOf(key)>=0))return false;p.balance=Math.min(1000000,p.balance+n);p.earned+=n;p.history.unshift({kind:"earned",points:n,reason:String(reason||"Free game activity").slice(0,45),at:Date.now()});p.history=p.history.slice(0,8);if(key){p.ids.push(key);p.ids=p.ids.slice(-100);}return saveUser(p);}
+  function showCatalog(){var a=catalog();LBC.notice(a.length?"🖤 BROTHERHOOD REWARDS\n"+a.map(function(x){return "#"+x.id+" · "+x.cost+" pts — "+x.name;}).join("\n")+"\nRedeem with !redeem <number>. Points are earned by free game participation.":"Rewards shelf empty. Broadcaster: /ab rewards add 100 Reward name.");}
+  function review(id,approve){var a=requests(),r=null;for(var i=0;i<a.length;i++)if(Number(a[i].id)===id){r=a[i];break;}if(!r||r.status!=="pending"){LBC.notice("Pending reward request not found.");return;}r.status=approve?"approved":"denied";if(!approve){var p=getUser(r.user);if(p){p.balance+=r.cost;p.spent=Math.max(0,p.spent-r.cost);p.history.unshift({kind:"refund",points:r.cost,reason:"Request #"+id+" denied",at:Date.now()});saveUser(p);}}write(REQ,a);LBC.notice(approve?"Approved #"+id+": "+r.user+" — "+r.name+". Broadcaster fulfillment is now due.":"Denied #"+id+"; "+r.cost+" points refunded to "+r.user+".");LBC.notice(approve?"Your reward request #"+id+" was approved: "+r.name+".":"Your reward request #"+id+" was declined; points refunded.",{toUsername:r.user});}
+  function redeem(user,itemId){var name=clean(user),a=catalog(),item=null;for(var i=0;i<a.length;i++)if(Number(a[i].id)===Number(itemId)){item=a[i];break;}if(!item){LBC.notice("That reward is not available.",{toUsername:name});return;}var p=getUser(name),list=requests(),pending=list.filter(function(r){return r.user.toLowerCase()===name.toLowerCase()&&r.status==="pending";});if(pending.length>=3){LBC.notice("You have three pending reward requests already.",{toUsername:name});return;}if(!p||p.balance<item.cost){LBC.notice("You need "+item.cost+" points. Your balance is "+(p?p.balance:0)+".",{toUsername:name});return;}var id=Math.max(1,Number(LBC.runtime.kvGet(NEXT,"1"))||1);LBC.runtime.kvSet(NEXT,String(id+1));p.balance-=item.cost;p.spent+=item.cost;p.history.unshift({kind:"reserved",points:item.cost,reason:"Request #"+id,at:Date.now()});if(!saveUser(p)){LBC.notice("Could not save your points. Try again.",{toUsername:name});return;}list.push({id:id,user:name,itemId:item.id,name:item.name,cost:item.cost,status:"pending",at:Date.now()});write(REQ,list.slice(-50));LBC.notice("Reward request #"+id+" submitted: "+item.name+". The broadcaster will review it.",{toUsername:name});LBC.notice(name+" requested reward #"+id+": "+item.name+" ("+item.cost+" points).");}
+  LBC.rewards={version:"1.0",award:award,balance:function(name){var p=getUser(name);return p?p.balance:0;}};
+  LBC.handleRewardsCommand=function(raw,user,isOwner){var body=String(raw||"").trim(),low=body.toLowerCase(),m;if(low==="!points"){var p=getUser(user);if(p)LBC.notice(p.username+" · "+p.balance+" BROTHERHOOD POINTS\nEarned: "+p.earned+" · Redeemed: "+p.spent+"\nPoints cannot be purchased or earned by tipping.",{toUsername:p.username});return;}if(low==="!rewards"){showCatalog();return;}if((m=body.match(/^!redeem\s+([1-9][0-9]{0,3})$/i))){redeem(user,Number(m[1]));return;}if(!isOwner||(low.indexOf("/ab rewards")!==0&&low.indexOf("/ab points")!==0))return;
+    if((m=body.match(/^\/ab rewards add\s+([1-9][0-9]{0,5})\s+(.{2,60})$/i))){var a=catalog();if(a.length>=12){LBC.notice("Rewards shelf is full (12 items).");return;}var id=a.reduce(function(max,x){return Math.max(max,Number(x.id)||0);},0)+1;var name=String(m[2]).replace(/[\r\n\t]/g," ").replace(/\s+/g," ").trim().slice(0,60);a.push({id:id,cost:Number(m[1]),name:name});write(CAT,a);LBC.notice("Added reward #"+id+": "+name+" · "+m[1]+" points.");return;}
+    if((m=low.match(/^\/ab rewards remove\s+([1-9][0-9]{0,3})$/))){var rid=Number(m[1]),old=catalog(),next=old.filter(function(x){return Number(x.id)!==rid;});if(next.length===old.length){LBC.notice("Reward not found.");return;}write(CAT,next);LBC.notice("Reward #"+rid+" removed.");return;}
+    if((m=low.match(/^\/ab rewards (approve|deny)\s+([1-9][0-9]{0,4})$/))){review(Number(m[2]),m[1]==="approve");return;}
+    if(low==="/ab rewards pending"){var q=requests().filter(function(x){return x.status==="pending";});LBC.notice(q.length?"PENDING REWARDS\n"+q.map(function(x){return "#"+x.id+" "+x.user+" — "+x.name+" ("+x.cost+" pts)";}).join("\n"):"No pending reward requests.");return;}
+    if(low==="/ab rewards"||low==="/ab rewards list"){showCatalog();return;}
+    if((m=body.match(/^\/ab points grant\s+([A-Za-z0-9_-]{1,25})\s+([1-9][0-9]{0,2})$/i))){if(award(m[1],Number(m[2]),"Broadcaster bonus","admin:"+Date.now()+":"+Math.random()))LBC.notice("Granted "+m[2]+" points to "+clean(m[1])+".");return;}
+    LBC.notice("REWARDS: /ab rewards add 100 Reward name · remove 1 · pending · approve 1 · deny 1 · list. POINTS: /ab points grant username 10. VIEWERS: !points · !rewards · !redeem 1.");
   };
 }());
 
@@ -1449,6 +1368,7 @@ LBC.runtime.reloadPanel()  };
 
     // Existing room systems.
     safeCall(originals.roomGoal, [body, isOwner], "Room Goal");
+    safeCall(originals.rewards, [body, username, isOwner], "Rewards");
     safeCall(originals.tipMenu, [body, isOwner], "Tip Menu");
     safeCall(originals.announcements, [body, isOwner], "Announcements");
     safeCall(originals.customAnnouncement, [body, isOwner, username], "Custom Announcements");
@@ -1491,6 +1411,7 @@ LBC.runtime.reloadPanel()  };
     coreCallback: LBC.onCallback,
 
     roomGoal: LBC.handleRoomGoalCommand,
+    rewards: LBC.handleRewardsCommand,
     tipMenu: LBC.handleTipMenuCommand,
     announcements: LBC.handleAnnouncementCommand,
     customAnnouncement: LBC.handleCustomAnnouncementCommand,
@@ -1521,6 +1442,7 @@ LBC.runtime.reloadPanel()  };
    */
   [
     "handleRoomGoalCommand",
+    "handleRewardsCommand",
     "handleTipMenuCommand",
     "handleAnnouncementCommand",
     "handleCustomAnnouncementCommand",
