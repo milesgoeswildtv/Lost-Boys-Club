@@ -294,5 +294,87 @@
         "order": 4
       }
     }
+  },
+  "reward_controls": {
+    "type": "fieldset",
+    "title": "Rewards Redemptions",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 9,
+    "settings": {
+      "rewardRedemptionEnabled": {
+        "type": "boolean",
+        "title": "Allow viewer reward browsing and redemption",
+        "description": "Disabling hides the public catalogue and blocks new redemptions. Points and existing pending requests are preserved; broadcaster review controls remain available.",
+        "default": true,
+        "order": 0
+      },
+      "rewardMaxPendingRequests": {
+        "type": "number",
+        "title": "Maximum pending requests per viewer",
+        "minimum": 1,
+        "maximum": 10,
+        "default": 3,
+        "order": 1
+      }
+    }
+  },
+  "vip_controls": {
+    "type": "fieldset",
+    "title": "Permanent VIP Thresholds",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 10,
+    "settings": {
+      "vipCuriousThresholdUsd": {
+        "type": "number",
+        "title": "The Curious ($)",
+        "description": "Lifetime direct room tips required. Higher tiers are automatically kept above this threshold.",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 50,
+        "order": 0
+      },
+      "vipLittleTeaseThresholdUsd": {
+        "type": "number",
+        "title": "Little Tease ($)",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 100,
+        "order": 1
+      },
+      "vipBadHabitThresholdUsd": {
+        "type": "number",
+        "title": "Bad Habit ($)",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 250,
+        "order": 2
+      },
+      "vipHouseFavoriteThresholdUsd": {
+        "type": "number",
+        "title": "House Favorite ($)",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 500,
+        "order": 3
+      },
+      "vipObsessionThresholdUsd": {
+        "type": "number",
+        "title": "The Obsession ($)",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 1000,
+        "order": 4
+      },
+      "vipRoyaltyThresholdUsd": {
+        "type": "number",
+        "title": "Brotherhood Royalty ($)",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 5000,
+        "order": 5
+      }
+    }
   }
 }
