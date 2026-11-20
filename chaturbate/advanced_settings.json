@@ -8,13 +8,13 @@
       "welcomeEnabled": {
         "type": "boolean",
         "title": "Welcome new viewers",
-        "description": "Show the existing Afterdark Brotherhood welcome notice when someone enters.",
+        "description": "Show the welcome notice when a viewer enters.",
         "default": true
       },
       "tipAcknowledgmentEnabled": {
         "type": "boolean",
         "title": "Tip acknowledgment notices",
-        "description": "Enable or silence the automatic thank-you notice after tips. Tip tracking and VIP attribution continue either way.",
+        "description": "Toggle thank-you notices; tip and VIP tracking continue.",
         "default": true
       }
     }
@@ -28,13 +28,13 @@
       "loyaltyEnabled": {
         "type": "boolean",
         "title": "Enable loyalty points",
-        "description": "Master switch for daily visit, verified viewing, and meaningful-chat points. Existing balances and reward requests are preserved.",
+        "description": "Master switch for daily, viewing, and chat point awards.",
         "default": true
       },
       "dailyVisitPoints": {
         "type": "number",
         "title": "Daily visit points",
-        "description": "Points awarded once per viewer per UTC day. Set to 0 to disable this earning source.",
+        "description": "Points awarded once per viewer each UTC day. 0 disables.",
         "minimum": 0,
         "maximum": 20,
         "default": 2
@@ -42,7 +42,7 @@
       "watchPointsPerFiveMinutes": {
         "type": "number",
         "title": "Viewing points per 5 minutes",
-        "description": "Points for each complete five-minute room-viewing interval. Set to 0 to disable viewing rewards.",
+        "description": "Points per completed 5-minute viewing interval. 0 disables.",
         "minimum": 0,
         "maximum": 20,
         "default": 1
@@ -50,7 +50,7 @@
       "meaningfulChatPoints": {
         "type": "number",
         "title": "Meaningful chat points",
-        "description": "Points for a qualifying message after its cooldown. Set to 0 to disable this earning source.",
+        "description": "Points per eligible chat message. 0 disables this award.",
         "minimum": 0,
         "maximum": 20,
         "default": 1
@@ -73,7 +73,7 @@
       "settingsHelp": {
         "type": "string",
         "title": "Configuration guide",
-        "description": "These are native Chaturbate App V2 settings. Changes apply automatically; persistent viewer balances and room activity are not reset.",
+        "description": "Native settings; saved balances and room activity are preserved.",
         "default": "Afterdark Brotherhood · No map. No supervision. Questionable decisions.",
         "maxLength": 120
       }
@@ -88,7 +88,7 @@
       "tipMenuDisplayEnabled": {
         "type": "boolean",
         "title": "Show informational tip menu",
-        "description": "Controls !tipmenu and !menu display. Existing menu items are preserved.",
+        "description": "Controls !tipmenu and !menu. Saved menu items are preserved.",
         "default": true
       },
       "tipMenuTitle": {
@@ -132,7 +132,7 @@
       "giveawayEnabled": {
         "type": "boolean",
         "title": "Enable free giveaways",
-        "description": "Allows viewers to view and enter free giveaways. Disabling does not erase an active giveaway or its entries; broadcaster controls remain available.",
+        "description": "Allow free giveaway viewing and entry. Saved entries remain.",
         "default": true
       }
     }
@@ -146,13 +146,13 @@
       "viewerQueueEnabled": {
         "type": "boolean",
         "title": "Enable viewer queue",
-        "description": "Allows viewers to join, leave, view, and book queue slots. Existing queue and bookings are preserved when disabled.",
+        "description": "Allow queue actions. Saved queue entries and bookings remain.",
         "default": true
       },
       "viewerQueueMaxWaitlist": {
         "type": "number",
         "title": "Maximum waitlist size",
-        "description": "Caps the queue capacity. Existing stored entries are retained if the cap is lowered.",
+        "description": "Maximum queue size. Lowering it does not delete entries.",
         "minimum": 1,
         "maximum": 50,
         "default": 50
@@ -168,7 +168,7 @@
       "goalDefaultDurationMinutes": {
         "type": "number",
         "title": "Default goal timer (minutes)",
-        "description": "Applied to newly created untimed goals and queued stages. Set to 0 for no timer. Explicit timed-goal commands still take priority.",
+        "description": "Default timer for new goals. 0 means no timer.",
         "minimum": 0,
         "maximum": 1440,
         "default": 0
@@ -191,13 +191,13 @@
       "goalCarryoverDefault": {
         "type": "boolean",
         "title": "Default token overflow carryover",
-        "description": "Initial default for goals before the broadcaster explicitly changes carryover.",
+        "description": "Default carryover choice for newly created goals.",
         "default": true
       },
       "goalAutoRepeatDefault": {
         "type": "boolean",
         "title": "Default automatic goal repeat",
-        "description": "Initial default for goals before the broadcaster explicitly changes repeat.",
+        "description": "Default repeat choice for newly created goals.",
         "default": false
       }
     }
@@ -211,7 +211,7 @@
       "broadcastPanelStyle": {
         "type": "string",
         "title": "Room panel layout",
-        "description": "Choose whether the native panel emphasizes the live goal or the game and record.",
+        "description": "Choose the goal-focused or game-and-record panel layout.",
         "enum": [
           "Goal + Game",
           "Game + Record"
@@ -229,31 +229,31 @@
       "gameCodebreakerEnabled": {
         "type": "boolean",
         "title": "Codebreaker",
-        "description": "Allow viewers to submit answers. Broadcaster controls remain available.",
+        "description": "Allow viewer participation. Owner controls remain available.",
         "default": true
       },
       "gameWordScrambleEnabled": {
         "type": "boolean",
         "title": "Word Scramble",
-        "description": "Allow viewers to submit answers. Broadcaster controls remain available.",
+        "description": "Allow viewer participation. Owner controls remain available.",
         "default": true
       },
       "gameWouldYouRatherEnabled": {
         "type": "boolean",
         "title": "Dirty Would You Rather",
-        "description": "Allow viewer participation. Broadcaster controls remain available.",
+        "description": "Allow viewer participation. Owner controls remain available.",
         "default": true
       },
       "gamePositionImpossibleEnabled": {
         "type": "boolean",
         "title": "Position Impossible",
-        "description": "Allow viewer participation. Broadcaster controls remain available.",
+        "description": "Allow viewer participation. Owner controls remain available.",
         "default": true
       },
       "gameDirtyCharadesEnabled": {
         "type": "boolean",
         "title": "Dirty Charades",
-        "description": "Allow viewer participation. Broadcaster controls remain available.",
+        "description": "Allow viewer participation. Owner controls remain available.",
         "default": true
       }
     }
@@ -267,7 +267,7 @@
       "rewardRedemptionEnabled": {
         "type": "boolean",
         "title": "Allow viewer reward browsing and redemption",
-        "description": "Disabling hides the public catalogue and blocks new redemptions. Points and existing pending requests are preserved; broadcaster review controls remain available.",
+        "description": "Allow catalogue browsing and new reward requests.",
         "default": true
       },
       "rewardMaxPendingRequests": {
@@ -288,7 +288,7 @@
       "vipCuriousThresholdUsd": {
         "type": "number",
         "title": "The Curious ($)",
-        "description": "Lifetime direct room tips required. Higher tiers are automatically kept above this threshold.",
+        "description": "Lifetime direct room-tip amount required for this tier.",
         "minimum": 1,
         "maximum": 1000000,
         "default": 50
