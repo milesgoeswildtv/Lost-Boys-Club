@@ -2542,11 +2542,15 @@ var LBC = (function () {
       LBC.notice("🖤 " + target + " has no tracked Brotherhood activity yet.", { toUsername: cleanName(viewerName) });
       return;
     }
+    var missionSummary = LBC.missions && typeof LBC.missions.getSummary === "function" ?
+      LBC.missions.getSummary(target) : null;
     LBC.notice(
       "🖤 BROTHERHOOD PROFILE — " + p.username + "\n" +
       "Points: " + balance + " · Earned: " + p.pointsEarned + "\n" +
       "Games entered: " + p.gamesPlayed + " · Wins: " + p.wins + "\n" +
-      "Win rate: " + (p.gamesPlayed ? Math.floor((p.wins / p.gamesPlayed) * 100) + "%" : "—"),
+      "Win rate: " + (p.gamesPlayed ? Math.floor((p.wins / p.gamesPlayed) * 100) + "%" : "—") +
+      (missionSummary ? "\nDaily missions: " + missionSummary.dailyCompleted + "/3 · Weekly: " +
+        missionSummary.weeklyCompleted + "/3 · Streak: " + missionSummary.streak + " days" : ""),
       { toUsername: cleanName(viewerName) }
     );
   }
@@ -2609,6 +2613,7 @@ var LBC = (function () {
       "Team Wars: " + (function () { var t = readJson("lbc_ab_teams_state", {}); return (Array.isArray(t.teams) ? t.teams.length : 0) + " teams · " + String(t.seasonName || "No season"); }()) + "\n" +"Viewer queue: " + (function () { var q = readJson("lbc_ab_viewer_queue_v1", {}); return (q.current && q.current.user ? "active: " + q.current.user + " · " : "") + (Array.isArray(q.waiting) ? q.waiting.length : 0) + "/" + (Number(q.limit) || 50) + " waiting"; }()) + "\n" +
       "Brotherhood Vault: " + (LBC.vault ? LBC.vault.status().totalGamePoints + " shared points" : "offline") + "\n" +
       "Hall of Fame: " + (LBC.hallOfFame ? LBC.hallOfFame.records().membersTracked + " members tracked" : "offline") + "\n" +
+      "Missions: " + (LBC.missions ? LBC.missions.adminStatus().dailyClaims + " daily · " + LBC.missions.adminStatus().weeklyClaims + " weekly claimed" : "offline") + "\n" +
       "Game modules: " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + "\n" +
       "Use /ab admin help for the control map."
     );
@@ -2684,6 +2689,18 @@ var LBC = (function () {
         "\nCommands: /ab teams create Name · delete Name · reset · season start Name.");
       return;
     }
+    if (value === "missions") {
+      var missionStats = LBC.missions ? LBC.missions.adminStatus() : null;
+      LBC.notice("🎯 MISSION CONTROL\n" +
+        (missionStats ? "Tracked members: " + missionStats.members +
+          "\nActive today: " + missionStats.activeToday +
+          "\nDaily missions claimed: " + missionStats.dailyClaims +
+          "\nWeekly missions claimed: " + missionStats.weeklyClaims +
+          "\nPending reward deliveries: " + missionStats.pendingRewards : "Mission engine unavailable.") +
+        "\nDaily/weekly resets: 00:00 UTC / Monday 00:00 UTC." +
+        "\nViewer commands: !missions · !streak · !missionhistory.");
+      return;
+    }
     if (value === "queue") {
       var queue = readJson("lbc_ab_viewer_queue_v1", {});
       LBC.notice("🎤 VIEWER QUEUE CONTROL\\n" +
@@ -2707,7 +2724,7 @@ var LBC = (function () {
     LBC.notice(
       "🖤 AFTERDARK BROTHERHOOD — ADMIN CONTROL MAP\n" +
       "/ab admin — dashboard · /ab admin status — refresh dashboard\n" +
-      "/ab admin games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue — subsystem status\n" +
+      "/ab admin games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue|missions — subsystem status\n" +
       "/ab admin members — member tracking summary\n" +
       "GOALS: /ab goal set 1000 Title · /ab goal queue 1500 Next\n" +
       "REWARDS: /ab rewards add 100 Reward · pending · approve 1 · deny 1\n" +
@@ -2749,7 +2766,7 @@ var LBC = (function () {
         " / " + MAX_INDEX + "\nViewer commands: !profile · !profile username · !leaderboard wins|games|points.");
       return;
     }
-    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue)$/))) {
+    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|teams|vault|halloffame|queue|missions)$/))) {
       adminDetail(match[1]);
       return;
     }
@@ -3805,4 +3822,241 @@ var LBC = (function () {
     onCallback: onCallback,
     onAppStart: onAppStart
   });
+}());
+
+
+/*
+ * AFTERDARK BROTHERHOOD — DAILY & WEEKLY MISSIONS
+ * UTC-based repeatable missions, lifetime streak milestones, and idempotent
+ * loyalty-point rewards. Only successful free-game participation/win awards
+ * advance progress. Tips and manual bonus grants never count.
+ */
+(function () {
+  "use strict";
+  var PREFIX = "lbc_ab_missions_user_";
+  var INDEX_KEY = "lbc_ab_member_index";
+  var MAX_HISTORY = 20;
+  var DAILY = [
+    { id: "play-2", label: "Play 2 free games", metric: "games", target: 2, reward: 5 },
+    { id: "win-1", label: "Win 1 free game", metric: "wins", target: 1, reward: 8 },
+    { id: "points-10", label: "Earn 10 game points", metric: "points", target: 10, reward: 5 }
+  ];
+  var WEEKLY = [
+    { id: "play-10", label: "Play 10 free games", metric: "games", target: 10, reward: 20 },
+    { id: "win-5", label: "Win 5 free games", metric: "wins", target: 5, reward: 30 },
+    { id: "points-50", label: "Earn 50 game points", metric: "points", target: 50, reward: 25 }
+  ];
+  var STREAKS = [
+    { days: 3, reward: 5 },
+    { days: 7, reward: 15 },
+    { days: 14, reward: 30 },
+    { days: 30, reward: 75 }
+  ];
+  function cleanName(value) {
+    return String(value || "").replace(/^@/, "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25);
+  }
+  function read(key, fallback) {
+    try { var raw = LBC.runtime.kvGet(key, ""); return raw ? JSON.parse(raw) : fallback; }
+    catch (err) { return fallback; }
+  }
+  function write(key, value) {
+    try { return LBC.runtime.kvSet(key, JSON.stringify(value)) !== false; }
+    catch (err) { return false; }
+  }
+  function keyFor(name) { return PREFIX + cleanName(name).toLowerCase(); }
+  function dayKey(ms) { return new Date(ms).toISOString().slice(0, 10); }
+  function weekKey(ms) {
+    var d = new Date(ms);
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+    return dayKey(d.getTime());
+  }
+  function blankPeriod(period) { return { period: period, games: 0, wins: 0, points: 0, claims: {} }; }
+  function stateFor(name) {
+    var user = cleanName(name), s = read(keyFor(user), {});
+    if (!s || typeof s !== "object") s = {};
+    s.version = 1; s.username = user;
+    s.daily = s.daily && typeof s.daily === "object" ? s.daily : blankPeriod(dayKey(Date.now()));
+    s.weekly = s.weekly && typeof s.weekly === "object" ? s.weekly : blankPeriod(weekKey(Date.now()));
+    s.streak = s.streak && typeof s.streak === "object" ? s.streak : { current: 0, best: 0, lastDay: "", claimed: {} };
+    s.streak.current = Math.max(0, Number(s.streak.current) || 0);
+    s.streak.best = Math.max(s.streak.current, Number(s.streak.best) || 0);
+    if (!s.streak.claimed || typeof s.streak.claimed !== "object") s.streak.claimed = {};
+    if (!Array.isArray(s.pending)) s.pending = [];
+    if (!Array.isArray(s.history)) s.history = [];
+    return s;
+  }
+  function ensurePeriods(s, now) {
+    var day = dayKey(now), week = weekKey(now), changed = false;
+    if (!s.daily || s.daily.period !== day) { s.daily = blankPeriod(day); changed = true; }
+    if (!s.weekly || s.weekly.period !== week) { s.weekly = blankPeriod(week); changed = true; }
+    return changed;
+  }
+  function saveState(s) { return write(keyFor(s.username), s); }
+  function metricValue(record, metric) { return Math.max(0, Number(record[metric]) || 0); }
+  function rawAwardHasId(username, id) {
+    var p = read("lbc_ab_rewards_user_" + cleanName(username).toLowerCase(), {});
+    return !!(p && Array.isArray(p.ids) && p.ids.indexOf(id) >= 0);
+  }
+  function recordHistory(s, item) {
+    s.history.unshift({ mission: item.label, period: item.period, reward: item.points, at: Date.now(), kind: item.kind });
+    s.history = s.history.slice(0, MAX_HISTORY);
+  }
+  function queueClaim(s, kind, period, missionId, label, points) {
+    var id = "mission:" + kind + ":" + period + ":" + missionId + ":" + s.username.toLowerCase();
+    s.pending.push({ id: id, kind: kind, period: period, missionId: missionId, label: label,
+      points: points, username: s.username, createdAt: Date.now() });
+  }
+  function evaluateMissions(s, kind, definitions, record) {
+    definitions.forEach(function (mission) {
+      if (record.claims[mission.id] || metricValue(record, mission.metric) < mission.target) return;
+      record.claims[mission.id] = true;
+      queueClaim(s, kind, record.period, mission.id, mission.label, mission.reward);
+    });
+  }
+  function evaluateStreak(s) {
+    STREAKS.forEach(function (milestone) {
+      var id = String(milestone.days);
+      if (s.streak.current >= milestone.days && !s.streak.claimed[id]) {
+        s.streak.claimed[id] = true;
+        queueClaim(s, "streak", "lifetime", id, milestone.days + "-day activity streak", milestone.reward);
+      }
+    });
+  }
+  function attemptPending(s) {
+    if (!LBC.rewards || typeof LBC.rewards.award !== "function" || !s.pending.length) return false;
+    var remaining = [], changed = false;
+    s.pending.forEach(function (item) {
+      var delivered = rawAwardHasId(item.username, item.id);
+      if (!delivered) {
+        var ok = LBC.rewards.award(item.username, item.points,
+          (item.kind === "streak" ? "Mission streak reward: " : "Mission reward: ") + item.label, item.id);
+        delivered = ok === true || rawAwardHasId(item.username, item.id);
+      }
+      if (delivered) {
+        recordHistory(s, item); changed = true;
+        LBC.notice("🎯 MISSION COMPLETE — " + item.label + " · +" + item.points +
+          " Brotherhood points.", { toUsername: item.username });
+      } else { remaining.push(item); }
+    });
+    if (remaining.length !== s.pending.length) changed = true;
+    s.pending = remaining.slice(-20);
+    if (changed) saveState(s);
+    return changed;
+  }
+  function processGameAward(username, amount, reason) {
+    var name = cleanName(username), why = String(reason || "").toLowerCase();
+    if (!name || /mission (?:streak )?reward/i.test(reason)) return;
+    var participation = /participation/i.test(why), win = /\bwin\b/i.test(why);
+    if (!participation && !win) return;
+    var s = stateFor(name), now = Date.now(), day = dayKey(now);
+    ensurePeriods(s, now);
+    var points = Math.max(0, Math.floor(Number(amount) || 0));
+    if (participation) { s.daily.games += 1; s.weekly.games += 1; }
+    if (win) { s.daily.wins += 1; s.weekly.wins += 1; }
+    s.daily.points += points; s.weekly.points += points;
+    if (s.streak.lastDay !== day) {
+      var yesterday = dayKey(now - 86400000);
+      s.streak.current = s.streak.lastDay === yesterday ? s.streak.current + 1 : 1;
+      s.streak.lastDay = day;
+      s.streak.best = Math.max(s.streak.best, s.streak.current);
+    }
+    evaluateMissions(s, "daily", DAILY, s.daily);
+    evaluateMissions(s, "weekly", WEEKLY, s.weekly);
+    evaluateStreak(s);
+    saveState(s);
+    attemptPending(s);
+  }
+  function completedCount(record, definitions) {
+    return definitions.filter(function (m) { return !!record.claims[m.id]; }).length;
+  }
+  function progressLine(definitions, record) {
+    return definitions.map(function (m) {
+      var value = metricValue(record, m.metric), complete = !!record.claims[m.id];
+      return (complete ? "✓ " : "• ") + m.label + " — " + Math.min(value, m.target) + "/" +
+        m.target + " · +" + m.reward + (complete ? " CLAIMED" : "");
+    }).join("\n");
+  }
+  function summary(name) {
+    var s = stateFor(name), now = Date.now();
+    if (ensurePeriods(s, now)) saveState(s);
+    attemptPending(s);
+    return { username: s.username, dailyCompleted: completedCount(s.daily, DAILY),
+      weeklyCompleted: completedCount(s.weekly, WEEKLY), streak: s.streak.current,
+      bestStreak: s.streak.best, pendingRewards: s.pending.length, daily: s.daily, weekly: s.weekly };
+  }
+  function showMissions(username) {
+    var s = stateFor(username), now = Date.now();
+    if (ensurePeriods(s, now)) saveState(s);
+    attemptPending(s);
+    LBC.notice("🎯 AFTERDARK MISSIONS — " + s.username + "\n" +
+      "DAILY · resets 00:00 UTC\n" + progressLine(DAILY, s.daily) + "\n" +
+      "WEEKLY · resets Monday 00:00 UTC\n" + progressLine(WEEKLY, s.weekly) + "\n" +
+      "Current streak: " + s.streak.current + " days · Best: " + s.streak.best +
+      "\nStreak bonuses: 3d +5 · 7d +15 · 14d +30 · 30d +75 points.\n" +
+      "Free games only. Tips and purchases do not count.", { toUsername: s.username });
+  }
+  function showStreak(username) {
+    var s = stateFor(username), now = Date.now();
+    if (ensurePeriods(s, now)) saveState(s);
+    attemptPending(s);
+    var next = null;
+    for (var i = 0; i < STREAKS.length; i++) {
+      if (!s.streak.claimed[String(STREAKS[i].days)]) { next = STREAKS[i]; break; }
+    }
+    LBC.notice("🔥 AFTERDARK STREAK — " + s.username + "\nCurrent: " + s.streak.current +
+      " consecutive UTC days · Best: " + s.streak.best +
+      (next ? "\nNext lifetime streak reward: " + next.days + " days · +" + next.reward + " points." :
+        "\nAll current lifetime streak milestones have been claimed.") +
+      "\nPlay at least one free game each UTC day to keep your streak.", { toUsername: s.username });
+  }
+  function showHistory(username) {
+    var s = stateFor(username);
+    attemptPending(s);
+    LBC.notice("🏅 MISSION HISTORY — " + s.username + "\n" +
+      (s.history.length ? s.history.slice(0, 10).map(function (x) {
+        return x.mission + " · +" + x.reward + " pts · " + new Date(x.at).toISOString().slice(0, 10);
+      }).join("\n") : "No completed missions yet."), { toUsername: s.username });
+  }
+  function adminStatus() {
+    var index = read(INDEX_KEY, []);
+    if (!Array.isArray(index)) index = [];
+    var stats = { members: index.length, activeToday: 0, dailyClaims: 0, weeklyClaims: 0, pendingRewards: 0 };
+    var today = dayKey(Date.now());
+    index.forEach(function (name) {
+      var s = stateFor(name);
+      ensurePeriods(s, Date.now());
+      if (s.streak.lastDay === today) stats.activeToday += 1;
+      stats.dailyClaims += completedCount(s.daily, DAILY);
+      stats.weeklyClaims += completedCount(s.weekly, WEEKLY);
+      stats.pendingRewards += s.pending.length;
+    });
+    return stats;
+  }
+  function onChatMessage(body, username) {
+    var low = String(body || "").trim().toLowerCase();
+    if (low === "!missions") { showMissions(username); return; }
+    if (low === "!streak") { showStreak(username); return; }
+    if (low === "!missionhistory") { showHistory(username); return; }
+  }
+  if (LBC.rewards && typeof LBC.rewards.award === "function" && !LBC.rewards.award.__missions) {
+    var previousAward = LBC.rewards.award;
+    var missionAward = function (username, amount, reason, id) {
+      var ok = previousAward.apply(null, arguments);
+      if (ok) {
+        try { processGameAward(username, amount, reason); }
+        catch (err) { LBC.notice("Mission progress couldn't be saved for that game award. The game reward itself was preserved."); }
+      }
+      return ok;
+    };
+    missionAward.__missions = true;
+    LBC.rewards.award = missionAward;
+  }
+  LBC.missions = {
+    version: "1.0",
+    getSummary: summary,
+    adminStatus: adminStatus,
+    definitions: function () { return { daily: DAILY.slice(), weekly: WEEKLY.slice(), streaks: STREAKS.slice() }; }
+  };
+  LBC.gameLibrary.register("daily-weekly-missions", { onChatMessage: onChatMessage });
 }());
