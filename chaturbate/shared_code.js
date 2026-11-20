@@ -2428,3 +2428,278 @@ var LBC = (function () {
   );
 
 }());
+
+
+/* AFTERDARK BROTHERHOOD — MEMBER PROFILES + ADMIN CONTROL CENTER */
+(function () {
+  "use strict";
+
+  var INDEX_KEY = "lbc_ab_member_index";
+  var PROFILE_PREFIX = "lbc_ab_member_";
+  var MAX_INDEX = 250;
+
+  function cleanName(value) {
+    return String(value || "").replace(/^@/, "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25);
+  }
+
+  function readJson(key, fallback) {
+    try {
+      var raw = LBC.runtime.kvGet(key, "");
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (err) {
+      return fallback;
+    }
+  }
+
+  function writeJson(key, value) {
+    try {
+      return LBC.runtime.kvSet(key, JSON.stringify(value));
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function profileKey(username) {
+    return PROFILE_PREFIX + cleanName(username).toLowerCase();
+  }
+
+  function readProfile(username) {
+    var name = cleanName(username);
+    if (!name) return null;
+    var stored = readJson(profileKey(name), {});
+    return {
+      username: name,
+      gamesPlayed: Math.max(0, Number(stored.gamesPlayed) || 0),
+      wins: Math.max(0, Number(stored.wins) || 0),
+      pointsEarned: Math.max(0, Number(stored.pointsEarned) || 0),
+      firstTrackedAt: Math.max(0, Number(stored.firstTrackedAt) || 0),
+      lastGameAt: Math.max(0, Number(stored.lastGameAt) || 0)
+    };
+  }
+
+  function rememberMember(username) {
+    var name = cleanName(username);
+    if (!name) return;
+    var index = readJson(INDEX_KEY, []);
+    if (!Array.isArray(index)) index = [];
+    var lower = name.toLowerCase();
+    if (!index.some(function (item) { return String(item).toLowerCase() === lower; })) {
+      index.push(name);
+      if (index.length > MAX_INDEX) index = index.slice(index.length - MAX_INDEX);
+      writeJson(INDEX_KEY, index);
+    }
+  }
+
+  function trackAward(username, amount, reason) {
+    var name = cleanName(username);
+    if (!name) return;
+    var p = readProfile(name);
+    if (!p) return;
+    var points = Math.max(0, Math.floor(Number(amount) || 0));
+    var why = String(reason || "");
+    p.pointsEarned += points;
+    if (/participation/i.test(why)) {
+      p.gamesPlayed += 1;
+      p.lastGameAt = Date.now();
+    } else if (/\bwin\b/i.test(why)) {
+      p.wins += 1;
+      p.lastGameAt = Date.now();
+    }
+    if (!p.firstTrackedAt) p.firstTrackedAt = Date.now();
+    writeJson(profileKey(name), p);
+    rememberMember(name);
+  }
+
+  // Observe successful loyalty awards without changing the existing points engine.
+  if (LBC.rewards && typeof LBC.rewards.award === "function" && !LBC.rewards.award.__memberTracking) {
+    var originalAward = LBC.rewards.award;
+    var trackedAward = function (username, amount, reason, id) {
+      var awarded = originalAward.apply(null, arguments);
+      if (awarded) trackAward(username, amount, reason);
+      return awarded;
+    };
+    trackedAward.__memberTracking = true;
+    LBC.rewards.award = trackedAward;
+  }
+
+  function showProfile(requestedName, viewerName) {
+    var target = cleanName(requestedName || viewerName);
+    if (!target) return;
+    var p = readProfile(target);
+    var balance = LBC.rewards && typeof LBC.rewards.balance === "function" ?
+      LBC.rewards.balance(target) : 0;
+    if (!p || (!p.firstTrackedAt && !balance)) {
+      LBC.notice("🖤 " + target + " has no tracked Brotherhood activity yet.", { toUsername: cleanName(viewerName) });
+      return;
+    }
+    LBC.notice(
+      "🖤 BROTHERHOOD PROFILE — " + p.username + "\n" +
+      "Points: " + balance + " · Earned: " + p.pointsEarned + "\n" +
+      "Games entered: " + p.gamesPlayed + " · Wins: " + p.wins + "\n" +
+      "Win rate: " + (p.gamesPlayed ? Math.floor((p.wins / p.gamesPlayed) * 100) + "%" : "—"),
+      { toUsername: cleanName(viewerName) }
+    );
+  }
+
+  function showLeaderboard(kind) {
+    var index = readJson(INDEX_KEY, []);
+    if (!Array.isArray(index)) index = [];
+    var rows = index.map(function (name) {
+      var p = readProfile(name);
+      if (!p) return null;
+      var points = LBC.rewards && typeof LBC.rewards.balance === "function" ?
+        LBC.rewards.balance(name) : 0;
+      return { name: p.username, games: p.gamesPlayed, wins: p.wins, points: points };
+    }).filter(Boolean);
+    var mode = String(kind || "wins").toLowerCase();
+    var label = "WINS";
+    if (mode === "games" || mode === "participation") {
+      label = "GAME PARTICIPATION";
+      rows.sort(function (a, b) { return b.games - a.games || b.wins - a.wins; });
+    } else if (mode === "points") {
+      label = "LOYALTY POINTS";
+      rows.sort(function (a, b) { return b.points - a.points || b.wins - a.wins; });
+    } else {
+      mode = "wins";
+      rows.sort(function (a, b) { return b.wins - a.wins || b.games - a.games; });
+    }
+    rows = rows.filter(function (row) {
+      return mode === "points" ? row.points > 0 : mode === "games" ? row.games > 0 : row.wins > 0;
+    }).slice(0, 5);
+    LBC.notice("🏆 AFTERDARK BROTHERHOOD — " + label + "\n" +
+      (rows.length ? rows.map(function (row, i) {
+        var score = mode === "points" ? row.points + " pts" : mode === "games" ? row.games + " games" : row.wins + " wins";
+        return (i + 1) + ". " + row.name + " — " + score;
+      }).join("\n") : "No tracked records yet."));
+  }
+
+  function adminStatus() {
+    var game = LBC.gameLibrary && typeof LBC.gameLibrary.active === "function" ? LBC.gameLibrary.active() : null;
+    var goal = readJson("lbc_m2_room_goal", {});
+    var tipStats = readJson("lbc_m2_tip_stats", {});
+    var catalog = readJson("lbc_ab_rewards_catalog", []);
+    var requests = readJson("lbc_ab_rewards_requests", []);
+    var menu = readJson("lbc_m2_tip_menu", []);
+    var announcements = readJson("lbc_m2_announcements", {});
+    var goalTarget = Math.max(0, Number(goal.target) || 0);
+    var goalProgress = Math.max(0, (Number(tipStats.totalTokens) || 0) - (Number(goal.startTotal) || 0));
+    var goalLine = goalTarget ? (goal.paused ? "PAUSED " : goal.active ? "LIVE " : goal.completed ? "REACHED " : "OFF ") +
+      String(goal.title || "Room Goal") + " (" + Math.min(goalProgress, goalTarget) + "/" + goalTarget + ")" : "not configured";
+    var pending = Array.isArray(requests) ? requests.filter(function (r) { return r && r.status === "pending"; }).length : 0;
+    var activeName = game && game.active ? String(game.name || game.id || "Unknown game") : "none";
+    LBC.notice(
+      "🖤 AFTERDARK BROTHERHOOD — CONTROL CENTER\n" +
+      "Active game: " + activeName + "\n" +
+      "Room goal: " + goalLine + "\n" +
+      "Rewards: " + (Array.isArray(catalog) ? catalog.length : 0) + " listed · " + pending + " pending\n" +
+      "Tip menu: " + (Array.isArray(menu) ? menu.length : 0) + " items\n" +
+      "Rotating announcements: " + (announcements.enabled === true ? "ON" : "OFF") + "\n" +
+      "Game modules: " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + "\n" +
+      "Use /ab admin help for the control map."
+    );
+  }
+
+  function adminDetail(section) {
+    var value = String(section || "").toLowerCase();
+    if (value === "games") {
+      var active = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
+      var names = LBC.gameLibrary && LBC.gameLibrary.list ? LBC.gameLibrary.list() : [];
+      LBC.notice("🎮 GAME CONTROL\nActive: " + (active && active.active ? active.name : "none") +
+        "\nRegistered: " + (names.length ? names.join(", ") : "none") +
+        "\nUse each game's /ab <game> start/stop command.");
+      return;
+    }
+    if (value === "goals") {
+      var g = readJson("lbc_m2_room_goal", {});
+      var s = readJson("lbc_m2_tip_stats", {});
+      var target = Math.max(0, Number(g.target) || 0);
+      var progress = Math.max(0, (Number(s.totalTokens) || 0) - (Number(g.startTotal) || 0));
+      LBC.notice("🏁 GOAL CONTROL\n" + (target ? String(g.title || "Room Goal") + " · " +
+        (g.paused ? "PAUSED" : g.active ? "LIVE" : g.completed ? "REACHED" : "OFF") +
+        " · " + Math.min(progress, target) + "/" + target + " · queue " +
+        (Array.isArray(g.queue) ? g.queue.length : 0) : "No goal configured.") +
+        "\nCommands: /ab goal set · queue · pause · resume · extend · reset · off.");
+      return;
+    }
+    if (value === "rewards") {
+      var rewards = readJson("lbc_ab_rewards_catalog", []);
+      var reqs = readJson("lbc_ab_rewards_requests", []);
+      var waiting = Array.isArray(reqs) ? reqs.filter(function (r) { return r && r.status === "pending"; }) : [];
+      LBC.notice("🎁 REWARD CONTROL\nCatalogue: " + (Array.isArray(rewards) ? rewards.length : 0) +
+        " / 12 · Pending: " + waiting.length +
+        "\nCommands: /ab rewards add · remove · list · pending · approve · deny.");
+      return;
+    }
+    if (value === "menu") {
+      var items = readJson("lbc_m2_tip_menu", []);
+      LBC.notice("📋 TIP MENU CONTROL\nConfigured items: " + (Array.isArray(items) ? items.length : 0) +
+        "\nCommands: /ab menu add · remove · clear · show.");
+      return;
+    }
+    if (value === "announcements") {
+      var state = readJson("lbc_m2_announcements", {});
+      LBC.notice("📣 ANNOUNCEMENTS\nRotating notices: " + (state.enabled === true ? "ON" : "OFF") +
+        "\nCommands: /ab announcements on · off · status.");
+      return;
+    }
+    adminHelp();
+  }
+
+  function adminHelp() {
+    LBC.notice(
+      "🖤 AFTERDARK BROTHERHOOD — ADMIN CONTROL MAP\n" +
+      "/ab admin — dashboard · /ab admin status — refresh dashboard\n" +
+      "/ab admin games|goals|rewards|menu|announcements — subsystem status\n" +
+      "/ab admin members — member tracking summary\n" +
+      "GOALS: /ab goal set 1000 Title · /ab goal queue 1500 Next\n" +
+      "REWARDS: /ab rewards add 100 Reward · pending · approve 1 · deny 1\n" +
+      "TIP MENU: /ab menu add 50 Request · /ab menu remove 1\n" +
+      "ANNOUNCEMENTS: /ab announcements on|off\n" +
+      "GAMES: use the game's own /ab <game> start|stop command."
+    );
+  }
+
+  function onChatMessage(body, username, isOwner) {
+    var raw = String(body || "").trim();
+    var lower = raw.toLowerCase();
+    var match;
+    if ((match = lower.match(/^!profile(?:\s+@?([a-z0-9_-]{1,25}))?$/i))) {
+      showProfile(match[1] || username, username);
+      return;
+    }
+    if ((match = lower.match(/^!(?:leaderboard|top)(?:\s+(wins|games|participation|points))?$/i))) {
+      showLeaderboard(match[1] || "wins");
+      return;
+    }
+    if (!isOwner || lower.indexOf("/ab admin") !== 0) return;
+    if (lower === "/ab admin" || lower === "/ab admin status") {
+      adminStatus();
+      return;
+    }
+    if (lower === "/ab admin help") {
+      adminHelp();
+      return;
+    }
+    if (lower === "/ab admin members") {
+      var index = readJson(INDEX_KEY, []);
+      LBC.notice("👥 MEMBER TRACKING\nTracked members: " + (Array.isArray(index) ? index.length : 0) +
+        " / " + MAX_INDEX + "\nViewer commands: !profile · !profile username · !leaderboard wins|games|points.");
+      return;
+    }
+    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements)$/))) {
+      adminDetail(match[1]);
+      return;
+    }
+    adminHelp();
+  }
+
+  LBC.members = {
+    version: "1.0",
+    profile: readProfile,
+    leaderboard: showLeaderboard
+  };
+
+  LBC.gameLibrary.register("member-admin-center", {
+    onChatMessage: onChatMessage
+  });
+}());
