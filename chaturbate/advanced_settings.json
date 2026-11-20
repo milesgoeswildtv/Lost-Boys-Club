@@ -8,13 +8,13 @@
       "welcomeEnabled": {
         "type": "boolean",
         "title": "Welcome new viewers",
-        "description": "Show the welcome notice when a viewer enters.",
+        "description": "Welcome viewers when they enter.",
         "default": true
       },
       "tipAcknowledgmentEnabled": {
         "type": "boolean",
         "title": "Tip acknowledgment notices",
-        "description": "Toggle thank-you notices; tip and VIP tracking continue.",
+        "description": "Toggle thanks; tip and VIP tracking stay on.",
         "default": true
       }
     }
@@ -28,13 +28,13 @@
       "loyaltyEnabled": {
         "type": "boolean",
         "title": "Enable loyalty points",
-        "description": "Master switch for daily, viewing, and chat point awards.",
+        "description": "Enable or disable loyalty point awards.",
         "default": true
       },
       "dailyVisitPoints": {
         "type": "number",
         "title": "Daily visit points",
-        "description": "Points awarded once per viewer each UTC day. 0 disables.",
+        "description": "Daily points per viewer. 0 disables.",
         "minimum": 0,
         "maximum": 20,
         "default": 2
@@ -42,7 +42,7 @@
       "watchPointsPerFiveMinutes": {
         "type": "number",
         "title": "Viewing points per 5 minutes",
-        "description": "Points per completed 5-minute viewing interval. 0 disables.",
+        "description": "Points per 5-minute view. 0 disables.",
         "minimum": 0,
         "maximum": 20,
         "default": 1
@@ -50,7 +50,7 @@
       "meaningfulChatPoints": {
         "type": "number",
         "title": "Meaningful chat points",
-        "description": "Points per eligible chat message. 0 disables this award.",
+        "description": "Points per eligible message. 0 disables.",
         "minimum": 0,
         "maximum": 20,
         "default": 1
@@ -73,7 +73,7 @@
       "settingsHelp": {
         "type": "string",
         "title": "Configuration guide",
-        "description": "Native settings; saved balances and room activity are preserved.",
+        "description": "Settings changes preserve balances and room activity.",
         "default": "Afterdark Brotherhood · No map. No supervision. Questionable decisions.",
         "maxLength": 120
       }
@@ -88,20 +88,20 @@
       "tipMenuDisplayEnabled": {
         "type": "boolean",
         "title": "Show informational tip menu",
-        "description": "Controls !tipmenu and !menu. Saved menu items are preserved.",
+        "description": "Toggle !tipmenu and !menu display.",
         "default": true
       },
       "tipMenuTitle": {
         "type": "string",
         "title": "Tip menu heading",
-        "description": "Custom heading shown above the existing menu items.",
+        "description": "Heading displayed above the tip menu.",
         "maxLength": 70,
         "default": "AFTERDARK BROTHERHOOD — TIP MENU"
       },
       "tipMenuFooter": {
         "type": "string",
         "title": "Tip menu footer",
-        "description": "Short note shown below menu items. Leave blank for no footer.",
+        "description": "Footer below menu items; blank hides it.",
         "maxLength": 180,
         "default": "Tips are voluntary. Menu items are requests, not guaranteed outcomes. No game access or advantage is tied to tipping."
       }
@@ -116,7 +116,7 @@
       "announcementIntervalMinutes": {
         "type": "number",
         "title": "Announcement interval (minutes)",
-        "description": "Used when rotating announcements are enabled. Minimum 5 minutes.",
+        "description": "Rotation interval; minimum 5 minutes.",
         "minimum": 5,
         "maximum": 1440,
         "default": 15
@@ -132,7 +132,7 @@
       "giveawayEnabled": {
         "type": "boolean",
         "title": "Enable free giveaways",
-        "description": "Allow free giveaway viewing and entry. Saved entries remain.",
+        "description": "Enable free giveaways; saved entries remain.",
         "default": true
       }
     }
@@ -146,13 +146,13 @@
       "viewerQueueEnabled": {
         "type": "boolean",
         "title": "Enable viewer queue",
-        "description": "Allow queue actions. Saved queue entries and bookings remain.",
+        "description": "Enable queue actions; saved entries remain.",
         "default": true
       },
       "viewerQueueMaxWaitlist": {
         "type": "number",
         "title": "Maximum waitlist size",
-        "description": "Maximum queue size. Lowering it does not delete entries.",
+        "description": "Queue limit; lowering it keeps existing entries.",
         "minimum": 1,
         "maximum": 50,
         "default": 50
@@ -168,7 +168,7 @@
       "goalDefaultDurationMinutes": {
         "type": "number",
         "title": "Default goal timer (minutes)",
-        "description": "Default timer for new goals. 0 means no timer.",
+        "description": "Timer for new goals. 0 disables it.",
         "minimum": 0,
         "maximum": 1440,
         "default": 0
@@ -191,13 +191,13 @@
       "goalCarryoverDefault": {
         "type": "boolean",
         "title": "Default token overflow carryover",
-        "description": "Default carryover choice for newly created goals.",
+        "description": "Default token carryover for new goals.",
         "default": true
       },
       "goalAutoRepeatDefault": {
         "type": "boolean",
         "title": "Default automatic goal repeat",
-        "description": "Default repeat choice for newly created goals.",
+        "description": "Default auto-repeat setting for new goals.",
         "default": false
       }
     }
@@ -211,7 +211,7 @@
       "broadcastPanelStyle": {
         "type": "string",
         "title": "Room panel layout",
-        "description": "Choose the goal-focused or game-and-record panel layout.",
+        "description": "Choose the broadcast panel layout.",
         "enum": [
           "Goal + Game",
           "Game + Record"
@@ -229,31 +229,31 @@
       "gameCodebreakerEnabled": {
         "type": "boolean",
         "title": "Codebreaker",
-        "description": "Allow viewer participation. Owner controls remain available.",
+        "description": "Allow viewer play; owner controls stay available.",
         "default": true
       },
       "gameWordScrambleEnabled": {
         "type": "boolean",
         "title": "Word Scramble",
-        "description": "Allow viewer participation. Owner controls remain available.",
+        "description": "Allow viewer play; owner controls stay available.",
         "default": true
       },
       "gameWouldYouRatherEnabled": {
         "type": "boolean",
         "title": "Dirty Would You Rather",
-        "description": "Allow viewer participation. Owner controls remain available.",
+        "description": "Allow viewer play; owner controls stay available.",
         "default": true
       },
       "gamePositionImpossibleEnabled": {
         "type": "boolean",
         "title": "Position Impossible",
-        "description": "Allow viewer participation. Owner controls remain available.",
+        "description": "Allow viewer play; owner controls stay available.",
         "default": true
       },
       "gameDirtyCharadesEnabled": {
         "type": "boolean",
         "title": "Dirty Charades",
-        "description": "Allow viewer participation. Owner controls remain available.",
+        "description": "Allow viewer play; owner controls stay available.",
         "default": true
       }
     }
@@ -267,7 +267,7 @@
       "rewardRedemptionEnabled": {
         "type": "boolean",
         "title": "Allow viewer reward browsing and redemption",
-        "description": "Allow catalogue browsing and new reward requests.",
+        "description": "Allow reward browsing and requests.",
         "default": true
       },
       "rewardMaxPendingRequests": {
@@ -288,7 +288,7 @@
       "vipCuriousThresholdUsd": {
         "type": "number",
         "title": "The Curious ($)",
-        "description": "Lifetime direct room-tip amount required for this tier.",
+        "description": "Lifetime direct tips needed for this tier.",
         "minimum": 1,
         "maximum": 1000000,
         "default": 50
