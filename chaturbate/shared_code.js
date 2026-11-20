@@ -360,6 +360,18 @@ var LBC = (function () {
   var STATS = "lbc_m2_tip_stats";
   var TIMER = "ab_goal_deadline";
   var DEFAULTS = [25, 50, 75, 100];
+  function milestoneDefaults() {
+    var marks = [];
+    if (LBC.getSetting("goalMilestone25Enabled", true) !== false) marks.push(25);
+    if (LBC.getSetting("goalMilestone50Enabled", true) !== false) marks.push(50);
+    if (LBC.getSetting("goalMilestone75Enabled", true) !== false) marks.push(75);
+    marks.push(100);
+    return marks;
+  }
+  function defaultGoalDuration() {
+    var n = Math.floor(Number(LBC.getSetting("goalDefaultDurationMinutes", 0)) || 0);
+    return n > 0 ? Math.max(1, Math.min(1440, n)) : null;
+  }
 
   function json(key, fallback) {
     try { var raw = LBC.runtime.kvGet(key, ""); return raw ? JSON.parse(raw) : fallback; }
@@ -384,15 +396,15 @@ var LBC = (function () {
       paused: g.paused === true,
       pausedTotal: Math.max(0, Number(g.pausedTotal) || 0),
       completed: g.completed === true,
-      milestones: Array.isArray(g.milestones) && g.milestones.length ? g.milestones : DEFAULTS.slice(),
+      milestones: Array.isArray(g.milestones) && g.milestones.length ? g.milestones : milestoneDefaults(),
       reached: g.reached && typeof g.reached === "object" ? g.reached : {},
       queue: Array.isArray(g.queue) ? g.queue.slice(0, 10) : [],
       lastCompleted: g.lastCompleted || null,
       durationMinutes: integer(g.durationMinutes, 1, 1440),
       deadlineAt: Math.max(0, Number(g.deadlineAt) || 0),
       remainingMs: Math.max(0, Number(g.remainingMs) || 0),
-      carryover: g.carryover !== false,
-      repeat: g.repeat === true,
+      carryover: typeof g.carryover === "boolean" ? g.carryover : LBC.getSetting("goalCarryoverDefault", true) !== false,
+      repeat: typeof g.repeat === "boolean" ? g.repeat : LBC.getSetting("goalAutoRepeatDefault", false) === true,
       repeatCount: Math.max(0, Number(g.repeatCount) || 0)
     };
   }
@@ -485,7 +497,7 @@ var LBC = (function () {
       LBC.notice("⏱️ TIMED GOAL LIVE: " + g.title + " · " + g.target + " tokens · " + minutes + " minutes."); return;
     }
     if ((match = body.match(/^\/ab goal(?:\s+set)?\s+([1-9][0-9]{0,6})(?:\s+(.+))?$/i))) {
-      activate(g, Number(match[1]), match[2], null, 0); save(g);
+      activate(g, Number(match[1]), match[2], defaultGoalDuration(), 0); save(g);
       LBC.notice("🏁 Goal started: " + g.title + " · " + g.target + " tokens."); return;
     }
     if ((match = body.match(/^\/ab goal queue\s+timed\s+([1-9][0-9]{0,6})\s+([1-9][0-9]{0,3})\s+(.+)$/i))) {
@@ -496,7 +508,7 @@ var LBC = (function () {
     }
     if ((match = body.match(/^\/ab goal queue\s+([1-9][0-9]{0,6})(?:\s+(.+))?$/i))) {
       if (g.queue.length >= 10) { LBC.notice("Goal queue is full (10)."); return; }
-      g.queue.push({ target: Number(match[1]), durationMinutes: null, title: cleanTitle(match[2]) }); save(g);
+      g.queue.push({ target: Number(match[1]), durationMinutes: defaultGoalDuration(), title: cleanTitle(match[2]) }); save(g);
       LBC.notice("Queued stage #" + g.queue.length + ": " + g.queue[g.queue.length - 1].title + "."); return;
     }
     if (low === "/ab goal queue list") {
