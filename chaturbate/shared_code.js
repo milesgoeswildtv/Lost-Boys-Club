@@ -1377,24 +1377,34 @@ var LBC = (function () {
   function dispatchChat(body, username, isOwner) {
     activeDispatch = "chat";
 
-    var args = [body, username, isOwner];
+    // The Control Center accepts one consistent /ab admin <section> ... syntax
+    // and routes the action into the existing subsystem handler exactly once.
+    var routedBody = body;
+    var adminRoute = String(body || "").trim().match(/^\/ab admin (goal|goals|rewards|menu|announcements|giveaway|queue)\s+(.+)$/i);
+    if (isOwner && adminRoute) {
+      var section = adminRoute[1].toLowerCase();
+      var command = section === "goals" ? "goal" : section;
+      routedBody = "/ab " + command + " " + adminRoute[2];
+    }
 
-    // Original Guess the Number engine.
-    safeCall(originals.coreChat, args, "Guess the Number");
+    var args = [routedBody, username, isOwner];
 
-    // Existing room systems.
-    safeCall(originals.roomGoal, [body, isOwner], "Room Goal");
-    safeCall(originals.rewards, [body, username, isOwner], "Rewards");
-    safeCall(originals.tipMenu, [body, isOwner], "Tip Menu");
-    safeCall(originals.announcements, [body, isOwner], "Announcements");
-    safeCall(originals.customAnnouncement, [body, isOwner, username], "Custom Announcements");
-    safeCall(originals.guidance, [body, username], "Player Guidance");
+    // Original Guess the Number engine sees the user's literal command.
+    safeCall(originals.coreChat, [body, username, isOwner], "Guess the Number");
+
+    // Existing room systems receive the routed command, without new dispatchers.
+    safeCall(originals.roomGoal, [routedBody, isOwner], "Room Goal");
+    safeCall(originals.rewards, [routedBody, username, isOwner], "Rewards");
+    safeCall(originals.tipMenu, [routedBody, isOwner], "Tip Menu");
+    safeCall(originals.announcements, [routedBody, isOwner], "Announcements");
+    safeCall(originals.customAnnouncement, [routedBody, isOwner, username], "Custom Announcements");
+    safeCall(originals.guidance, [routedBody, username], "Player Guidance");
 
     // Existing games.
-    safeCall(originals.higherLower, [body, isOwner, username], "Higher or Lower");
-    safeCall(originals.trivia, [body, isOwner, username], "Couple Trivia");
+    safeCall(originals.higherLower, [routedBody, isOwner, username], "Higher or Lower");
+    safeCall(originals.trivia, [routedBody, isOwner, username], "Couple Trivia");
 
-    // All future registered games.
+    // Registered modules (including viewer queue) receive the same routed action.
     runModules("onChatMessage", args);
     activeDispatch = "";
   }
@@ -2598,17 +2608,24 @@ var LBC = (function () {
       String(goal.title || "Room Goal") + " (" + Math.min(goalProgress, goalTarget) + "/" + goalTarget + ")" : "not configured";
     var pending = Array.isArray(requests) ? requests.filter(function (r) { return r && r.status === "pending"; }).length : 0;
     var activeName = game && game.active ? String(game.name || game.id || "Unknown game") : "none";
+    var giveaway = readJson("lbc_ab_giveaway_current", null);
+    var queue = readJson("lbc_ab_viewer_queue_v1", {});
+    var queueLine = (queue.paused ? "PAUSED · " : "OPEN · ") +
+      (queue.current && queue.current.user ? "active " + queue.current.user + " · " : "") +
+      (Array.isArray(queue.waiting) ? queue.waiting.length : 0) + "/" + (Number(queue.limit) || 50) + " waiting";
+    var vip = LBC.vip ? LBC.vip.adminStatus() : { members: 0, totalUsd: 0 };
+    var supportTokens = Math.max(0, Number(tipStats.totalTokens) || 0);
     LBC.notice(
-      "🖤 AFTERDARK BROTHERHOOD — CONTROL CENTER\n" +
-      "Active game: " + activeName + "\n" +
-      "Room goal: " + goalLine + "\n" +
-      "Rewards: " + (Array.isArray(catalog) ? catalog.length : 0) + " listed · " + pending + " pending\n" +
-      "Tip menu: " + (Array.isArray(menu) ? menu.length : 0) + " items\n" +
-      "Rotating announcements: " + (announcements.enabled === true ? "ON" : "OFF") + "\n" +
-      "Giveaway: " + (function () { var g = readJson("lbc_ab_giveaway_current", null); return g && g.status === "open" ? "OPEN · " + Object.keys(g.entries || {}).length + " entered" : g && g.status === "closed" ? "CLOSED · awaiting draw" : "not running"; }()) + "\n" +
-      "VIP members: " + (LBC.vip ? LBC.vip.adminStatus().members : 0) + "\n" + "Viewer queue: " + (function () { var q = readJson("lbc_ab_viewer_queue_v1", {}); return (q.current && q.current.user ? "active: " + q.current.user + " · " : "") + (Array.isArray(q.waiting) ? q.waiting.length : 0) + "/" + (Number(q.limit) || 50) + " waiting"; }()) + "\n" +
-      "Game modules: " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + "\n" +
-      "Use /ab admin help for the control map."
+      "🖤 AFTERDARK BROTHERHOOD — STREAM CONTROL CENTER\n" +
+      "LIVE: Game " + activeName + " · Room support " + supportTokens + " tokens\n" +
+      "GOAL: " + goalLine + "\n" +
+      "QUEUE: " + queueLine + "\n" +
+      "GIVEAWAY: " + (giveaway && giveaway.status === "open" ? "OPEN · " + Object.keys(giveaway.entries || {}).length + " entered" : giveaway && giveaway.status === "closed" ? "CLOSED · awaiting draw" : "OFF") + "\n" +
+      "ENGAGEMENT: Announcements " + (announcements.enabled === true ? "ON" : "OFF") +
+      " · Tip menu " + (Array.isArray(menu) ? menu.length : 0) + " · Rewards " + (Array.isArray(catalog) ? catalog.length : 0) + " (" + pending + " pending)\n" +
+      "COMMUNITY: " + vip.members + " permanent VIP members · " + (LBC.gameLibrary ? LBC.gameLibrary.list().length : 0) + " game modules\n" +
+      "ACTIONS: /ab admin goal pause|resume · /ab admin queue pause|resume · /ab admin announcements on|off\n" +
+      "MORE: /ab admin games|goal|rewards|menu|giveaway|queue|vip · /ab admin help"
     );
   }
 
@@ -2622,7 +2639,7 @@ var LBC = (function () {
         "\nUse each game's /ab <game> start/stop command.");
       return;
     }
-    if (value === "goals") {
+    if (value === "goal" || value === "goals") {
       var g = readJson("lbc_m2_room_goal", {});
       var s = readJson("lbc_m2_tip_stats", {});
       var target = Math.max(0, Number(g.target) || 0);
@@ -2687,15 +2704,16 @@ var LBC = (function () {
     LBC.notice(
       "🖤 AFTERDARK BROTHERHOOD — ADMIN CONTROL MAP\n" +
       "/ab admin — dashboard · /ab admin status — refresh dashboard\n" +
-      "/ab admin games|goals|rewards|menu|announcements|giveaway|queue|vip — subsystem status\n" +
-      "/ab admin members — member tracking summary\n" +
-      "GOALS: /ab goal set 1000 Title · /ab goal queue 1500 Next\n" +
-      "REWARDS: /ab rewards add 100 Reward · pending · approve 1 · deny 1\n" +
-      "TIP MENU: /ab menu add 50 Request · /ab menu remove 1\n" +
-      "ANNOUNCEMENTS: /ab announcements on|off\n" +
-      "GIVEAWAY: /ab giveaway start Prize · end · draw · cancel · history (free entry only)\n" +
-      "VIEWER QUEUE: /ab queue next|done|skip|pause|resume|clear · !joinqueue · !slots · !book 1\n" +
-      "GAMES: use the game's own /ab <game> start|stop command."
+      "/ab admin games|goal|rewards|menu|announcements|giveaway|queue|vip — subsystem status\n" +
+      "/ab admin panel — refresh the native room panel · /ab admin members — member summary\n" +
+      "QUICK CONTROL: /ab admin goal pause|resume|status · /ab admin queue next|pause|resume\n" +
+      "GOALS: /ab admin goal set 1000 Title · queue 1500 Next · extend 250 · reset · off\n" +
+      "REWARDS: /ab admin rewards add 100 Reward · pending · approve 1 · deny 1\n" +
+      "TIP MENU: /ab admin menu add 50 Request · remove 1 · clear · show\n" +
+      "ANNOUNCEMENTS: /ab admin announcements on|off\n" +
+      "GIVEAWAY: /ab admin giveaway start Prize · end · draw · cancel · history (free entry)\n" +
+      "VIEWER QUEUE: /ab admin queue next|done|skip|pause|resume|clear · !joinqueue · !slots · !book 1\n" +
+      "GAMES: use /ab <game> start|stop; Guess the Number uses /ab start|stop."
     );
   }
 
@@ -2720,18 +2738,31 @@ var LBC = (function () {
       adminHelp();
       return;
     }
+    if (lower === "/ab admin panel") {
+      var refreshed = LBC.runtime.reloadPanel();
+      LBC.notice(refreshed === false ? "The native room panel could not be refreshed by this runtime." : "Native room panel refresh requested.");
+      return;
+    }
     if (lower === "/ab admin members") {
       var index = readJson(INDEX_KEY, []);
       LBC.notice("👥 MEMBER TRACKING\nTracked members: " + (Array.isArray(index) ? index.length : 0) +
         " / " + MAX_INDEX + "\nViewer commands: !profile · !profile username · !leaderboard wins|games|points.");
       return;
     }
-    if ((match = lower.match(/^\/ab admin (games|goals|rewards|menu|announcements|giveaway|queue|vip)$/))) {
+    if ((match = lower.match(/^\/ab admin (games|goal|goals|rewards|menu|announcements|giveaway|queue|vip)$/))) {
       adminDetail(match[1]);
       return;
     }
     adminHelp();
   }
+
+  LBC.controlCenter = {
+    version: "1.0",
+    status: adminStatus,
+    detail: adminDetail,
+    help: adminHelp,
+    refreshPanel: function () { return LBC.runtime.reloadPanel(); }
+  };
 
   LBC.members = {
     version: "1.0",
