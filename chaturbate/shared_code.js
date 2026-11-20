@@ -2735,6 +2735,7 @@ var LBC = (function () {
       "VAULT: !vault · !achievements — shared progress and personal unlocks\n" +
       "HALL OF FAME: !halloffame wins|games|points — permanent member records\n" +
       "VIEWER QUEUE: /ab queue next|done|skip|pause|resume|clear · !joinqueue · !slots · !book 1\n" +
+      "MISSIONS: !missions · !streak · !missionhistory — daily, weekly, and streak rewards\\n" +
       "GAMES: use the game's own /ab <game> start|stop command."
     );
   }
@@ -3893,6 +3894,11 @@ var LBC = (function () {
     return changed;
   }
   function saveState(s) { return write(keyFor(s.username), s); }
+  function effectiveStreak(s, now) {
+    if (!s.streak.lastDay) return 0;
+    var today = dayKey(now), yesterday = dayKey(now - 86400000);
+    return s.streak.lastDay === today || s.streak.lastDay === yesterday ? s.streak.current : 0;
+  }
   function metricValue(record, metric) { return Math.max(0, Number(record[metric]) || 0); }
   function rawAwardHasId(username, id) {
     var p = read("lbc_ab_rewards_user_" + cleanName(username).toLowerCase(), {});
@@ -3992,7 +3998,7 @@ var LBC = (function () {
     LBC.notice("🎯 AFTERDARK MISSIONS — " + s.username + "\n" +
       "DAILY · resets 00:00 UTC\n" + progressLine(DAILY, s.daily) + "\n" +
       "WEEKLY · resets Monday 00:00 UTC\n" + progressLine(WEEKLY, s.weekly) + "\n" +
-      "Current streak: " + s.streak.current + " days · Best: " + s.streak.best +
+      "Current streak: " + effectiveStreak(s, now) + " days · Best: " + s.streak.best +
       "\nStreak bonuses: 3d +5 · 7d +15 · 14d +30 · 30d +75 points.\n" +
       "Free games only. Tips and purchases do not count.", { toUsername: s.username });
   }
@@ -4004,7 +4010,7 @@ var LBC = (function () {
     for (var i = 0; i < STREAKS.length; i++) {
       if (!s.streak.claimed[String(STREAKS[i].days)]) { next = STREAKS[i]; break; }
     }
-    LBC.notice("🔥 AFTERDARK STREAK — " + s.username + "\nCurrent: " + s.streak.current +
+    LBC.notice("🔥 AFTERDARK STREAK — " + s.username + "\nCurrent: " + effectiveStreak(s, now) +
       " consecutive UTC days · Best: " + s.streak.best +
       (next ? "\nNext lifetime streak reward: " + next.days + " days · +" + next.reward + " points." :
         "\nAll current lifetime streak milestones have been claimed.") +
@@ -4039,6 +4045,15 @@ var LBC = (function () {
     if (low === "!streak") { showStreak(username); return; }
     if (low === "!missionhistory") { showHistory(username); return; }
   }
+  function onAppStart() {
+    var index = read(INDEX_KEY, []);
+    if (!Array.isArray(index)) return;
+    index.forEach(function (name) {
+      var s = stateFor(name);
+      if (ensurePeriods(s, Date.now())) saveState(s);
+      attemptPending(s);
+    });
+  }
   if (LBC.rewards && typeof LBC.rewards.award === "function" && !LBC.rewards.award.__missions) {
     var previousAward = LBC.rewards.award;
     var missionAward = function (username, amount, reason, id) {
@@ -4058,5 +4073,5 @@ var LBC = (function () {
     adminStatus: adminStatus,
     definitions: function () { return { daily: DAILY.slice(), weekly: WEEKLY.slice(), streaks: STREAKS.slice() }; }
   };
-  LBC.gameLibrary.register("daily-weekly-missions", { onChatMessage: onChatMessage });
+  LBC.gameLibrary.register("daily-weekly-missions", { onChatMessage: onChatMessage, onAppStart: onAppStart });
 }());
