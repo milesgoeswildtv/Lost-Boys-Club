@@ -9,7 +9,8 @@ LBC.setRuntime({
   createCallback: function (label, seconds, repeat) { try { if (typeof repeat === "boolean") return $callback.create(label, seconds, repeat); return $callback.create(label, seconds); } catch (err) { return false; } },
   cancelCallback: function (label) { try { return $callback.cancel(label); } catch (err) { return false; } },
   reloadPanel: function () { try { return $room.reloadPanel(); } catch (err) { return false; } },
-  setPanelTemplate: function (template) { try { return $room.setPanelTemplate(template); } catch (err) { return false; } }
+  setPanelTemplate: function (template) { try { return $room.setPanelTemplate(template); } catch (err) { return false; } },
+  getSetting: function (name, fallback) { try { var value = $settings && $settings[name]; return value === undefined || value === null ? fallback : value; } catch (err) { return fallback; } }
 });
 
 
@@ -59,7 +60,7 @@ if (tokens > 0) {
   var lastAck = Number($kv.get(ackKey, "0")) || 0;
   var nowSeconds = Math.floor(Date.now() / 1000);
 
-  if (nowSeconds - lastAck >= ACK_COOLDOWN_SECONDS) {
+  if (LBC.getSetting("tipAcknowledgmentEnabled", true) !== false && nowSeconds - lastAck >= ACK_COOLDOWN_SECONDS) {
     $kv.set(ackKey, String(nowSeconds), ACK_COOLDOWN_SECONDS);
     $room.sendNotice(
       "🖤 " + (isAnonymous ? "A mystery supporter" : username) +
