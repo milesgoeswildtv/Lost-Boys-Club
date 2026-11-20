@@ -115,3 +115,12 @@ A feature is not complete because code was drafted. It is complete only when:
 - Announcements are disabled by default and rotate at a conservative 15-minute cadence.
 - Messages are informational, short, and never imply that tipping is required.
 - Stale callbacks are ignored; disabling announcements prevents further rotations.
+
+
+### M5 — Advanced Goals & Loyalty Rewards (implemented in source branch; portal QA pending)
+- Advanced room goals: named goals, configurable milestone percentages, pause/resume with paused tips excluded, target extensions, reset/off controls, and a sequential queue of up to 10 goals.
+- Loyalty points: free-game participation and win bonuses with per-round idempotency.
+- Reward shelf: broadcaster-managed catalogue, viewer redemption requests, pending queue, approval/denial, and automatic point refunds on denial.
+- Points are not sold, are not earned from tips, have no cash value, and do not unlock game access or improve game odds.
+- No paid-entry raffles, random paid prizes, or automatic tip-triggered rewards.
+- GitHub source changes are not considered deployed until the Chaturbate editor and Testbed checks pass.
