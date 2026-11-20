@@ -17,7 +17,7 @@ Broadcaster commands:
 - `/ab goal status` — display the current status.
 - `/ab goal off` — turn off the current goal without deleting the queue.
 
-When a goal reaches 100%, the engine announces completion and automatically activates the next queued goal, if one exists. Viewers use `!goal` (the older `!clubgoal` alias remains supported). The native panel displays the current goal and progress.
+When a goal reaches 100%, the engine announces completion and automatically activates the next queued goal, if one exists. Viewers use `!goal`. The native panel displays the current goal and progress.
 
 ## Loyalty & Rewards
 
@@ -66,3 +66,33 @@ GitHub does not sync to the Chaturbate Developer Portal. The Shared Code and han
 
 ## Integration note
 The Shared Code central chat dispatcher routes loyalty commands together with the other room systems. The Chat Message event handler must call LBC.onChatMessage exactly once and must not separately call the individual room-system handlers. The Callback event handler likewise calls LBC.onCallback once; callback modules are dispatched centrally. This avoids skipped or duplicate command processing.
+
+
+## Member Profiles & Leaderboards
+
+Viewer profiles are private replies to the requesting viewer. The profile displays the viewer's current points balance, total points earned, tracked game participation, wins, and win rate.
+
+Viewer commands:
+
+- `!profile` — show your own profile.
+- `!profile username` — privately view another tracked member's profile.
+- `!leaderboard` or `!leaderboard wins` — top five tracked winners.
+- `!leaderboard games` — top five by game participation.
+- `!leaderboard points` — top five by current points balance.
+
+The member index is capped at 250 tracked usernames. Profiles are updated only after a loyalty award successfully posts; duplicate award IDs do not inflate member stats. Existing loyalty balances and award history remain authoritative.
+
+## Admin Control Center
+
+Broadcaster-only overview and subsystem status commands:
+
+- `/ab admin` or `/ab admin status` — dashboard for game, goal, rewards, tip menu, announcements, and registered game modules.
+- `/ab admin help` — command map.
+- `/ab admin games`
+- `/ab admin goals`
+- `/ab admin rewards`
+- `/ab admin menu`
+- `/ab admin announcements`
+- `/ab admin members` — member tracking count.
+
+The control center is a read-only status console. Existing subsystem commands continue to perform changes; this avoids duplicating business logic or bypassing subsystem validation. Only the broadcaster receives admin status output.
