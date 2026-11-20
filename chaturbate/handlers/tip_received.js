@@ -54,6 +54,7 @@ if (tokens > 0) {
   }
 
   $kv.set(TIP_STATS_KEY, JSON.stringify(stats));
+  if (LBC.analytics) LBC.analytics.recordTip(tokens, username, isAnonymous);
 
   var ackIdentity = isAnonymous ? "anonymous" : username.toLowerCase();
   var ackKey = TIP_ACK_PREFIX + ackIdentity;
