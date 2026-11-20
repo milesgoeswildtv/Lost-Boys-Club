@@ -103,14 +103,9 @@ var LBC = (function () {
       "!points / !rewards — free-play loyalty points and reward shelf",
       "!redeem 1 — request a reward using points",
       "!giveaway / !enter — view or enter a free room giveaway",
-      "!teams / !team — Brotherhood Wars standings and your team",
-      "!jointeam Name / !leaveteam — manage your free team membership",
-      "!vault — shared Brotherhood progression",
-      "!halloffame — permanent member records",
-      "!achievements — your unlocked milestones",
-      "!missions / !streak / !missionhistory — daily, weekly, and streak rewards",
-      "!rank / !badges / !titles / !rankings — permanent reputation and recognition",
-      "!title set regular — select an unlocked profile title",
+      "!profile — view your profile, game stats, loyalty balance, and VIP tier",
+      "!vip — view your permanent room VIP tier",
+      "!leaderboard wins|games|points — room leaderboards",
       "!queue / !joinqueue / !leavequeue — view and join the viewer waitlist",
       "!slots / !book 1 / !cancelbooking — scheduled viewer slots",
       "",
@@ -118,7 +113,8 @@ var LBC = (function () {
       "/ab start — start a 90-second round",
       "/ab stop — end the current round",
       "/ab giveaway start Prize — open a free-entry giveaway",
-      "/ab teams create Name — create a Brotherhood Wars team"
+      "/ab rewards add 100 Reward — add a loyalty reward",
+      "/ab admin — open the room control center"
     ].join("\n");
   }
 
