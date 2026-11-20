@@ -21,7 +21,7 @@ Choose a section by sending `/ab` followed by its number:
 | 9 | Live Dashboard |
 | 10 | Settings |
 
-Inside a section, send the displayed number to select an action. Send `/ab 0`, `/ab back`, or `/ab` to return to the main menu.
+Inside a section, send the displayed number to select an action. The Games menu can start Codebreaker, Word Scramble, Dirty Would You Rather, Position Impossible, Dirty Charades, or Guess the Number, and can stop the active game. Send `/ab 0`, `/ab back`, or `/ab` to return to the main menu.
 
 ### Guided actions
 
@@ -66,7 +66,7 @@ The existing Chaturbate Broadcast Panel Update handler remains intact. It contin
 
 ## Verification
 
-The Shared Code file passed JavaScript syntax compilation after the changes. A mocked runtime exercise verified dashboard rendering, goal create/pause, announcement toggle, tip-menu add, reward add, queue pause, giveaway start, and native panel refresh command. This is code-level mock verification only; Chaturbate Developer Portal synchronization, Testbed QA, and live-room behavior have not been verified by this change.
+The Shared Code file passed JavaScript parsing with the JavaScript Function parser. Mock-runtime menu checks passed for main-menu navigation, Games submenu, Codebreaker start/stop, timed-goal creation, tip-menu item creation, free-entry giveaway creation, and announcement toggle. Existing mocked subsystem checks covered dashboard rendering, goal create/pause, reward add, queue pause, giveaway start, and native panel refresh. These are code-level mock checks only; Chaturbate Developer Portal synchronization, Testbed QA, and live-room behavior have not been verified.
 
 
 ## Advanced goal engine
