@@ -250,5 +250,49 @@
         "order": 0
       }
     }
+  },
+  "game_controls": {
+    "type": "fieldset",
+    "title": "Game Availability",
+    "collapsible": true,
+    "collapsed": false,
+    "order": 8,
+    "settings": {
+      "gameCodebreakerEnabled": {
+        "type": "boolean",
+        "title": "Codebreaker",
+        "description": "Allow viewers to submit answers. Broadcaster controls remain available.",
+        "default": true,
+        "order": 0
+      },
+      "gameWordScrambleEnabled": {
+        "type": "boolean",
+        "title": "Word Scramble",
+        "description": "Allow viewers to submit answers. Broadcaster controls remain available.",
+        "default": true,
+        "order": 1
+      },
+      "gameWouldYouRatherEnabled": {
+        "type": "boolean",
+        "title": "Dirty Would You Rather",
+        "description": "Allow viewer participation. Broadcaster controls remain available.",
+        "default": true,
+        "order": 2
+      },
+      "gamePositionImpossibleEnabled": {
+        "type": "boolean",
+        "title": "Position Impossible",
+        "description": "Allow viewer participation. Broadcaster controls remain available.",
+        "default": true,
+        "order": 3
+      },
+      "gameDirtyCharadesEnabled": {
+        "type": "boolean",
+        "title": "Dirty Charades",
+        "description": "Allow viewer participation. Broadcaster controls remain available.",
+        "default": true,
+        "order": 4
+      }
+    }
   }
 }
