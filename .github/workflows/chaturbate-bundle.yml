@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "chaturbate/**"
+      - "relay/**"
       - "scripts/verify-chaturbate-bundle.mjs"
       - ".github/workflows/chaturbate-bundle.yml"
   push:
@@ -28,5 +29,7 @@ jobs:
           node-version: 22
       - name: Verify Chaturbate upload bundle and overlay contracts
         run: node scripts/verify-chaturbate-bundle.mjs
+      - name: Test Cloudflare relay event normalization
+        run: node relay/worker.test.mjs
       - name: Check Cloudflare Worker module syntax
         run: node --input-type=module --check < relay/worker.js
