@@ -1,0 +1,16 @@
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+$("relay").value=localStorage.getItem("afterdark.relay")||"";
+$("token").value=localStorage.getItem("afterdark.eventToken")||"";
+function status(message,ok){$("status").textContent=message;$("status").style.borderLeftColor=ok?"#a6ff35":"#ff55c7"}
+function credentials(){return {relay:$("relay").value.trim().replace(/\/$/,""),token:$("token").value.trim()}}
+$("save").addEventListener("click",function(){var c=credentials();if(!/^https:\/\//i.test(c.relay)||!c.token){status("Enter a valid https Worker URL and event token.",false);return}localStorage.setItem("afterdark.relay",c.relay);localStorage.setItem("afterdark.eventToken",c.token);status("Access saved in this browser. You can now send test events.",true)});
+$("forget").addEventListener("click",function(){localStorage.removeItem("afterdark.relay");localStorage.removeItem("afterdark.eventToken");$("relay").value="";$("token").value="";status("Saved access cleared from this browser.",true)});
+async function send(type,data){var c=credentials();if(!c.relay||!c.token){status("Connect first: enter the Worker URL and event token.",false);return}
+var buttons=document.querySelectorAll("button");buttons.forEach(function(b){b.disabled=true});
+try{var response=await fetch(c.relay+"/event",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+c.token},body:JSON.stringify({type:type,data:data})});var body=await response.text();if(!response.ok)throw new Error(response.status+" "+body);status("SENT · "+type.toUpperCase()+"\n"+body,true)}catch(error){status("SEND FAILED · "+error.message+"\nCheck the Worker URL, EVENT_INGEST_TOKEN, and allowed overlay origin.",false)}finally{buttons.forEach(function(b){b.disabled=false})}}
+function gameData(){return {title:$("game").value.toUpperCase(),subtitle:"AFTERDARK BROTHERHOOD",prompt:$("prompt").value.trim(),instructions:$("instructions").value.trim(),meta:$("detail").value.trim(),remainingSeconds:Math.max(0,Math.min(3600,Number($("seconds").value)||0)),round:$("round").value.trim()||"1",footer:"PLAY ALONG IN CHAT"}}
+document.querySelectorAll("[data-action]").forEach(function(button){button.addEventListener("click",function(){var action=button.getAttribute("data-action");if(action==="close"){send("game_end",{title:$("game").value.toUpperCase(),subtitle:"WINDOW CLOSED",prompt:"",footer:"THANK YOU FOR PLAYING",displayMs:2500});return}var data=gameData();if(action==="game_results"){data.statusLabel="ROUND RESULTS";data.remainingSeconds=null;data.results=[{name:"RESULTS",detail:$("detail").value.trim()||"Awaiting final placements"}]}send(action,data)})});
+$("sendAlert").addEventListener("click",function(){send("notification",{eyebrow:$("eyebrow").value.trim(),title:$("alertTitle").value.trim(),message:$("message").value.trim(),duration:6500})});
+})();
