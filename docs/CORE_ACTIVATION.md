@@ -89,9 +89,11 @@ The primary owner entry point is '/ab'. The owner sends the command in broadcast
 | One Word Story | '/ab story start' |
 | Afterdark Dare Deck | '/ab dare start' |
 | Caption Clash | '/ab caption start' |
+| Higher or Lower | '/ab higher start' |
+| Couple Trivia | '/ab trivia start' (add at least one question first with '/ab trivia add Question :: Answer') |
 | Stop active game | Select the stop action in the Games menu |
 
-The Shared Code also contains older Higher or Lower and Couple Trivia dispatch paths. They are not currently exposed in the '/ab' Games menu; do not treat them as menu-registered/ready controls until they are added and tested.
+Higher or Lower and Couple Trivia are now exposed in the '/ab' Games menu and included in the stop-active-game routing. Couple Trivia requires a saved question deck before it can start. Both remain subject to Testbed verification.
 
 ### Guided input examples documented by the current menu
 
@@ -119,7 +121,7 @@ Run these checks in order. Record the observed result; do not mark a check compl
 
 ### Command routing and permissions
 - [ ] Broadcaster '/ab' opens the main menu.
-- [ ] Broadcaster '/ab 1' through '/ab 10' open the matching sections.
+- [ ] Broadcaster '/ab 1' through '/ab 13' open the matching sections.
 - [ ] '/ab 0', '/ab back' and '/ab cancel' work.
 - [ ] A viewer typing '/ab' cannot access broadcaster controls.
 - [ ] A normal broadcaster chat message is not consumed by a pending guided action.
