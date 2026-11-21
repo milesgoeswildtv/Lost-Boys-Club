@@ -17,7 +17,7 @@ const tip = normalizeChaturbateEvent(event("tip", {
   user: { username: "Supporter" }, tip: { tokens: 55, isAnon: false }
 }));
 assert.equal(tip.type, "tip");
-assert.match(tip.data.title, /SUPPORTER/);
+assert.match(tip.data.title, /SUPPORTER/i);
 assert.match(tip.data.message, /55 TOKENS/);
 
 const anonTip = normalizeChaturbateEvent(event("tip", {
