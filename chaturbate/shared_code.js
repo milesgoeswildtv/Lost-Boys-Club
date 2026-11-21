@@ -1067,7 +1067,10 @@ var LBC = (function () {
     try {
       var raw = LBC.runtime.kvGet("lbc_v1_game", "");
       var game = raw ? JSON.parse(raw) : null;
-      return !!(game && game.active === true);
+      if (game && game.active === true) return true;
+      var triviaRaw = LBC.runtime.kvGet("lbc_m3_trivia_state", "");
+      var trivia = triviaRaw ? JSON.parse(triviaRaw) : null;
+      return !!(trivia && trivia.active === true);
     } catch (err) {
       return false;
     }
@@ -3146,7 +3149,7 @@ var LBC = (function () {
       var activeGame = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
       var baseGame = readJson("lbc_v1_game", {});
       say("GAMES" + (activeGame && activeGame.active ? "\nActive: " + activeGame.name : baseGame && baseGame.active ? "\nActive: Guess the Number" : "\nNo game running") +
-        "\n1. Codebreaker\n2. Word Scramble\n3. Dirty Would You Rather\n4. Position Impossible\n5. Dirty Charades\n6. Guess the Number\n7. One Word Story\n8. Afterdark Dare Deck\n9. Caption Clash\n10. Stop active game\n11. Return to main menu");
+        "\n1. Codebreaker\n2. Word Scramble\n3. Dirty Would You Rather\n4. Position Impossible\n5. Dirty Charades\n6. Guess the Number\n7. One Word Story\n8. Afterdark Dare Deck\n9. Caption Clash\n10. Higher or Lower\n11. Couple Trivia\n12. Stop active game\n13. Return to main menu");
     } else if (name === "goals") {
       if (LBC.controlCenter) LBC.controlCenter.detail("goal");
       say("GOALS — choose an action\n1. View goal status\n2. Create an untimed goal\n3. Create a timed goal\n4. Queue a goal stage\n5. Pause / resume current goal\n6. View goal queue\n7. Return to main menu");
@@ -3225,17 +3228,21 @@ var LBC = (function () {
       if (sections[number]) { section(state, sections[number]); return { handled: true }; }
     }
     if (s === "games") {
-      var gameCommands = {1:"/ab codebreaker start",2:"/ab scramble start",3:"/ab wyr start",4:"/ab position start",5:"/ab charades start",6:"/ab start",7:"/ab story start",8:"/ab dare start",9:"/ab caption start"};
+      var gameCommands = {1:"/ab codebreaker start",2:"/ab scramble start",3:"/ab wyr start",4:"/ab position start",5:"/ab charades start",6:"/ab start",7:"/ab story start",8:"/ab dare start",9:"/ab caption start",10:"/ab higher start",11:"/ab trivia start"};
       if (gameCommands[number]) return {handled:true,command:gameCommands[number]};
-      if (number === 10) {
+      if (number === 12) {
         var running = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
-        var stops = {"codebreaker":"/ab codebreaker stop","word-scramble":"/ab scramble stop","would-you-rather":"/ab wyr stop","position-impossible":"/ab position stop","dirty-charades":"/ab charades stop","one-word-story":"/ab story stop","afterdark-dare-deck":"/ab dare stop","caption-clash":"/ab caption stop"};
+        var stops = {"codebreaker":"/ab codebreaker stop","word-scramble":"/ab scramble stop","would-you-rather":"/ab wyr stop","position-impossible":"/ab position stop","dirty-charades":"/ab charades stop","one-word-story":"/ab story stop","afterdark-dare-deck":"/ab dare stop","caption-clash":"/ab caption stop","higher-or-lower":"/ab higher stop","couple-trivia":"/ab trivia stop"};
         if (running && running.active && stops[running.id]) return {handled:true,command:stops[running.id]};
+        var higher = readJson("lbc_m3_higher_lower",{});
+        if (higher && higher.active) return {handled:true,command:"/ab higher stop"};
+        var trivia = readJson("lbc_m3_trivia_state",{});
+        if (trivia && trivia.active) return {handled:true,command:"/ab trivia stop"};
         var base = readJson("lbc_v1_game",{});
         if (base && base.active) return {handled:true,command:"/ab stop"};
         say("There is no active game to stop."); return {handled:true};
       }
-      if (number === 11) { home(state); return {handled:true}; }
+      if (number === 13) { home(state); return {handled:true}; }
     }
     if (s === "customization") {
       var fields = {1:["roomTagline","Room tagline",80],2:["roomWelcomeMessage","Welcome message",160],3:["tipMenuTitle","Tip-menu heading",70],4:["tipMenuFooter","Tip-menu footer",180],5:["profileHeading","Member-profile heading",40]};
