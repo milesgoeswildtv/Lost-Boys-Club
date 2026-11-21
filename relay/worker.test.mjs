@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
 
 const source = await readFile(new URL("./worker.js", import.meta.url), "utf8");
 const moduleUrl = "data:text/javascript;base64," + Buffer.from(source).toString("base64");
@@ -23,7 +22,7 @@ assert.match(tip.data.message, /55 TOKENS/);
 const anonTip = normalizeChaturbateEvent(event("tip", {
   user: { username: "Secret" }, tip: { tokens: 20, isAnon: true }
 }));
-assert.doesNotMatch(anonTip.data.title, /SECRET/);
+assert.doesNotMatch(anonTip.data.title, /SECRET/i);
 
 assert.equal(normalizeChaturbateEvent(event("userEnter", { user: { username: "Arrival" } })).type, "viewer");
 assert.equal(normalizeChaturbateEvent(event("userLeave", { user: { username: "Exit" } })).type, "notification");
@@ -32,6 +31,7 @@ assert.equal(normalizeChaturbateEvent(event("fanclubJoin", { user: { username: "
 assert.equal(normalizeChaturbateEvent(event("mediaPurchase", { user: { username: "Buyer" }, media: { type: "photo" } })).type, "notification");
 assert.equal(normalizeChaturbateEvent(event("broadcastStart", {})).data.status, "LIVE FROM AFTERDARK");
 assert.equal(normalizeChaturbateEvent(event("broadcastStop", {})).data.status, "BROADCAST ENDED");
+assert.equal(normalizeChaturbateEvent(event("roomSubjectChange", { subject: "Afterdark: open" })).data.mode, "Afterdark: open");
 
 const commands = [
   ["!code 4821", "CODEBREAKER"],
@@ -52,11 +52,13 @@ for (const [message, game] of commands) {
   const result = normalizeChaturbateEvent(chat(message));
   assert.equal(result.type, "notification", message);
   assert.equal(result.data.eyebrow, game, message);
-  const submittedText = message.replace(/^!\\S+\\s*/, "");
-  if (submittedText) assert.doesNotMatch(result.data.title + " " + result.data.message, new RegExp(submittedText.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\  assert.doesNotMatch(JSON.stringify(result.data), /afterdark|missionary|absolutely|correct/i,
-    "viewer-submitted answer text must not be echoed to the overlay");"), "i"),
-    "viewer-submitted answer text must not be echoed to the overlay");
+  const submittedText = message.includes(" ") ? message.slice(message.indexOf(" ") + 1) : "";
+  if (submittedText) {
+    const publicCopy = (result.data.title + " " + result.data.message).toLowerCase();
+    assert.equal(publicCopy.includes(submittedText.toLowerCase()), false,
+      "viewer-submitted answer text must not be echoed to the overlay");
+  }
 }
 assert.equal(normalizeChaturbateEvent(chat("!code 12")), null);
 assert.equal(normalizeChaturbateEvent(chat("hello everyone")), null);
-console.log("AFTERDARK relay normalization: PASS (13 game submission commands + room events)");
+console.log("AFTERDARK relay normalization: PASS (13 game submission command variants + room events)");
