@@ -44,7 +44,7 @@ const commands = [
   ["!dareanswer absolutely", "AFTERDARK DARE DECK"],
   ["!caption this is chaos", "CAPTION CLASH"],
   ["!guess 42", "GUESS THE NUMBER"],
-  ["!answer correct", "COUPLE TRIVIA"]
+  ["!answer correct", "COUPLE TRIVIA"],\n  ["!higher", "HIGHER OR LOWER"],\n  ["!lower", "HIGHER OR LOWER"]
 ];
 for (const [message, game] of commands) {
   const result = normalizeChaturbateEvent(chat(message));
@@ -55,4 +55,4 @@ for (const [message, game] of commands) {
 }
 assert.equal(normalizeChaturbateEvent(chat("!code 12")), null);
 assert.equal(normalizeChaturbateEvent(chat("hello everyone")), null);
-console.log("AFTERDARK relay normalization: PASS (11 game submission commands + room events)");
+console.log("AFTERDARK relay normalization: PASS (13 game submission commands + room events)");
