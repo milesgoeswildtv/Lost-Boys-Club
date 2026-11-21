@@ -5,7 +5,10 @@
   root.dataset.initialized = "true";
 
   var $ = function (id) { return document.getElementById(id); };
-  var eventTimer = null;\n  var gameHideTimer = null;\n  var gameClockTimer = null;\n  var gameRemaining = null;
+  var eventTimer = null;
+  var gameHideTimer = null;
+  var gameClockTimer = null;
+  var gameRemaining = null;
   var socket = null;
   var retryTimer = null;
   var state = {
