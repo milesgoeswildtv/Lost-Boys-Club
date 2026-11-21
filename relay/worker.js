@@ -9,7 +9,7 @@ export default {
       overlayConfigured: !!env.OVERLAY_TOKEN,
       chaturbateEventsConfigured: !!env.CB_EVENTS_URL,
       operatorControlConfigured: !!env.EVENT_INGEST_TOKEN
-    });
+    }, { headers: { "Access-Control-Allow-Origin": env.OVERLAY_ORIGIN || "*", "Vary": "Origin" } });
 
     if (url.pathname === "/event") {
       const origin = request.headers.get("Origin") || "";
