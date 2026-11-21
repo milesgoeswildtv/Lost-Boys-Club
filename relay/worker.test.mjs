@@ -44,7 +44,9 @@ const commands = [
   ["!dareanswer absolutely", "AFTERDARK DARE DECK"],
   ["!caption this is chaos", "CAPTION CLASH"],
   ["!guess 42", "GUESS THE NUMBER"],
-  ["!answer correct", "COUPLE TRIVIA"],\n  ["!higher", "HIGHER OR LOWER"],\n  ["!lower", "HIGHER OR LOWER"]
+  ["!answer correct", "COUPLE TRIVIA"],
+  ["!higher", "HIGHER OR LOWER"],
+  ["!lower", "HIGHER OR LOWER"]
 ];
 for (const [message, game] of commands) {
   const result = normalizeChaturbateEvent(chat(message));
