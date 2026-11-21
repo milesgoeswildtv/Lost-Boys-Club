@@ -45,7 +45,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:var(--silver)}
 .rail-sub{font-size:clamp(7px,.58vw,10px);letter-spacing:.12em;color:var(--muted);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .progress-track{height:4px;margin-top:9px;background:rgba(255,255,255,.13);overflow:hidden}
 .progress-track span{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--pink-deep),var(--pink-hot),var(--acid));box-shadow:0 0 9px var(--pink);transition:width .45s ease}
-.event-card{position:absolute;right:clamp(24px,4vw,76px);bottom:150px;width:min(440px,38vw);padding:18px 22px 20px;background:linear-gradient(125deg,rgba(5,4,9,.96),rgba(28,5,25,.92));border:1px solid rgba(255,85,199,.75);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%);box-shadow:0 0 25px rgba(255,85,199,.2);opacity:0;transform:translateY(16px) scale(.98);transition:opacity .28s ease,transform .28s ease;pointer-events:none}
+.event-card{position:absolute;left:clamp(24px,4vw,76px);right:auto;bottom:150px;width:min(360px,30vw);padding:18px 22px 20px;background:linear-gradient(125deg,rgba(5,4,9,.96),rgba(28,5,25,.92));border:1px solid rgba(255,85,199,.75);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%);box-shadow:0 0 25px rgba(255,85,199,.2);opacity:0;transform:translateY(16px) scale(.98);transition:opacity .28s ease,transform .28s ease;pointer-events:none}
 .event-card.visible{opacity:1;transform:translateY(0) scale(1)}
 .event-rule{height:2px;width:64px;background:linear-gradient(90deg,var(--pink),var(--acid));margin-bottom:12px;box-shadow:0 0 10px var(--pink)}
 .event-eyebrow{font-size:9px;letter-spacing:.25em;color:var(--acid);margin-bottom:7px}
@@ -68,7 +68,7 @@ body{font-family:Arial,Helvetica,sans-serif;color:var(--silver)}
  .rail-label{margin-bottom:3px}
  .rail-sub{margin-top:3px}
  .progress-track{margin-top:5px}
- .event-card{right:16px;left:16px;bottom:205px;width:auto}
+ .event-card{right:16px;left:16px;top:108px;bottom:auto;width:auto}
  .frame-top-left{top:8px;left:8px}.frame-top-right{top:8px;right:8px}
  .frame-bottom-left{bottom:8px;left:8px}.frame-bottom-right{bottom:8px;right:8px}
 }
