@@ -4,12 +4,21 @@ const MAX_EVENT_BYTES = 4096;
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === "/health") return Response.json({
-      ok: true, service: "afterdark-overlay-relay",
-      overlayConfigured: !!env.OVERLAY_TOKEN,
-      chaturbateEventsConfigured: !!env.CB_EVENTS_URL,
-      operatorControlConfigured: !!env.EVENT_INGEST_TOKEN
-    }, { headers: { "Access-Control-Allow-Origin": env.OVERLAY_ORIGIN || "*", "Vary": "Origin" } });
+    if (url.pathname === "/health") {
+      let eventFeed = { state: env.CB_EVENTS_URL ? "waiting_for_overlay" : "not_configured" };
+      try {
+        const id = env.AFTERDARK_RELAY.idFromName("primary-room");
+        const status = await env.AFTERDARK_RELAY.get(id).fetch("https://relay.internal/status");
+        if (status.ok) eventFeed = await status.json();
+      } catch (error) { eventFeed = { state: "status_unavailable" }; }
+      return Response.json({
+        ok: true, service: "afterdark-overlay-relay",
+        overlayConfigured: !!env.OVERLAY_TOKEN,
+        chaturbateEventsConfigured: !!env.CB_EVENTS_URL,
+        operatorControlConfigured: !!env.EVENT_INGEST_TOKEN,
+        eventFeed
+      }, { headers: { "Access-Control-Allow-Origin": env.OVERLAY_ORIGIN || "*", "Vary": "Origin" } });
+    }
 
     if (url.pathname === "/event") {
       const origin = request.headers.get("Origin") || "";
@@ -52,6 +61,17 @@ export class AfterdarkRelay {
 
   async fetch(request) {
     const url = new URL(request.url);
+    if (request.method === "GET" && url.pathname === "/status") {
+      const status = await this.state.storage.get("pollStatus") || {};
+      return Response.json({
+        state: status.state || (this.env.CB_EVENTS_URL ? "waiting_for_overlay" : "not_configured"),
+        lastAttemptAt: status.lastAttemptAt || null,
+        lastSuccessAt: status.lastSuccessAt || null,
+        consecutiveFailures: status.consecutiveFailures || 0,
+        lastError: status.lastError || null,
+        connectedClients: this.state.getWebSockets().length
+      });
+    }
     if (request.method === "POST" && url.pathname === "/publish") {
       const raw = await request.text();
       if (new TextEncoder().encode(raw).byteLength > MAX_EVENT_BYTES) return new Response("Event too large", { status: 413 });
@@ -78,6 +98,10 @@ export class AfterdarkRelay {
     if (!sockets.length || !this.env.CB_EVENTS_URL) return;
     if (this.polling) { await this.state.storage.setAlarm(Date.now() + 1500); return; }
     this.polling = true;
+    const previousStatus = await this.state.storage.get("pollStatus") || {};
+    await this.state.storage.put("pollStatus", {
+      ...previousStatus, state: "polling", lastAttemptAt: new Date().toISOString()
+    });
     try {
       const nextUrl = await this.state.storage.get("nextUrl") || this.env.CB_EVENTS_URL;
       const pollUrl = new URL(nextUrl);
@@ -90,10 +114,33 @@ export class AfterdarkRelay {
         const event = normalizeChaturbateEvent(item);
         if (event) this.broadcast(event);
       }
+      const recovered = (previousStatus.consecutiveFailures || 0) > 0;
+      await this.state.storage.put("pollStatus", {
+        state: "connected", lastAttemptAt: previousStatus.lastAttemptAt || new Date().toISOString(),
+        lastSuccessAt: new Date().toISOString(), consecutiveFailures: 0, lastError: null
+      });
+      if (recovered) this.broadcast({ type: "notification", data: {
+        eyebrow: "EVENT BRIDGE", title: "CONNECTION RESTORED",
+        message: "Automatic room events are flowing again.", duration: 4500
+      }});
       await this.state.storage.setAlarm(Date.now() + 100);
     } catch (error) {
-      this.broadcast({ type: "notification", data: { eyebrow: "EVENT BRIDGE", title: "CONNECTION INTERRUPTED", message: "The room event feed is reconnecting." } });
-      await this.state.storage.setAlarm(Date.now() + 5000);
+      const message = String(error && error.message || "");
+      const statusMatch = message.match(/returned (\d{3})/);
+      const failureCount = (previousStatus.consecutiveFailures || 0) + 1;
+      const lastError = statusMatch ? "HTTP_" + statusMatch[1] :
+        (error instanceof TypeError ? "NETWORK_OR_TIMEOUT" : "INVALID_FEED_RESPONSE");
+      await this.state.storage.put("pollStatus", {
+        state: "reconnecting", lastAttemptAt: new Date().toISOString(),
+        lastSuccessAt: previousStatus.lastSuccessAt || null,
+        consecutiveFailures: failureCount, lastError
+      });
+      if (failureCount === 1 || failureCount % 12 === 0) this.broadcast({ type: "notification", data: {
+        eyebrow: "EVENT BRIDGE", title: "CONNECTION INTERRUPTED",
+        message: "Automatic room events are reconnecting. Status: " + lastError + ".",
+        duration: 5000
+      }});
+      await this.state.storage.setAlarm(Date.now() + Math.min(30000, 5000 * Math.min(failureCount, 6)));
     } finally { this.polling = false; }
   }
 
@@ -109,26 +156,99 @@ export class AfterdarkRelay {
   webSocketError() {}
 }
 
-function normalizeChaturbateEvent(event) {
+export function normalizeChaturbateEvent(event) {
   if (!event || typeof event !== "object") return null;
-  const object = event.object || {}, user = object.user || {}, name = clean(user.username || "");
+  const object = event.object || {};
+  const user = object.user || {};
+  const name = clean(user.username || "");
+
   if (event.method === "tip") {
-    const tip = object.tip || {}, tokens = Math.max(0, Math.floor(Number(tip.tokens) || 0));
+    const tip = object.tip || {};
+    const tokens = Math.max(0, Math.floor(Number(tip.tokens) || 0));
     if (!tokens) return null;
     const anonymous = !!tip.isAnon;
     return { type: "tip", data: {
       eyebrow: "BROTHERHOOD SUPPORT",
       title: anonymous ? "✦ A MYSTERY TIP LANDED ✦" : "✦ " + name + " SENT SUPPORT ✦",
-      message: tokens.toLocaleString("en-US") + " TOKENS · THE AFTERDARK FEELS THAT ONE.", duration: 6500
+      message: tokens.toLocaleString("en-US") + " TOKENS · THE AFTERDARK FEELS THAT ONE.",
+      duration: 6500
     }};
   }
-  if (event.method === "userEnter" && name) return { type: "viewer", data: { eyebrow: "NEW ARRIVAL", title: name.toUpperCase() + " ENTERED AFTERDARK", message: "Make yourself comfortable. The night is just getting started.", duration: 5000 }};
-  if (event.method === "broadcastStart") return { type: "room", data: { status: "LIVE FROM AFTERDARK", mode: "THE BROTHERHOOD IS OPEN" }};
-  if (event.method === "broadcastStop") return { type: "room", data: { status: "BROADCAST ENDED", mode: "UNTIL NEXT TIME" }};
+
+  if (event.method === "userEnter" && name) return {
+    type: "viewer", data: {
+      eyebrow: "NEW ARRIVAL", title: name.toUpperCase() + " ENTERED AFTERDARK",
+      message: "Make yourself comfortable. The night is just getting started.", duration: 5000
+    }
+  };
+  if (event.method === "userLeave" && name) return {
+    type: "notification", data: {
+      eyebrow: "ROOM MOVEMENT", title: name.toUpperCase() + " LEFT THE ROOM",
+      message: "The night keeps moving.", duration: 3500
+    }
+  };
+  if (event.method === "follow" && name) return {
+    type: "notification", data: {
+      eyebrow: "NEW FOLLOW", title: name.toUpperCase() + " JOINED THE BROTHERHOOD",
+      message: "Thanks for finding your way into AFTERDARK.", duration: 5000
+    }
+  };
+  if (event.method === "fanclubJoin" && name) return {
+    type: "vip", data: {
+      eyebrow: "BROTHERHOOD MEMBER", title: name.toUpperCase() + " JOINED THE INNER CIRCLE",
+      value: "NEW FAN CLUB MEMBER", detail: "A new member joined the Brotherhood.", announce: true
+    }
+  };
+  if (event.method === "mediaPurchase" && name) {
+    const media = object.media || {};
+    return { type: "notification", data: {
+      eyebrow: "SUPPORT RECEIVED", title: name.toUpperCase() + " UNLOCKED CONTENT",
+      message: "A " + clean(media.type || "media purchase").toUpperCase() + " purchase came through.", duration: 5000
+    }};
+  }
+  if (event.method === "roomSubjectChange") return {
+    type: "room", data: { status: "AFTERDARK LIVE", mode: String(object.subject || "ROOM SUBJECT UPDATED").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 50) }
+  };
+  if (event.method === "broadcastStart") return {
+    type: "room", data: { status: "LIVE FROM AFTERDARK", mode: "THE BROTHERHOOD IS OPEN" }
+  };
+  if (event.method === "broadcastStop") return {
+    type: "room", data: { status: "BROADCAST ENDED", mode: "UNTIL NEXT TIME" }
+  };
+
   if (event.method === "chatMessage") {
-    const message = object.message && (object.message.message || object.message) || "", lower = String(message).trim().toLowerCase();
-    if (/^!door\s+[123]$/.test(lower)) return { type: "game_reveal", data: { eyebrow: "THREE DOORS", title: name.toUpperCase() + " CHOSE A DOOR", message: "Door selection received. Awaiting the reveal.", duration: 5000 }};
-    if (/^!caption\s+/.test(lower)) return { type: "notification", data: { eyebrow: "CAPTION CLASH", title: name.toUpperCase() + " ENTERED", message: "A new caption has joined the contest.", duration: 4500 }};
+    const raw = object.message && (object.message.message || object.message) || "";
+    const lower = String(raw).trim().toLowerCase();
+    if (!name) return null;
+
+    // Never mirror private answers or free-form viewer text onto the public overlay.
+    const submissions = [
+      [/^!code\s+\d{4}$/, "CODEBREAKER", "CODE ATTEMPT RECEIVED"],
+      [/^!word\s+\S+/, "WORD SCRAMBLE", "ANSWER SUBMITTED"],
+      [/^!(?:a|b)$/, "DIRTY WOULD YOU RATHER", "VOTE RECEIVED"],
+      [/^!position\s+\S+/, "POSITION IMPOSSIBLE", "GUESS SUBMITTED"],
+      [/^!charade\s+\S+/, "DIRTY CHARADES", "GUESS SUBMITTED"],
+      [/^!addword\s+\S+/, "ONE WORD STORY", "WORD ADDED TO THE STORY"],
+      [/^!dareanswer\s+\S+/, "AFTERDARK DARE DECK", "RESPONSE SUBMITTED"],
+      [/^!caption\s+\S+/, "CAPTION CLASH", "CAPTION ENTERED"],
+      [/^!guess\s+\d{1,3}$/, "GUESS THE NUMBER", "GUESS LOCKED IN"],
+      [/^!answer\s+\S+/, "COUPLE TRIVIA", "ANSWER LOCKED IN"],
+      [/^!(?:higher|lower)$/, "HIGHER OR LOWER", "PREDICTION LOCKED IN"]
+    ];
+    for (const [pattern, game, action] of submissions) {
+      if (pattern.test(lower)) return {
+        type: "notification", data: {
+          eyebrow: game, title: name.toUpperCase() + " · " + action,
+          message: "A player submission was received.", duration: 3200
+        }
+      };
+    }
+    if (/^!door\s+[123]$/.test(lower)) return {
+      type: "game_reveal", data: {
+        eyebrow: "THREE DOORS", title: name.toUpperCase() + " CHOSE A DOOR",
+        message: "Door selection received. Awaiting the reveal.", duration: 5000
+      }
+    };
   }
   return null;
 }

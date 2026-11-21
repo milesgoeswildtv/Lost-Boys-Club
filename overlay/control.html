@@ -17,7 +17,7 @@ button.primary{background:var(--pink);color:#160811}button.end{border-color:#777
 </style></head>
 <body><main>
 <div class="kicker">AFTERDARK BROTHERHOOD · BROADCASTER TOOLS</div><div class="brand">OBS <b>CONTROL ROOM</b></div>
-<p class="intro">This is the laptop-side operator panel. It sends game-window and event updates to the browser source in OBS. Your Chaturbate games still run in the room; this panel controls what the audience sees in the overlay.</p>
+<p class="intro">This is the laptop-side operator panel. It sends game-window and event updates to the hosted overlay in Streamlabs Mobile or OBS. Your Chaturbate games still run in the room; this panel controls what the audience sees in the overlay.</p>
 <div class="panel"><h2>01 · CONNECT THE CONTROL ROOM</h2>
 <div class="grid"><div><label for="relay">RELAY WORKER URL</label><input id="relay" placeholder="https://your-worker.workers.dev"></div><div><label for="token">OPERATOR EVENT TOKEN</label><input id="token" type="password" placeholder="Paste the private event token"></div></div>
 <div class="buttons"><button id="test">TEST CONNECTION</button><button id="save">SAVE ON THIS LAPTOP</button><button id="forget" class="end">CLEAR SAVED ACCESS</button></div>
@@ -32,7 +32,7 @@ button.primary{background:var(--pink);color:#160811}button.end{border-color:#777
 <div class="buttons"><button class="primary" data-action="game_start">OPEN GAME WINDOW</button><button data-action="game_update">UPDATE WINDOW</button><button data-action="game_results">SHOW RESULTS</button><button data-action="game_end">END GAME</button><button class="end" data-action="close">CLOSE WINDOW</button></div></div>
 <div class="panel"><h2>03 · ROOM ALERT</h2>
 <div class="grid"><div><label for="eyebrow">CATEGORY</label><input id="eyebrow" value="AFTERDARK TRANSMISSION"></div><div><label for="alertTitle">HEADLINE</label><input id="alertTitle" value="THE NIGHT IS JUST GETTING STARTED"></div></div>
-<label for="message">MESSAGE</label><textarea id="message" placeholder="Alert message"></textarea><div class="buttons"><button id="sendAlert" class="primary">SEND ALERT TO OBS</button></div></div>
+<label for="message">MESSAGE</label><textarea id="message" placeholder="Alert message"></textarea><div class="buttons"><button id="sendAlert" class="primary">SEND ALERT TO STREAM</button></div></div>
 <div class="status" id="status"><span class="tag">NOT CONNECTED</span> Enter the Worker URL and private event token to begin.</div>
 <p class="note">This panel can display game lifecycle states, but it does not yet read hidden game-engine state or automatically decide winners. Automatic synchronization from every Chaturbate game is a separate integration step.</p>
 </main><script src="./control.js"></script></body></html>
