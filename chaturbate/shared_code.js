@@ -3229,7 +3229,7 @@ var LBC = (function () {
       if (gameCommands[number]) return {handled:true,command:gameCommands[number]};
       if (number === 10) {
         var running = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
-        var stops = {"codebreaker":"/ab codebreaker stop","word-scramble":"/ab scramble stop","would-you-rather":"/ab wyr stop","position-impossible":"/ab position stop","dirty-charades":"/ab charades stop","one-word-story":"/ab story stop","afterdark-dare-deck":"/ab dare stop"};
+        var stops = {"codebreaker":"/ab codebreaker stop","word-scramble":"/ab scramble stop","would-you-rather":"/ab wyr stop","position-impossible":"/ab position stop","dirty-charades":"/ab charades stop","one-word-story":"/ab story stop","afterdark-dare-deck":"/ab dare stop","caption-clash":"/ab caption stop"};
         if (running && running.active && stops[running.id]) return {handled:true,command:stops[running.id]};
         var base = readJson("lbc_v1_game",{});
         if (base && base.active) return {handled:true,command:"/ab stop"};
@@ -4376,8 +4376,16 @@ var LBC = (function () {
     LBC.runtime.kvSet(KEY, "");
     LBC.runtime.reloadPanel();
   }
+  function legacyBusy() {
+    var keys = ["lbc_v1_game", "lbc_m3_higher_lower", "lbc_m3_trivia_state", "lbc_ab_one_word_story_v1", "lbc_ab_afterdark_dare_deck_v1", "lbc_afterhours_game_state"];
+    for (var i = 0; i < keys.length; i++) {
+      try { var raw = LBC.runtime.kvGet(keys[i], ""); if (raw && JSON.parse(raw).active === true) return true; }
+      catch (err) { /* Ignore malformed legacy state. */ }
+    }
+    return false;
+  }
   function start() {
-    if (LBC.gameLibrary.isBusy()) { LBC.notice("Another game is already running. Finish that round before starting Caption Clash."); return; }
+    if (LBC.gameLibrary.isBusy() || legacyBusy()) { LBC.notice("Another game is already running. Finish that round before starting Caption Clash."); return; }
     if (!LBC.gameLibrary.claim("caption-clash", "Caption Clash")) return;
     state = { active: true, prompt: PROMPTS[Math.floor(Math.random() * PROMPTS.length)], entries: [], players: {}, startedAt: Math.floor(Date.now() / 1000), endsAt: 0 };
     state.endsAt = Math.floor(Date.now() / 1000) + DURATION;
