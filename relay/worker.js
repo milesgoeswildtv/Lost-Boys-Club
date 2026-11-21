@@ -185,7 +185,8 @@ export function normalizeChaturbateEvent(event) {
       [/^!dareanswer\s+\S+/, "AFTERDARK DARE DECK", "RESPONSE SUBMITTED"],
       [/^!caption\s+\S+/, "CAPTION CLASH", "CAPTION ENTERED"],
       [/^!guess\s+\d{1,3}$/, "GUESS THE NUMBER", "GUESS LOCKED IN"],
-      [/^!answer\s+\S+/, "COUPLE TRIVIA", "ANSWER LOCKED IN"]
+      [/^!answer\s+\S+/, "COUPLE TRIVIA", "ANSWER LOCKED IN"],
+      [/^!(?:higher|lower)$/, "HIGHER OR LOWER", "PREDICTION LOCKED IN"]
     ];
     for (const [pattern, game, action] of submissions) {
       if (pattern.test(lower)) return {
