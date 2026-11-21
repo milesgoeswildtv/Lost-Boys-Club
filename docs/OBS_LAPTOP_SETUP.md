@@ -27,7 +27,7 @@ This is the first supported broadcast route. The laptop runs OBS Studio, the iPh
 7. Set its URL to the deployed overlay URL, with the relay endpoint and private overlay token appended:
 
 ```
-https://afterdark-overlay-preview.pages.dev/?ws=wss://YOUR-WORKER.workers.dev/ws&token=YOUR_OVERLAY_TOKEN
+https://afterdark-overlay-preview.pages.dev/?ws=wss://afterdark-overlay-relay.afterdarklabs.workers.dev/ws&token=YOUR_OVERLAY_TOKEN
 ```
 
 Replace both placeholders with the actual Worker hostname and private `OVERLAY_TOKEN`. Do not share this URL; the token grants access to the overlay feed.
@@ -50,7 +50,7 @@ Open this on the laptop in a normal browser:
 https://afterdark-overlay-preview.pages.dev/control.html
 ```
 
-Enter the Relay Worker base URL (for example `https://YOUR-WORKER.workers.dev`) and private `EVENT_INGEST_TOKEN`. Choose a game, enter the prompt and chat instructions, then use **OPEN GAME WINDOW**, **UPDATE WINDOW**, **SHOW RESULTS**, and **END GAME**. Use the alert section for separate room notifications.
+Enter the Relay Worker base URL (for example `https://afterdark-overlay-relay.afterdarklabs.workers.dev`) and private `EVENT_INGEST_TOKEN`. Choose a game, enter the prompt and chat instructions, then use **OPEN GAME WINDOW**, **UPDATE WINDOW**, **SHOW RESULTS**, and **END GAME**. Use the alert section for separate room notifications.
 
 The control token is stored in that browser's local storage. Do not share it or enter it into OBS.
 
