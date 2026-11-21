@@ -126,7 +126,7 @@ export class AfterdarkRelay {
       await this.state.storage.setAlarm(Date.now() + 100);
     } catch (error) {
       const message = String(error && error.message || "");
-      const statusMatch = message.match(/returned (\\d{3})/);
+      const statusMatch = message.match(/returned (\d{3})/);
       const failureCount = (previousStatus.consecutiveFailures || 0) + 1;
       const lastError = statusMatch ? "HTTP_" + statusMatch[1] :
         (error instanceof TypeError ? "NETWORK_OR_TIMEOUT" : "INVALID_FEED_RESPONSE");
