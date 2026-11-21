@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>AFTERDARK — OBS Control</title>
+<style>
+:root{color-scheme:dark;--pink:#ff55c7;--acid:#a6ff35;--bg:#08060b;--muted:#aaa3b1}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#291025 0,transparent 42%),var(--bg);color:#f4edf4;font:14px Arial,sans-serif;min-height:100vh}
+main{max-width:900px;margin:0 auto;padding:28px 18px 60px}.kicker{color:var(--acid);letter-spacing:.25em;font-size:10px}.brand{font:700 28px Georgia,serif;margin:8px 0 4px}.brand b{color:var(--pink)}.intro{color:#c8bdc8;line-height:1.5;max-width:680px}
+.panel{background:rgba(21,16,25,.94);border:1px solid rgba(255,85,199,.45);padding:18px;margin-top:18px;box-shadow:0 0 22px #ff55c710}
+h2{font:700 14px Georgia,serif;letter-spacing:.12em;color:var(--pink);margin:0 0 14px}
+label{display:block;color:var(--muted);font-size:11px;letter-spacing:.12em;margin:12px 0 6px}
+input,select,textarea{width:100%;border:1px solid #574052;background:#09070c;color:#fff;padding:11px;border-radius:2px;font:14px Arial}
+textarea{min-height:76px;resize:vertical}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.buttons{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+button{border:1px solid var(--pink);background:#260e22;color:#fff;padding:12px 15px;font-weight:700;letter-spacing:.08em;cursor:pointer}
+button.primary{background:var(--pink);color:#160811}button.end{border-color:#777;background:#17151a}button:disabled{opacity:.5;cursor:wait}
+.status{margin-top:12px;padding:12px;background:#09070c;border-left:3px solid var(--acid);color:#d7d0d8;white-space:pre-wrap;min-height:42px}
+.note{font-size:12px;color:var(--muted);line-height:1.5}.warning{color:#ffd2ef}.tag{display:inline-block;color:var(--acid);border:1px solid #59732d;padding:4px 7px;font-size:10px;letter-spacing:.1em}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.brand{font-size:23px}}
+</style></head>
+<body><main>
+<div class="kicker">AFTERDARK BROTHERHOOD · BROADCASTER TOOLS</div><div class="brand">OBS <b>CONTROL ROOM</b></div>
+<p class="intro">This is the laptop-side operator panel. It sends game-window and event updates to the browser source in OBS. Your Chaturbate games still run in the room; this panel controls what the audience sees in the overlay.</p>
+<div class="panel"><h2>01 · CONNECT THE CONTROL ROOM</h2>
+<div class="grid"><div><label for="relay">RELAY WORKER URL</label><input id="relay" placeholder="https://your-worker.workers.dev"></div><div><label for="token">OPERATOR EVENT TOKEN</label><input id="token" type="password" placeholder="Paste the private event token"></div></div>
+<div class="buttons"><button id="save">SAVE ON THIS LAPTOP</button><button id="forget" class="end">CLEAR SAVED ACCESS</button></div>
+<p class="note warning">Keep the operator token private. Do not put it in OBS, a public chat message, or a screenshot. It is stored only in this browser's local storage.</p></div>
+<div class="panel"><h2>02 · GAME WINDOW</h2>
+<label for="game">GAME</label><select id="game">
+<option>Codebreaker</option><option>Word Scramble</option><option>Dirty Would You Rather</option><option>Position Impossible</option><option>Dirty Charades</option><option>Guess the Number</option><option>One Word Story</option><option>Afterdark Dare Deck</option><option>Caption Clash</option><option>Higher or Lower</option><option>Couple Trivia</option><option>Custom</option></select>
+<div class="grid"><div><label for="seconds">COUNTDOWN (SECONDS)</label><input id="seconds" type="number" min="0" max="3600" value="75"></div><div><label for="round">ROUND LABEL</label><input id="round" value="1"></div></div>
+<label for="prompt">PROMPT / QUESTION</label><textarea id="prompt" placeholder="What viewers should see on screen"></textarea>
+<label for="instructions">HOW TO PLAY / CHAT COMMAND</label><input id="instructions" placeholder="Example: Submit !word followed by your answer.">
+<label for="detail">SMALL DETAIL (OPTIONAL)</label><input id="detail" placeholder="Example: First correct answer wins">
+<div class="buttons"><button class="primary" data-action="game_start">OPEN GAME WINDOW</button><button data-action="game_update">UPDATE WINDOW</button><button data-action="game_results">SHOW RESULTS</button><button data-action="game_end">END GAME</button><button class="end" data-action="close">CLOSE WINDOW</button></div></div>
+<div class="panel"><h2>03 · ROOM ALERT</h2>
+<div class="grid"><div><label for="eyebrow">CATEGORY</label><input id="eyebrow" value="AFTERDARK TRANSMISSION"></div><div><label for="alertTitle">HEADLINE</label><input id="alertTitle" value="THE NIGHT IS JUST GETTING STARTED"></div></div>
+<label for="message">MESSAGE</label><textarea id="message" placeholder="Alert message"></textarea><div class="buttons"><button id="sendAlert" class="primary">SEND ALERT TO OBS</button></div></div>
+<div class="status" id="status"><span class="tag">NOT CONNECTED</span> Enter the Worker URL and private event token to begin.</div>
+<p class="note">This panel can display game lifecycle states, but it does not yet read hidden game-engine state or automatically decide winners. Automatic synchronization from every Chaturbate game is a separate integration step.</p>
+</main><script src="./control.js"></script></body></html>
