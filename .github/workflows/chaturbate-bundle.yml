@@ -26,5 +26,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Verify Chaturbate upload bundle
+      - name: Verify Chaturbate upload bundle and overlay contracts
         run: node scripts/verify-chaturbate-bundle.mjs
+      - name: Check Cloudflare Worker module syntax
+        run: node --input-type=module --check < relay/worker.js
