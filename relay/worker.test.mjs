@@ -52,7 +52,9 @@ for (const [message, game] of commands) {
   const result = normalizeChaturbateEvent(chat(message));
   assert.equal(result.type, "notification", message);
   assert.equal(result.data.eyebrow, game, message);
-  assert.doesNotMatch(JSON.stringify(result.data), /afterdark|missionary|absolutely|correct/i,
+  const submittedText = message.replace(/^!\\S+\\s*/, "");
+  if (submittedText) assert.doesNotMatch(result.data.title + " " + result.data.message, new RegExp(submittedText.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\  assert.doesNotMatch(JSON.stringify(result.data), /afterdark|missionary|absolutely|correct/i,
+    "viewer-submitted answer text must not be echoed to the overlay");"), "i"),
     "viewer-submitted answer text must not be echoed to the overlay");
 }
 assert.equal(normalizeChaturbateEvent(chat("!code 12")), null);
