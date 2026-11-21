@@ -11,7 +11,7 @@ The camera remains the primary subject. The permanent layer is restricted to the
 - `overlay/index.html` — transparent OBS browser-source document.
 - `overlay/styles.css` — responsive visual frame, status rail and animated event card.
 - `overlay/overlay.js` — event renderer, WebSocket client and local demo mode.
-- Add to OBS as a Browser Source at 1920 × 1080 (or the canvas resolution in use).
+- Add to OBS as a Browser Source at 1920 × 1080 (or the canvas resolution in use), or add the live overlay URL as a Custom URL source in Streamlabs Mobile.
 - For visual preview append `?demo=1` to the overlay URL.
 
 The overlay currently supports these normalized event types:
@@ -51,7 +51,7 @@ The existing Chaturbate Shared Code remains the source of truth for games, loyal
 
 A separate authenticated event relay is required to deliver events to OBS. The overlay accepts a secure `wss://` endpoint and an access token through query parameters. The relay must authenticate the browser source, reject unauthorized publishers, validate event types/payload sizes, and never expose Chaturbate event-feed credentials to the browser.
 
-The relay and the Chaturbate-to-relay publisher are not yet deployed. The next integration step is to verify the supported outbound HTTP capability of the V2 app runtime and select the least fragile relay design. Do not claim live synchronization until this is completed and tested.
+The Cloudflare Worker + Durable Object relay and laptop operator publisher are deployed. The operator-to-phone path has been confirmed by the broadcaster using Streamlabs Mobile Custom URL. Chaturbate App V2 cannot make external API calls, so do not attempt to call the Worker from Shared Code or event handlers. Automatic room events use the separate Chaturbate Events API feed polled by the Worker; configure the private `CB_EVENTS_URL` Worker secret before expecting those cards. The Worker now normalizes room events and safe game-submission acknowledgements. Authoritative private game state and winner calculation are not exposed by the Events API and remain operator-published. See `docs/MOBILE_STREAM_SETUP.md` and `relay/README.md`.
 
 ## Safety and operational rules
 
