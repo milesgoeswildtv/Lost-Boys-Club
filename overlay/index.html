@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>AFTERDARK BROTHERHOOD — Stream Overlay</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main id="afterdark-overlay" aria-label="Afterdark Brotherhood stream overlay">
+    <div class="storm-wash" aria-hidden="true"></div>
+    <div class="frame frame-top-left" aria-hidden="true"></div>
+    <div class="frame frame-top-right" aria-hidden="true"></div>
+    <div class="frame frame-bottom-left" aria-hidden="true"></div>
+    <div class="frame frame-bottom-right" aria-hidden="true"></div>
+
+    <header class="brand-lockup">
+      <span class="brand-wing wing-left" aria-hidden="true">⟡</span>
+      <div class="brand-copy">
+        <div class="brand-kicker">NO MAP · NO SUPERVISION · QUESTIONABLE DECISIONS</div>
+        <div class="brand-name">AFTERDARK <b>BROTHERHOOD</b></div>
+      </div>
+      <span class="brand-wing wing-right" aria-hidden="true">⟡</span>
+    </header>
+
+    <section class="top-status" aria-label="Live room status">
+      <span class="live-dot"></span><span id="room-status">LIVE FROM AFTERDARK</span>
+      <span class="status-divider">◆</span>
+      <span id="room-mode">THE BROTHERHOOD IS OPEN</span>
+    </section>
+
+    <section class="bottom-rail" aria-label="Room information">
+      <div class="rail-cell goal-cell">
+        <div class="rail-label"><span>✦</span> ROOM GOAL</div>
+        <div class="rail-value" id="goal-title">THE NIGHT'S BUSINESS</div>
+        <div class="progress-track"><span id="goal-progress"></span></div>
+        <div class="rail-sub" id="goal-detail">WAITING FOR THE NEXT MILESTONE</div>
+      </div>
+      <div class="rail-cell activity-cell">
+        <div class="rail-label"><span>⚡</span> CURRENT ACTIVITY</div>
+        <div class="rail-value" id="activity-title">NO GAME RUNNING</div>
+        <div class="rail-sub" id="activity-detail">THE FLOOR IS YOURS</div>
+      </div>
+      <div class="rail-cell community-cell">
+        <div class="rail-label"><span>♜</span> BROTHERHOOD</div>
+        <div class="rail-value" id="community-value">MEMBERS · LOYALTY · VIP</div>
+        <div class="rail-sub" id="community-detail">WELCOME TO THE AFTERDARK</div>
+      </div>
+    </section>
+
+    <aside id="event-card" class="event-card" aria-live="polite" aria-atomic="true">
+      <div class="event-rule"></div>
+      <div class="event-eyebrow" id="event-eyebrow">AFTERDARK TRANSMISSION</div>
+      <div class="event-title" id="event-title">THE NIGHT IS JUST GETTING STARTED</div>
+      <div class="event-copy" id="event-copy">Stay close. Something is always happening after dark.</div>
+    </aside>
+
+    <div class="connection-state" id="connection-state">OVERLAY STANDBY</div>
+    <div class="demo-tools" id="demo-tools" hidden>
+      <button type="button" data-demo="tip">TIP ALERT</button>
+      <button type="button" data-demo="goal">GOAL UPDATE</button>
+      <button type="button" data-demo="game">GAME REVEAL</button>
+      <button type="button" data-demo="clear">CLEAR</button>
+    </div>
+  </main>
+  <script src="./overlay.js"></script>
+</body>
+</html>
