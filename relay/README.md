@@ -40,7 +40,7 @@ After deployment, verify `/health`. A working health response includes `ok: true
 Add a Browser Source with dimensions 1920×1080 and URL:
 
 ```
-https://afterdark-overlay-preview.pages.dev/?ws=wss://YOUR-WORKER.workers.dev/ws&token=YOUR_OVERLAY_TOKEN
+https://afterdark-overlay-preview.pages.dev/?ws=wss://afterdark-overlay-relay.afterdarklabs.workers.dev/ws&token=YOUR_OVERLAY_TOKEN
 ```
 
 Keep the URL private because it contains the overlay access token.
