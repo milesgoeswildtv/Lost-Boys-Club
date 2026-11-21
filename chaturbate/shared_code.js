@@ -1593,7 +1593,8 @@ var LBC = (function () {
     "position-impossible": "gamePositionImpossibleEnabled",
     "dirty-charades": "gameDirtyCharadesEnabled",
     "one-word-story": "gameOneWordStoryEnabled",
-    "afterdark-dare-deck": "gameAfterdarkDareDeckEnabled"
+    "afterdark-dare-deck": "gameAfterdarkDareDeckEnabled",
+    "caption-clash": "gameCaptionClashEnabled"
   };
 
   function safeCall(fn, args, label) {
@@ -3145,7 +3146,7 @@ var LBC = (function () {
       var activeGame = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
       var baseGame = readJson("lbc_v1_game", {});
       say("GAMES" + (activeGame && activeGame.active ? "\nActive: " + activeGame.name : baseGame && baseGame.active ? "\nActive: Guess the Number" : "\nNo game running") +
-        "\n1. Codebreaker\n2. Word Scramble\n3. Dirty Would You Rather\n4. Position Impossible\n5. Dirty Charades\n6. Guess the Number\n7. One Word Story\n8. Afterdark Dare Deck\n9. Stop active game\n10. Return to main menu");
+        "\n1. Codebreaker\n2. Word Scramble\n3. Dirty Would You Rather\n4. Position Impossible\n5. Dirty Charades\n6. Guess the Number\n7. One Word Story\n8. Afterdark Dare Deck\n9. Caption Clash\n10. Stop active game\n11. Return to main menu");
     } else if (name === "goals") {
       if (LBC.controlCenter) LBC.controlCenter.detail("goal");
       say("GOALS — choose an action\n1. View goal status\n2. Create an untimed goal\n3. Create a timed goal\n4. Queue a goal stage\n5. Pause / resume current goal\n6. View goal queue\n7. Return to main menu");
@@ -3188,6 +3189,7 @@ var LBC = (function () {
       var publicRecognition = LBC.getSetting("retentionPublicRecognition", false) === true;
       var storyOn = LBC.getSetting("gameOneWordStoryEnabled", true) !== false;
       var dareOn = LBC.getSetting("gameAfterdarkDareDeckEnabled", true) !== false;
+      var captionOn = LBC.getSetting("gameCaptionClashEnabled", true) !== false;
       var firstGreeting = LBC.getSetting("retentionFirstVisitMessage", true) !== false;
       var returnGreeting = LBC.getSetting("retentionReturnRecognition", true) !== false;
       var milestones = LBC.getSetting("retentionMilestoneRecognition", true) !== false;
@@ -3200,12 +3202,13 @@ var LBC = (function () {
         "Visit milestones: " + (milestones ? "ON" : "OFF") + "\n" +
         "Anniversary recognition: " + (anniversaries ? "ON" : "OFF") + "\n" +
         "One Word Story: " + (storyOn ? "ENABLED" : "DISABLED") + "\n" +
-        "Afterdark Dare Deck: " + (dareOn ? "ENABLED" : "DISABLED") + "\n\n" +
+        "Afterdark Dare Deck: " + (dareOn ? "ENABLED" : "DISABLED") + "\n" +
+        "Caption Clash: " + (captionOn ? "ENABLED" : "DISABLED") + "\n\n" +
         "1. Toggle Viewer Retention\n2. Toggle Public / Private Recognition\n" +
         "3. Toggle First-Visit Greeting\n4. Toggle Return Recognition\n" +
         "5. Toggle Visit Milestones\n6. Toggle Anniversary Recognition\n" +
         "7. Enable / Disable One Word Story\n8. Enable / Disable Dare Deck\n" +
-        "9. Return to main menu");
+        "9. Enable / Disable Caption Clash\n10. Return to main menu");
 
     }
   }
@@ -3222,9 +3225,9 @@ var LBC = (function () {
       if (sections[number]) { section(state, sections[number]); return { handled: true }; }
     }
     if (s === "games") {
-      var gameCommands = {1:"/ab codebreaker start",2:"/ab scramble start",3:"/ab wyr start",4:"/ab position start",5:"/ab charades start",6:"/ab start",7:"/ab story start",8:"/ab dare start"};
+      var gameCommands = {1:"/ab codebreaker start",2:"/ab scramble start",3:"/ab wyr start",4:"/ab position start",5:"/ab charades start",6:"/ab start",7:"/ab story start",8:"/ab dare start",9:"/ab caption start"};
       if (gameCommands[number]) return {handled:true,command:gameCommands[number]};
-      if (number === 9) {
+      if (number === 10) {
         var running = LBC.gameLibrary && LBC.gameLibrary.active ? LBC.gameLibrary.active() : null;
         var stops = {"codebreaker":"/ab codebreaker stop","word-scramble":"/ab scramble stop","would-you-rather":"/ab wyr stop","position-impossible":"/ab position stop","dirty-charades":"/ab charades stop","one-word-story":"/ab story stop","afterdark-dare-deck":"/ab dare stop"};
         if (running && running.active && stops[running.id]) return {handled:true,command:stops[running.id]};
@@ -3232,7 +3235,7 @@ var LBC = (function () {
         if (base && base.active) return {handled:true,command:"/ab stop"};
         say("There is no active game to stop."); return {handled:true};
       }
-      if (number === 10) { home(state); return {handled:true}; }
+      if (number === 11) { home(state); return {handled:true}; }
     }
     if (s === "customization") {
       var fields = {1:["roomTagline","Room tagline",80],2:["roomWelcomeMessage","Welcome message",160],3:["tipMenuTitle","Tip-menu heading",70],4:["tipMenuFooter","Tip-menu footer",180],5:["profileHeading","Member-profile heading",40]};
@@ -3265,7 +3268,8 @@ var LBC = (function () {
         5: ["retentionMilestoneRecognition", true, "Visit milestone recognition"],
         6: ["retentionAnniversaryRecognition", true, "Anniversary recognition"],
         7: ["gameOneWordStoryEnabled", true, "One Word Story"],
-        8: ["gameAfterdarkDareDeckEnabled", true, "Afterdark Dare Deck"]
+        8: ["gameAfterdarkDareDeckEnabled", true, "Afterdark Dare Deck"],
+        9: ["gameCaptionClashEnabled", true, "Caption Clash"]
       };
       if (settingMap[number]) {
         var setting = settingMap[number];
@@ -3278,7 +3282,7 @@ var LBC = (function () {
         }
         return {handled:true};
       }
-      if (number === 9) { home(state); return {handled:true}; }
+      if (number === 10) { home(state); return {handled:true}; }
     }
     if (s === "goals") {
       if (number === 1) return {handled:true,command:"/ab goal status"};
@@ -4318,6 +4322,122 @@ var LBC = (function () {
   }
   LBC.afterdarkDareDeck={version:"1.0",status:function(){return state||read();},prompts:PROMPTS.slice()};
   LBC.gameLibrary.register("afterdark-dare-deck",{onChatMessage:onChatMessage,onCallback:onCallback,onAppStart:onAppStart});
+}());
+
+
+/* AFTERDARK BROTHERHOOD — CAPTION CLASH
+ * Free-entry room caption contest. Viewers submit one caption; the owner
+ * selects the winner. Uses the shared game lock, timer, rewards and recovery.
+ */
+(function () {
+  "use strict";
+  if (!LBC.gameLibrary || LBC.__captionClashInstalled) return;
+  LBC.__captionClashInstalled = true;
+  var KEY = "lbc_ab_caption_clash_v1";
+  var TIMER = "lbc_ab_caption_clash_timeout";
+  var DURATION = 90, MAX_ENTRIES = 12, MAX_CAPTION = 140, state = null;
+  var PROMPTS = [
+    "The group chat after someone says: 'I have an idea.'",
+    "A sign you absolutely should not ignore at 2 AM.",
+    "The official slogan for a spectacularly bad decision.",
+    "The first line of a reality show nobody asked for.",
+    "What the bouncer says when the night gets interesting.",
+    "The caption under a photo that should have stayed private.",
+    "The name of a club with a very questionable reputation.",
+    "The one sentence that guarantees the night gets chaotic."
+  ];
+  function cleanName(v) { return String(v || "someone").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 25) || "someone"; }
+  function cleanCaption(v) { return String(v || "").replace(/[\r\n\t]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_CAPTION); }
+  function read() {
+    try {
+      var raw = LBC.runtime.kvGet(KEY, ""), p = raw ? JSON.parse(raw) : null;
+      return p && p.active === true && Array.isArray(p.entries) && p.players && typeof p.players === "object" ? p : null;
+    } catch (err) { return null; }
+  }
+  function save() { LBC.runtime.kvSet(KEY, JSON.stringify(state)); }
+  function finish(reason, winner) {
+    if (!state || !state.active) return;
+    var done = state;
+    done.active = false;
+    if (winner) done.winner = cleanName(winner);
+    save();
+    LBC.runtime.cancelCallback(TIMER);
+    LBC.gameLibrary.release("caption-clash");
+    if (winner && LBC.rewards) {
+      LBC.rewards.award(done.winner, 5, "Caption Clash winner", "play:caption-clash-win:" + done.startedAt + ":" + done.winner.toLowerCase());
+    }
+    var entries = done.entries.map(function (e, i) {
+      return (i + 1) + ". " + e.username + ": " + e.caption + (winner && e.username.toLowerCase() === done.winner.toLowerCase() ? "  ★ WINNER" : "");
+    });
+    LBC.notice("🖤 AFTERDARK BROTHERHOOD — CAPTION CLASH\n" + done.prompt + "\n\n" +
+      (entries.length ? entries.join("\n") : "Nobody entered this round.") +
+      (winner ? "\n\n🏆 " + done.winner + " wins 5 loyalty points." : "\n\nRound closed · " + entries.length + "/" + MAX_ENTRIES + " entries."));
+    state = null;
+    LBC.runtime.kvSet(KEY, "");
+    LBC.runtime.reloadPanel();
+  }
+  function start() {
+    if (LBC.gameLibrary.isBusy()) { LBC.notice("Another game is already running. Finish that round before starting Caption Clash."); return; }
+    if (!LBC.gameLibrary.claim("caption-clash", "Caption Clash")) return;
+    state = { active: true, prompt: PROMPTS[Math.floor(Math.random() * PROMPTS.length)], entries: [], players: {}, startedAt: Math.floor(Date.now() / 1000), endsAt: 0 };
+    state.endsAt = Math.floor(Date.now() / 1000) + DURATION;
+    save();
+    LBC.runtime.cancelCallback(TIMER);
+    LBC.runtime.createCallback(TIMER, DURATION, false);
+    LBC.notice("🖤 CAPTION CLASH IS LIVE\n" + state.prompt +
+      "\nYou have 90 seconds. Submit one caption with !caption <your caption>. First 12 entries only. The host picks the winner.");
+    LBC.runtime.reloadPanel();
+  }
+  function submit(username, raw) {
+    if (!state || !state.active) { LBC.notice("Caption Clash is closed. Wait for the next round.", { toUsername: cleanName(username) }); return; }
+    var name = cleanName(username), key = name.toLowerCase(), caption = cleanCaption(raw);
+    if (!caption) { LBC.notice("Add your caption after !caption.", { toUsername: name }); return; }
+    if (state.players[key]) { LBC.notice("You already entered this Caption Clash round.", { toUsername: name }); return; }
+    if (state.entries.length >= MAX_ENTRIES) { LBC.notice("This round has reached its 12-entry limit.", { toUsername: name }); return; }
+    state.players[key] = true;
+    state.entries.push({ username: name, caption: caption });
+    save();
+    if (LBC.rewards) LBC.rewards.award(name, 1, "Caption Clash participation", "play:caption-clash:" + state.startedAt + ":" + key);
+    LBC.notice("🖤 " + name + " entered Caption Clash · " + state.entries.length + "/" + MAX_ENTRIES + ".");
+    LBC.runtime.reloadPanel();
+  }
+  function onChatMessage(body, username, isOwner) {
+    var t = String(body || "").trim(), low = t.toLowerCase(), m;
+    if (isOwner && low === "/ab caption start") { start(); return; }
+    if (isOwner && low === "/ab caption stop") { if (state && state.active) finish("manual"); else LBC.notice("Caption Clash isn't running."); return; }
+    if (isOwner && (m = t.match(/^\/ab caption winner\s+([A-Za-z0-9_-]{1,25})$/i))) {
+      if (!state) state = read();
+      if (!state || !state.active) { LBC.notice("Caption Clash isn't running."); return; }
+      var target = m[1].toLowerCase(), entry = state.entries.filter(function (e) { return e.username.toLowerCase() === target; })[0];
+      if (!entry) { LBC.notice("That viewer has not entered this Caption Clash round."); return; }
+      finish("winner", entry.username);
+      return;
+    }
+    if (low === "!caption") {
+      var current = state || read();
+      LBC.notice(current ? "🖤 CAPTION CLASH · " + current.entries.length + "/" + MAX_ENTRIES + " entries · " + Math.max(0, current.endsAt - Math.floor(Date.now() / 1000)) + "s left\n" + current.prompt + "\nEnter with !caption <your caption>." : "Caption Clash is not running right now.", { toUsername: cleanName(username) });
+      return;
+    }
+    if ((m = t.match(/^!caption\s+([\s\S]+)$/i))) {
+      if (!state) state = read();
+      submit(username, m[1]);
+    }
+  }
+  function onCallback(label) { if (label !== TIMER) return; if (!state) state = read(); if (state && state.active) finish("timeout"); }
+  var recovered = false;
+  function onAppStart() {
+    if (recovered) return;
+    recovered = true;
+    state = read();
+    if (!state) return;
+    var remaining = state.endsAt - Math.floor(Date.now() / 1000);
+    if (remaining <= 0) { finish("timeout"); return; }
+    if (!LBC.gameLibrary.claim("caption-clash", "Caption Clash")) { finish("interrupted"); return; }
+    LBC.runtime.cancelCallback(TIMER);
+    LBC.runtime.createCallback(TIMER, remaining, false);
+  }
+  LBC.captionClash = { version: "1.0", status: function () { return state || read(); }, prompts: PROMPTS.slice() };
+  LBC.gameLibrary.register("caption-clash", { onChatMessage: onChatMessage, onCallback: onCallback, onAppStart: onAppStart });
 }());
 
 
