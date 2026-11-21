@@ -160,7 +160,7 @@ export function normalizeChaturbateEvent(event) {
     }};
   }
   if (event.method === "roomSubjectChange") return {
-    type: "room", data: { status: "AFTERDARK LIVE", mode: clean(object.subject || "ROOM SUBJECT UPDATED").slice(0, 50) }
+    type: "room", data: { status: "AFTERDARK LIVE", mode: String(object.subject || "ROOM SUBJECT UPDATED").replace(/[\\u0000-\\u001f\\u007f]/g, " ").trim().slice(0, 50) }
   };
   if (event.method === "broadcastStart") return {
     type: "room", data: { status: "LIVE FROM AFTERDARK", mode: "THE BROTHERHOOD IS OPEN" }
