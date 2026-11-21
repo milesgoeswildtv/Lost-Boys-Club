@@ -42,8 +42,8 @@ for (const file of required.filter((item) => item.endsWith(".js"))) {
 
 try {
   const settings = JSON.parse(read("chaturbate/advanced_settings.json"));
-  if (!Array.isArray(settings)) throw new Error("Advanced Settings root must be an array.");
-  console.log("PASS JSON: chaturbate/advanced_settings.json (" + settings.length + " top-level groups)");
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) throw new Error("Advanced Settings root must be an object of fieldsets.");
+  console.log("PASS JSON: chaturbate/advanced_settings.json (" + Object.keys(settings).length + " top-level groups)");
 } catch (error) {
   failures.push("Advanced Settings JSON failed: " + error.message);
 }
