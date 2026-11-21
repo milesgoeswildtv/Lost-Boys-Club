@@ -4,12 +4,21 @@ const MAX_EVENT_BYTES = 4096;
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === "/health") return Response.json({
-      ok: true, service: "afterdark-overlay-relay",
-      overlayConfigured: !!env.OVERLAY_TOKEN,
-      chaturbateEventsConfigured: !!env.CB_EVENTS_URL,
-      operatorControlConfigured: !!env.EVENT_INGEST_TOKEN
-    }, { headers: { "Access-Control-Allow-Origin": env.OVERLAY_ORIGIN || "*", "Vary": "Origin" } });
+    if (url.pathname === "/health") {
+      let eventFeed = { state: env.CB_EVENTS_URL ? "waiting_for_overlay" : "not_configured" };
+      try {
+        const id = env.AFTERDARK_RELAY.idFromName("primary-room");
+        const status = await env.AFTERDARK_RELAY.get(id).fetch("https://relay.internal/status");
+        if (status.ok) eventFeed = await status.json();
+      } catch (error) { eventFeed = { state: "status_unavailable" }; }
+      return Response.json({
+        ok: true, service: "afterdark-overlay-relay",
+        overlayConfigured: !!env.OVERLAY_TOKEN,
+        chaturbateEventsConfigured: !!env.CB_EVENTS_URL,
+        operatorControlConfigured: !!env.EVENT_INGEST_TOKEN,
+        eventFeed
+      }, { headers: { "Access-Control-Allow-Origin": env.OVERLAY_ORIGIN || "*", "Vary": "Origin" } });
+    }
 
     if (url.pathname === "/event") {
       const origin = request.headers.get("Origin") || "";
@@ -52,6 +61,17 @@ export class AfterdarkRelay {
 
   async fetch(request) {
     const url = new URL(request.url);
+    if (request.method === "GET" && url.pathname === "/status") {
+      const status = await this.state.storage.get("pollStatus") || {};
+      return Response.json({
+        state: status.state || (this.env.CB_EVENTS_URL ? "waiting_for_overlay" : "not_configured"),
+        lastAttemptAt: status.lastAttemptAt || null,
+        lastSuccessAt: status.lastSuccessAt || null,
+        consecutiveFailures: status.consecutiveFailures || 0,
+        lastError: status.lastError || null,
+        connectedClients: this.state.getWebSockets().length
+      });
+    }
     if (request.method === "POST" && url.pathname === "/publish") {
       const raw = await request.text();
       if (new TextEncoder().encode(raw).byteLength > MAX_EVENT_BYTES) return new Response("Event too large", { status: 413 });
@@ -78,6 +98,10 @@ export class AfterdarkRelay {
     if (!sockets.length || !this.env.CB_EVENTS_URL) return;
     if (this.polling) { await this.state.storage.setAlarm(Date.now() + 1500); return; }
     this.polling = true;
+    const previousStatus = await this.state.storage.get("pollStatus") || {};
+    await this.state.storage.put("pollStatus", {
+      ...previousStatus, state: "polling", lastAttemptAt: new Date().toISOString()
+    });
     try {
       const nextUrl = await this.state.storage.get("nextUrl") || this.env.CB_EVENTS_URL;
       const pollUrl = new URL(nextUrl);
@@ -90,10 +114,33 @@ export class AfterdarkRelay {
         const event = normalizeChaturbateEvent(item);
         if (event) this.broadcast(event);
       }
+      const recovered = (previousStatus.consecutiveFailures || 0) > 0;
+      await this.state.storage.put("pollStatus", {
+        state: "connected", lastAttemptAt: previousStatus.lastAttemptAt || new Date().toISOString(),
+        lastSuccessAt: new Date().toISOString(), consecutiveFailures: 0, lastError: null
+      });
+      if (recovered) this.broadcast({ type: "notification", data: {
+        eyebrow: "EVENT BRIDGE", title: "CONNECTION RESTORED",
+        message: "Automatic room events are flowing again.", duration: 4500
+      }});
       await this.state.storage.setAlarm(Date.now() + 100);
     } catch (error) {
-      this.broadcast({ type: "notification", data: { eyebrow: "EVENT BRIDGE", title: "CONNECTION INTERRUPTED", message: "The room event feed is reconnecting." } });
-      await this.state.storage.setAlarm(Date.now() + 5000);
+      const message = String(error && error.message || "");
+      const statusMatch = message.match(/returned (\\d{3})/);
+      const failureCount = (previousStatus.consecutiveFailures || 0) + 1;
+      const lastError = statusMatch ? "HTTP_" + statusMatch[1] :
+        (error instanceof TypeError ? "NETWORK_OR_TIMEOUT" : "INVALID_FEED_RESPONSE");
+      await this.state.storage.put("pollStatus", {
+        state: "reconnecting", lastAttemptAt: new Date().toISOString(),
+        lastSuccessAt: previousStatus.lastSuccessAt || null,
+        consecutiveFailures: failureCount, lastError
+      });
+      if (failureCount === 1 || failureCount % 12 === 0) this.broadcast({ type: "notification", data: {
+        eyebrow: "EVENT BRIDGE", title: "CONNECTION INTERRUPTED",
+        message: "Automatic room events are reconnecting. Status: " + lastError + ".",
+        duration: 5000
+      }});
+      await this.state.storage.setAlarm(Date.now() + Math.min(30000, 5000 * Math.min(failureCount, 6)));
     } finally { this.polling = false; }
   }
 
