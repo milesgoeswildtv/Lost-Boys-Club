@@ -267,6 +267,12 @@
         "title": "Afterdark Dare Deck",
         "description": "Allow viewers to join timed prompt rounds.",
         "default": true
+      },
+      "gameCaptionClashEnabled": {
+        "type": "boolean",
+        "title": "Caption Clash",
+        "description": "Allow viewers to enter the free room caption contest.",
+        "default": true
       }
     }
   },
