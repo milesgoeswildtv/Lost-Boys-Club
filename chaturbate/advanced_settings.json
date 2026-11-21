@@ -1,0 +1,395 @@
+{
+  "room_controls": {
+    "type": "fieldset",
+    "title": "Room Controls",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "welcomeEnabled": {
+        "type": "boolean",
+        "title": "Welcome new viewers",
+        "description": "Welcome viewers when they enter.",
+        "default": true
+      },
+      "tipAcknowledgmentEnabled": {
+        "type": "boolean",
+        "title": "Tip acknowledgment notices",
+        "description": "Toggle thanks; tip and VIP tracking stay on.",
+        "default": true
+      }
+    }
+  },
+  "loyalty_controls": {
+    "type": "fieldset",
+    "title": "Loyalty & Rewards",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "loyaltyEnabled": {
+        "type": "boolean",
+        "title": "Enable loyalty points",
+        "description": "Enable or disable loyalty point awards.",
+        "default": true
+      },
+      "dailyVisitPoints": {
+        "type": "number",
+        "title": "Daily visit points",
+        "description": "Daily points per viewer. 0 disables.",
+        "minimum": 0,
+        "maximum": 20,
+        "default": 2
+      },
+      "watchPointsPerFiveMinutes": {
+        "type": "number",
+        "title": "Viewing points per 5 minutes",
+        "description": "Points per 5-minute view. 0 disables.",
+        "minimum": 0,
+        "maximum": 20,
+        "default": 1
+      },
+      "meaningfulChatPoints": {
+        "type": "number",
+        "title": "Meaningful chat points",
+        "description": "Points per eligible message. 0 disables.",
+        "minimum": 0,
+        "maximum": 20,
+        "default": 1
+      },
+      "meaningfulChatCooldownMinutes": {
+        "type": "number",
+        "title": "Meaningful chat cooldown (minutes)",
+        "minimum": 1,
+        "maximum": 1440,
+        "default": 10
+      }
+    }
+  },
+  "interface_notes": {
+    "type": "fieldset",
+    "title": "Interface Notes",
+    "collapsible": true,
+    "collapsed": true,
+    "settings": {
+      "settingsHelp": {
+        "type": "string",
+        "title": "Configuration guide",
+        "description": "Balances and activity are preserved.",
+        "default": "Afterdark Brotherhood · No map. No supervision. Questionable decisions.",
+        "maxLength": 120
+      }
+    }
+  },
+  "tip_menu_controls": {
+    "type": "fieldset",
+    "title": "Tip Menu Display",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "tipMenuDisplayEnabled": {
+        "type": "boolean",
+        "title": "Show informational tip menu",
+        "description": "Toggle !tipmenu and !menu display.",
+        "default": true
+      },
+      "tipMenuTitle": {
+        "type": "string",
+        "title": "Tip menu heading",
+        "description": "Heading displayed above the tip menu.",
+        "maxLength": 70,
+        "default": "AFTERDARK BROTHERHOOD — TIP MENU"
+      },
+      "tipMenuFooter": {
+        "type": "string",
+        "title": "Tip menu footer",
+        "description": "Footer below menu items; blank hides it.",
+        "maxLength": 180,
+        "default": "Tips are voluntary. Menu items are requests, not guaranteed outcomes. No game access or advantage is tied to tipping."
+      }
+    }
+  },
+  "announcement_controls": {
+    "type": "fieldset",
+    "title": "Rotating Announcements",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "announcementIntervalMinutes": {
+        "type": "number",
+        "title": "Announcement interval (minutes)",
+        "description": "Rotation interval; minimum 5 minutes.",
+        "minimum": 5,
+        "maximum": 1440,
+        "default": 15
+      }
+    }
+  },
+  "giveaway_controls": {
+    "type": "fieldset",
+    "title": "Free Giveaways",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "giveawayEnabled": {
+        "type": "boolean",
+        "title": "Enable free giveaways",
+        "description": "Enable free giveaways; saved entries remain.",
+        "default": true
+      }
+    }
+  },
+  "queue_controls": {
+    "type": "fieldset",
+    "title": "Viewer Queue",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "viewerQueueEnabled": {
+        "type": "boolean",
+        "title": "Enable viewer queue",
+        "description": "Enable queue actions; saved entries remain.",
+        "default": true
+      },
+      "viewerQueueMaxWaitlist": {
+        "type": "number",
+        "title": "Maximum waitlist size",
+        "description": "Queue limit; lowering it keeps existing entries.",
+        "minimum": 1,
+        "maximum": 50,
+        "default": 50
+      }
+    }
+  },
+  "goal_controls": {
+    "type": "fieldset",
+    "title": "Room Goal Defaults",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "goalDefaultDurationMinutes": {
+        "type": "number",
+        "title": "Default goal timer (minutes)",
+        "description": "Timer for new goals. 0 disables it.",
+        "minimum": 0,
+        "maximum": 1440,
+        "default": 0
+      },
+      "goalMilestone25Enabled": {
+        "type": "boolean",
+        "title": "Announce 25% milestone",
+        "default": true
+      },
+      "goalMilestone50Enabled": {
+        "type": "boolean",
+        "title": "Announce 50% milestone",
+        "default": true
+      },
+      "goalMilestone75Enabled": {
+        "type": "boolean",
+        "title": "Announce 75% milestone",
+        "default": true
+      },
+      "goalCarryoverDefault": {
+        "type": "boolean",
+        "title": "Default token overflow carryover",
+        "description": "Default token carryover for new goals.",
+        "default": true
+      },
+      "goalAutoRepeatDefault": {
+        "type": "boolean",
+        "title": "Default automatic goal repeat",
+        "description": "Default auto-repeat setting for new goals.",
+        "default": false
+      }
+    }
+  },
+  "panel_controls": {
+    "type": "fieldset",
+    "title": "Broadcast Panel",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "broadcastPanelStyle": {
+        "type": "string",
+        "title": "Room panel layout",
+        "description": "Choose the broadcast panel layout.",
+        "enum": [
+          "Goal + Game",
+          "Game + Record"
+        ],
+        "default": "Goal + Game"
+      }
+    }
+  },
+  "game_controls": {
+    "type": "fieldset",
+    "title": "Game Availability",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "gameCodebreakerEnabled": {
+        "type": "boolean",
+        "title": "Codebreaker",
+        "description": "Allow viewer play; owner controls stay available.",
+        "default": true
+      },
+      "gameWordScrambleEnabled": {
+        "type": "boolean",
+        "title": "Word Scramble",
+        "description": "Allow viewer play; owner controls stay available.",
+        "default": true
+      },
+      "gameWouldYouRatherEnabled": {
+        "type": "boolean",
+        "title": "Dirty Would You Rather",
+        "description": "Allow viewer play; owner controls stay available.",
+        "default": true
+      },
+      "gamePositionImpossibleEnabled": {
+        "type": "boolean",
+        "title": "Position Impossible",
+        "description": "Allow viewer play; owner controls stay available.",
+        "default": true
+      },
+      "gameDirtyCharadesEnabled": {
+        "type": "boolean",
+        "title": "Dirty Charades",
+        "description": "Allow viewer play; owner controls stay available.",
+        "default": true
+      },
+      "gameOneWordStoryEnabled": {
+        "type": "boolean",
+        "title": "One Word Story",
+        "description": "Allow viewers to join the room story.",
+        "default": true
+      },
+      "gameAfterdarkDareDeckEnabled": {
+        "type": "boolean",
+        "title": "Afterdark Dare Deck",
+        "description": "Allow viewers to join timed prompt rounds.",
+        "default": true
+      },
+      "gameCaptionClashEnabled": {
+        "type": "boolean",
+        "title": "Caption Clash",
+        "description": "Allow viewers to enter the free room caption contest.",
+        "default": true
+      }
+    }
+  },
+  "reward_controls": {
+    "type": "fieldset",
+    "title": "Rewards Redemptions",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "rewardRedemptionEnabled": {
+        "type": "boolean",
+        "title": "Allow viewer reward browsing and redemption",
+        "description": "Allow reward browsing and requests.",
+        "default": true
+      },
+      "rewardMaxPendingRequests": {
+        "type": "number",
+        "title": "Maximum pending requests per viewer",
+        "minimum": 1,
+        "maximum": 10,
+        "default": 3
+      }
+    }
+  },
+  "vip_controls": {
+    "type": "fieldset",
+    "title": "Permanent VIP Thresholds",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "vipCuriousThresholdUsd": {
+        "type": "number",
+        "title": "The Curious ($)",
+        "description": "Lifetime direct tips needed for this tier.",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 50
+      },
+      "vipLittleTeaseThresholdUsd": {
+        "type": "number",
+        "title": "Little Tease ($)",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 100
+      },
+      "vipBadHabitThresholdUsd": {
+        "type": "number",
+        "title": "Bad Habit ($)",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 250
+      },
+      "vipHouseFavoriteThresholdUsd": {
+        "type": "number",
+        "title": "House Favorite ($)",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 500
+      },
+      "vipObsessionThresholdUsd": {
+        "type": "number",
+        "title": "The Obsession ($)",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 1000
+      },
+      "vipRoyaltyThresholdUsd": {
+        "type": "number",
+        "title": "Brotherhood Royalty ($)",
+        "minimum": 1,
+        "maximum": 1000000,
+        "default": 5000
+      }
+    }
+  },
+  "retention_controls": {
+    "type": "fieldset",
+    "title": "Viewer Retention",
+    "collapsible": true,
+    "collapsed": false,
+    "settings": {
+      "retentionEnabled": {
+        "type": "boolean",
+        "title": "Enable viewer recognition",
+        "description": "Track visits and member milestones.",
+        "default": true
+      },
+      "retentionPublicRecognition": {
+        "type": "boolean",
+        "title": "Public recognition notices",
+        "description": "Post recognition publicly; off sends it privately.",
+        "default": false
+      },
+      "retentionFirstVisitMessage": {
+        "type": "boolean",
+        "title": "First-visit welcome",
+        "description": "Recognize first-time visitors.",
+        "default": true
+      },
+      "retentionReturnRecognition": {
+        "type": "boolean",
+        "title": "Returning member greeting",
+        "description": "Greet members returning after 7 days.",
+        "default": true
+      },
+      "retentionMilestoneRecognition": {
+        "type": "boolean",
+        "title": "Visit milestone notices",
+        "description": "Recognize 5, 10, 25, 50 and 100 visits.",
+        "default": true
+      },
+      "retentionAnniversaryRecognition": {
+        "type": "boolean",
+        "title": "Membership anniversaries",
+        "description": "Recognize yearly membership anniversaries.",
+        "default": true
+      }
+    }
+  }
+}

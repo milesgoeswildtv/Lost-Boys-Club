@@ -96,3 +96,151 @@ Do not release to the public App Directory or live room until all applicable che
 - [ ] Balances and requests persist across app restart.
 - [ ] Invalid usernames, amounts, IDs, and malformed stored data fail safely.
 - [ ] Approved rewards are manually fulfilled by the broadcaster; no cash value or random prize claim is implied.
+
+
+## M2.5: Loyalty & rewards integration (required before release)
+- [ ] In Testbed, a viewer sends !points; they receive a private balance response, including a zero balance for a first-time viewer.
+- [ ] Broadcaster sends /ab rewards add 100 Reward Name; the reward appears in !rewards.
+- [ ] A viewer with sufficient points sends !redeem 1; one pending request is created and the exact cost is reserved.
+- [ ] Broadcaster sends /ab rewards pending; the request is listed.
+- [ ] Broadcaster denies the request; the viewer receives an exact refund and the request is no longer pending.
+- [ ] Repeat redemption and approve the request; approval does not refund points and is marked approved.
+- [ ] Broadcaster bonus grant /ab points grant username 10 updates the named viewer balance.
+- [ ] Guess the Number awards 1 point for a valid entry and 5 additional points for a win; duplicate event processing does not double-award.
+- [ ] Higher or Lower, Couple Trivia, and eligible After Hours entries/wins award their documented points once.
+- [ ] Tips do not award loyalty points.
+- [ ] Restart the app and verify balances, catalogue, and requests persist.
+- [ ] Verify viewer commands work for non-owner accounts and broadcaster controls are rejected for non-owners.
+
+## Branding regression
+- [ ] Search all active Shared Code and event-handler messages for old Lost Boys Club, Clubhouse, and old player-facing club labels.
+- [ ] Confirm startup, game, reward, support-stat, and broadcast-panel messages display AFTERDARK BROTHERHOOD branding.
+- [ ] Confirm the current public support command is !supportstats; no old !clubstats or !clubgoal wording is advertised.
+
+
+## Member Profiles & Leaderboards
+
+- Award one valid game participation point and one game win award to a test viewer.
+- Confirm `!profile` privately shows the viewer's points, participation, wins, and win rate.
+- Confirm `!profile username` is delivered privately to the requesting viewer.
+- Confirm `!leaderboard wins`, `!leaderboard games`, and `!leaderboard points` sort the tracked members correctly.
+- Replay an award with the same idempotency key; confirm neither points nor member statistics increase.
+- Confirm a new app session reads the same profile data from persistent KV.
+
+## Admin Control Center
+
+- As broadcaster, run `/ab admin` and confirm game, goal, reward, tip-menu, announcement, and module status.
+- Run each subsystem view: `/ab admin games`, `goals`, `rewards`, `menu`, and `announcements`.
+- Run `/ab admin members` and confirm the tracked member count.
+- Run `/ab admin help` and verify command map.
+- As an ordinary viewer, run `/ab admin`; confirm no admin dashboard is disclosed.
+- Confirm existing `/ab goal`, `/ab rewards`, `/ab menu`, game start/stop, and announcement commands still operate unchanged.
+
+
+## Free-Entry Giveaway QA
+
+- Broadcaster starts a giveaway with `/ab giveaway start Test Prize`.
+- Viewer `!giveaway` receives current prize, status, and entry instructions.
+- Viewer `!enter` receives private confirmation and is stored once.
+- Repeating `!enter` does not create a duplicate entry.
+- A second viewer can enter independently.
+- Broadcaster `/ab giveaway end` closes entries; late `!enter` attempts are rejected.
+- Broadcaster `/ab giveaway draw` selects exactly one of the stored entrants and saves the result to history.
+- `/ab giveaway history` shows the completed draw.
+- `/ab giveaway cancel` closes an open or awaiting-draw giveaway without selecting a winner.
+- Confirm no tip or loyalty point command is required or grants additional entries.
+- Confirm only the broadcaster can run giveaway management commands.
+
+
+## Brotherhood Wars QA
+
+- Broadcaster creates two teams; duplicate names and a ninth team are rejected.
+- Viewers join teams; duplicate membership and joining a second team without leaving are rejected.
+- `!team` privately displays current team and score; `!teams` displays standings.
+- Award a game participation point to a team member; confirm exactly 1 team point.
+- Award a game win to a team member; confirm exactly 5 additional team points.
+- Replay an award with the same idempotency key; confirm no duplicate team score.
+- Confirm tips and broadcaster bonus point grants do not add team score.
+- Broadcaster assign/unassign works; team deletion is blocked while members remain.
+- Season start archives the prior champion and resets scores while preserving memberships.
+- Confirm only the broadcaster can create, delete, assign, reset, or start seasons.
+
+
+## Brotherhood Vault QA
+
+- Start with an empty Vault and confirm `!vault` reports 0 shared game points and the first milestone.
+- Award successful game participation and win points; confirm only those points advance shared progress.
+- Confirm a manual broadcaster bonus grant does not advance Vault totals.
+- Replay an award with the same idempotency key; confirm the Vault does not advance twice.
+- Cross each milestone threshold; confirm it unlocks once and is persisted.
+- Confirm `!achievements` privately shows personal achievements and new achievements unlock once.
+- Confirm a new app session reads the same Vault and member achievement data.
+
+## Hall of Fame QA
+
+- `!halloffame wins`, `games`, and `points` show correctly sorted top-five records.
+- Confirm participation, win, and free-game point records match successful awards.
+- Confirm manual bonus grants and tips do not inflate Hall of Fame points.
+- Confirm duplicate award IDs do not change records.
+- Confirm `/ab admin vault` and `/ab admin halloffame` show broadcaster status.
+- Confirm ordinary viewers cannot access broadcaster admin status.
+
+
+## Advanced Viewer Queue QA
+
+- Fresh storage reports an empty queue and available capacity.
+- Viewer joins; FIFO position and public queue count update.
+- Duplicate join is rejected without creating another entry.
+- Viewer leaves; following positions close the gap.
+- Queue capacity is enforced at the configured limit and cannot exceed 50.
+- Pausing blocks new joins; resuming permits them.
+- Broadcaster calls next; exactly one active viewer is set and removed from waitlist.
+- Calling next while a turn is active is rejected.
+- Done closes the active turn and records completion history.
+- Skip moves the active viewer to the end of the waitlist.
+- Clear removes waiting and active turns but preserves scheduled bookings.
+- Broadcaster-only controls reject ordinary viewers.
+- Future ISO slots require explicit timezone and reject invalid/past times.
+- A slot can be booked once; another viewer cannot double-book it.
+- One viewer cannot book multiple slots; cancellation frees the slot.
+- Slot removal frees a booking and cancels reminders as appropriate.
+- Five-minute reminder fires once for each booked slot and does not repeat after restart.
+- Queue, active turn, slot bookings, pause state, and capacity persist across app restart.
+- Tips, loyalty points, and paid actions do not affect queue position or slot booking.
+
+
+## Daily & Weekly Missions QA
+
+- First successful free-game participation increments daily/weekly games and points exactly once.
+- A successful win increments wins and free-game points; a duplicate award ID changes no mission counters.
+- Complete each daily mission and verify exactly one loyalty reward for each claim.
+- Complete each weekly mission and verify exactly one loyalty reward for each claim.
+- Verify daily progress resets at 00:00 UTC and weekly progress resets Monday at 00:00 UTC, preserving history and lifetime streak milestones.
+- Verify one active UTC day increments the streak once even when the viewer receives both participation and win awards on that day.
+- Verify missing a UTC day resets the active streak to zero; best streak remains.
+- Verify 3-, 7-, 14-, and 30-day streak rewards each unlock once and do not repeat after a later streak.
+- Verify tips, purchases, giveaways, queue bookings, and broadcaster bonus grants do not advance mission counters or streaks.
+- Verify mission rewards increase the existing loyalty balance but do not recursively advance mission progress, Team Wars, Vault, or Hall of Fame totals.
+- Simulate a failed mission reward KV write; confirm the pending delivery survives and retries on app start using the same idempotency key.
+- Verify `!missions`, `!streak`, and `!missionhistory` are private viewer responses.
+- Verify `!profile` includes daily/weekly completion and streak summary.
+- Verify `/ab admin missions` and the admin dashboard report current totals; ordinary viewers cannot access admin detail.
+- Verify user state persists across app restart and period rollovers use UTC, independent of local room timezone.
+
+
+## Viewer Reputation & Rank Progression QA
+
+- A successful participation award adds exactly 10 reputation XP and one reputation game count.
+- A successful win award adds exactly 25 reputation XP and one reputation win count.
+- Duplicate award IDs do not add XP, games, wins, badges, or rank progress twice.
+- Confirm thresholds promote a viewer through New Face, Regular (100), Known Face (300), After Hours (750), Room Fixture (1,500), Heavyweight (3,000), and Room Legend (6,000).
+- Confirm rank is permanent and does not decrease after app restart or inactivity.
+- Confirm participation badges unlock at 1/10/25/50/100 games and win badges at 1/5/25/50 wins, exactly once each.
+- Confirm rank and badge titles unlock at their thresholds; locked titles cannot be selected.
+- Confirm `!rank`, `!badges`, `!titles`, `!title`, `!title set <id>`, and `!rankings` work and private member details are sent only to the requesting viewer.
+- Confirm `!profile` includes rank, XP, and active title.
+- Confirm the broadcaster-only `/ab admin reputation` reports member count, total XP, and badges; ordinary viewers cannot access it.
+- Confirm tips, manual bonus grants, mission/streak rewards, purchases, giveaways, queue activity, and reward redemptions add zero reputation XP.
+- Confirm reputation does not change loyalty balances, game odds, queue priority, Team Wars, Vault, or Hall of Fame.
+- Confirm reputation state and selected title persist across app restart.
+- Confirm existing game, reward, mission, profile, and admin commands continue to operate without duplicate routing.

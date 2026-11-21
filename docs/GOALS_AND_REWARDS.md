@@ -1,64 +1,76 @@
-# Afterdark Brotherhood — Goals & Rewards
+# Afterdark Brotherhood — Goals, Loyalty & VIP
 
-## Advanced Goal Engine
+## One progression economy
 
-Room goals use the existing aggregate tip counter. The goal baseline is captured when a goal starts or resets. A goal can be paused; tips received during the pause are excluded when it resumes.
+There is one spendable balance: **Loyalty Points**. There is no separate XP, reputation, rank, mission, streak, team-score, Vault, or Hall-of-Fame progression.
 
-Broadcaster commands:
+Points are engagement rewards only. They have no cash value, cannot be purchased, and do not improve game odds or grant paid-entry access. Tips never award loyalty points.
 
-- `/ab goal set 1000 Main Goal` — start or replace the current goal.
-- `/ab goal 1000` — compatible shorthand for setting a goal.
-- `/ab goal queue 1500 Next Goal` — add a sequential goal (up to 10 queued).
-- `/ab goal queue list` / `/ab goal queue clear` — inspect or clear the queue.
-- `/ab goal milestones 10 25 50 75 100` — customize milestone notices. 100% is always included.
-- `/ab goal pause` / `/ab goal resume` — pause or resume progress accounting.
-- `/ab goal extend 250` — increase the active target.
-- `/ab goal reset` — restart the current goal from zero without changing its target.
-- `/ab goal status` — display the current status.
-- `/ab goal off` — turn off the current goal without deleting the queue.
+### Earning defaults
 
-When a goal reaches 100%, the engine announces completion and automatically activates the next queued goal, if one exists. Viewers use `!goal` (the older `!clubgoal` alias remains supported). The native panel displays the current goal and progress.
+| Activity | Loyalty points |
+|---|---:|
+| Verified room viewing | 1 per complete 5 minutes |
+| Meaningful chat engagement | 1, no more than once per 10 minutes |
+| Successful game participation | 1 (existing game award) |
+| Successful game win | +5 bonus (existing game award) |
+| First room visit of a UTC day | 2 |
 
-## Loyalty & Rewards
+Chat engagement ignores commands and very short messages. Duplicate/replayed game awards remain protected by their existing award IDs. Viewing time is measured from room-enter to room-exit events; sessions are capped at 24 hours. Sessions are not carried across an app restart, because continued presence cannot be verified after restart.
 
-Points are a free-play engagement score. They are never awarded for tipping, cannot be purchased, and have no cash value. They do not grant game access, improve odds, or create paid-entry contests.
-
-### Earning
-
-- 1 point for a valid Guess the Number submission (once per viewer per round).
-- 1 point for a valid Higher or Lower prediction (once per viewer per round).
-- 1 point for a valid formatted submission in an After Hours game (once per viewer per round).
-- 5 bonus points for a game winner, including Guess the Number, Higher or Lower, Couple Trivia, and the After Hours games.
-- Award IDs are deduplicated so repeated event delivery does not award the same round twice.
+The earning values are configurable constants in the unified loyalty module.
 
 ### Viewer commands
 
-- `!points` — show personal balance and totals.
-- `!rewards` — view the broadcaster's reward shelf.
-- `!redeem 1` — submit a request for reward #1.
+- `!points` — current loyalty balance.
+- `!rewards` — reward catalogue.
+- `!redeem 1` — request a catalogue reward.
+- `!profile` — balance, earned points, games played, wins, and VIP tier.
+- `!vip` — your permanent room VIP tier and lifetime room-tip total.
+- `!leaderboard wins|games|points` — top-five records.
 
-### Broadcaster commands
+### Broadcaster reward controls
 
-- `/ab rewards add 100 Reward name` — add a reward (maximum 12).
-- `/ab rewards remove 1` — remove a reward by ID.
-- `/ab rewards list` — show the reward shelf.
-- `/ab rewards pending` — review pending requests.
-- `/ab rewards approve 1` — approve a request; broadcaster fulfillment is then due.
-- `/ab rewards deny 1` — deny a request and automatically refund the points.
-- `/ab points grant username 10` — issue a broadcaster bonus.
+- `/ab rewards add 100 Reward name`
+- `/ab rewards remove 1`
+- `/ab rewards list`
+- `/ab rewards pending`
+- `/ab rewards approve 1`
+- `/ab rewards deny 1` — denial refunds the requested points.
+- `/ab points grant username 10` — manual loyalty bonus.
+- `/ab admin` — control dashboard.
+- `/ab admin vip` — VIP summary.
 
-Each viewer may have up to three pending requests. Requests are stored persistently. Approved rewards must be fulfilled by the broadcaster; approval is not an automatic platform action. Reward descriptions should be clear, appropriate, and within platform rules.
+Each viewer may have up to three pending redemption requests. Approval records broadcaster fulfillment as due; it does not automatically deliver a reward.
+
+## Permanent room VIP
+
+VIP is independent of Loyalty Points. It is based only on tips received directly in this Chaturbate room. Other rooms, external purchases, platform purchases, and redeemed points do not count. VIP never expires and cannot be lost by spending points.
+
+Chaturbate's published broadcaster conversion rate is **$0.05 per token**. This implementation uses that published room-tip conversion to calculate the displayed USD total: tokens × $0.05. It represents the broadcaster-side Chaturbate conversion value, not the viewer's retail purchase cost or a net payout after payment fees.
+
+| Lifetime tips in this room | Permanent VIP tier |
+|---:|---|
+| $50 | The Curious |
+| $100 | Little Tease |
+| $250 | Bad Habit |
+| $500 | House Favorite |
+| $1,000 | The Obsession |
+| $5,000 | Brotherhood Royalty |
+
+Anonymous tips cannot be attributed to a member and therefore do not advance an individual VIP record. Tip-event deduplication uses the event ID when the event payload supplies one; otherwise a timestamp-based fallback is used and cannot guarantee perfect replay detection.
+
+## Room goals, giveaways & queue
+
+The existing advanced room-goal engine, tip menu, announcements, free-entry giveaways, games, and viewer queue remain separate room utilities. They do not create separate progression balances.
 
 ## Storage
 
-- Goal state: `lbc_m2_room_goal` (legacy key retained).
-- Reward catalogue: `lbc_ab_rewards_catalog`.
-- Per-viewer balance/history: `lbc_ab_rewards_user_<username>`.
-- Redemption requests: `lbc_ab_rewards_requests`.
-- Request sequence: `lbc_ab_rewards_next_id`.
+- Loyalty activity cooldowns and daily visit markers: `lbc_ab_loyalty_activity_v1`.
+- Watch session timestamps: `lbc_ab_watch_session_<username>`.
+- VIP members and recent tip-event IDs: `lbc_ab_vip_members_v1`.
+- Existing loyalty balances, award history, reward catalogue, and redemption requests retain their current `lbc_ab_rewards_*` keys.
 
-Existing game, tip-stat, and LBC compatibility keys remain unchanged.
+## Deployment and QA
 
-## Deployment and QA status
-
-GitHub does not sync to the Chaturbate Developer Portal. The Shared Code and handlers in this repository are source artifacts only until pasted/saved in the portal. The new implementation requires editor validation, Testbed event checks, persistence checks, and mobile panel QA before live use.
+GitHub does not sync source into the Chaturbate Developer Portal. Update Shared Code and the event handlers in the portal, including the room-exit handler, then validate in Testbed. Confirm enter/exit events, duplicate/reconnect handling, 5-minute accrual, daily and chat cooldowns, game participation/win awards, VIP thresholds, anonymous tips, and reward redemption/refunds before live use.

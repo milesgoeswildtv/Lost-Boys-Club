@@ -9,11 +9,14 @@ LBC.setRuntime({
   createCallback: function (label, seconds, repeat) { try { if (typeof repeat === "boolean") return $callback.create(label, seconds, repeat); return $callback.create(label, seconds); } catch (err) { return false; } },
   cancelCallback: function (label) { try { return $callback.cancel(label); } catch (err) { return false; } },
   reloadPanel: function () { try { return $room.reloadPanel(); } catch (err) { return false; } },
-  setPanelTemplate: function (template) { try { return $room.setPanelTemplate(template); } catch (err) { return false; } }
+  setPanelTemplate: function (template) { try { return $room.setPanelTemplate(template); } catch (err) { return false; } },
+  getSetting: function (name, fallback) { try { var value = $settings && $settings[name]; return value === undefined || value === null ? fallback : value; } catch (err) { return fallback; } }
 });
 
 
 // AFTERDARK BROTHERHOOD — App Start
+// Drop stale viewing sessions; presence cannot be verified across app restarts.
+if (LBC.loyalty) LBC.loyalty.resetSessions();
 // Shared Code is executed before this handler.
 var state = $kv.get("lbc_v1_game", "");
 if (!state) {

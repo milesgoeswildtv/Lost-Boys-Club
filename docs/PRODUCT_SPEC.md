@@ -124,3 +124,18 @@ A feature is not complete because code was drafted. It is complete only when:
 - Points are not sold, are not earned from tips, have no cash value, and do not unlock game access or improve game odds.
 - No paid-entry raffles, random paid prizes, or automatic tip-triggered rewards.
 - GitHub source changes are not considered deployed until the Chaturbate editor and Testbed checks pass.
+
+
+### M6 — Viewer Reputation & Rank Progression
+
+The Brotherhood now has a separate permanent recognition track for free-game activity.
+
+- +10 XP for each successful free-game participation award.
+- +25 XP for each successful free-game win award.
+- Permanent ranks: New Face (0), Regular (100), Known Face (300), After Hours (750), Room Fixture (1,500), Heavyweight (3,000), and Room Legend (6,000).
+- Participation badges unlock at 1/10/25/50/100 games; win badges unlock at 1/5/25/50 wins.
+- Rank and badge milestones unlock profile titles. Viewers can select any unlocked title.
+- Commands: `!rank`, `!badges`, `!titles`, `!title set <id>`, and `!rankings`.
+- `!profile` includes rank, XP, and selected title; broadcaster status is `/ab admin reputation`.
+- XP is not loyalty currency, has no cash value, cannot be purchased, and never affects odds, queue priority, Team Wars, Vault, or Hall of Fame.
+- Only successfully posted participation and win awards qualify. Tips, bonus grants, mission rewards, giveaways, and queue activity are excluded.
