@@ -57,7 +57,7 @@ Enter the Worker base URL and `EVENT_INGEST_TOKEN`. The control room can send al
 
 ## Chaturbate event feed
 
-When `CB_EVENTS_URL` is configured, the Durable Object long-polls the Chaturbate Events API while an OBS WebSocket client is connected. The Worker converts tips, arrivals/departures, follows, fan-club joins, media purchases, broadcast start/stop, room subject changes, Three Doors selections, and safe submission acknowledgements for 10 modern/standard game command families. It intentionally does not mirror viewer-submitted answers. The Events API does not expose the app's private KV state, so authoritative game prompts, scores, and winners still require operator-published lifecycle/results events or a separately supported state-export mechanism. Higher or Lower's legacy command contract still needs a dedicated audit.
+When `CB_EVENTS_URL` is configured, the Durable Object long-polls the Chaturbate Events API while an OBS WebSocket client is connected. The Worker converts tips, arrivals/departures, follows, fan-club joins, media purchases, broadcast start/stop, room subject changes, Three Doors selections, and safe submission acknowledgements for all 11 game command families. It intentionally does not mirror viewer-submitted answers. The Events API does not expose the app's private KV state, so authoritative game prompts, scores, and winners still require operator-published lifecycle/results events or a separately supported state-export mechanism. Higher or Lower's legacy command contract still needs a dedicated audit.
 
 ## Security
 
