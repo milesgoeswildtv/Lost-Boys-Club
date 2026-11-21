@@ -1,6 +1,6 @@
 # AFTERDARK BROTHERHOOD — Overlay Relay
 
-This Worker provides the authenticated WebSocket endpoint consumed by the OBS browser overlay and an authenticated HTTP event-ingest endpoint used by the laptop operator control room.
+This Worker provides the authenticated WebSocket endpoint consumed by the hosted overlay (OBS or Streamlabs Mobile Custom URL) and an authenticated HTTP event-ingest endpoint used by the laptop operator control room.
 
 ## Routes
 
@@ -8,7 +8,7 @@ This Worker provides the authenticated WebSocket endpoint consumed by the OBS br
 - `GET /ws?token=...` — authenticated WebSocket for the OBS Browser Source. Requires `OVERLAY_TOKEN`.
 - `POST /event` — authenticated event publisher for `overlay/control.html`. Requires `Authorization: Bearer <EVENT_INGEST_TOKEN>` and accepts only allowlisted event types up to 4 KB.
 
-The Worker sends accepted events to the Durable Object, which broadcasts them to connected OBS browser sources. Game lifecycle events (`game_start`, `game_update`, `game_round`, `game_results`, `game_end`) are now allowlisted.
+The Worker sends accepted events to the Durable Object, which broadcasts them to connected overlay browser sources, including Streamlabs Mobile Custom URL sources. Game lifecycle events (`game_start`, `game_update`, `game_round`, `game_results`, `game_end`) are now allowlisted.
 
 ## Required bindings and secrets
 
@@ -35,7 +35,7 @@ Deploy `worker.js` with the Durable Object binding and the SQLite migration in `
 
 After deployment, verify `/health`. A working health response includes `ok: true`, `overlayConfigured: true`, and `operatorControlConfigured: true`. `chaturbateEventsConfigured` may remain false until the Events API feed is configured.
 
-## OBS setup
+## Streamlabs Mobile setup\n\nAdd the hosted overlay URL as a Custom URL source/layer in Streamlabs Mobile. Use the same live URL format shown below, including the WebSocket endpoint and private overlay token. Do not add the demo query parameter. The overlay token belongs only in this URL; never use the operator token here.\n\n## OBS setup
 
 Add a Browser Source with dimensions 1920×1080 and URL:
 
@@ -57,7 +57,7 @@ Enter the Worker base URL and `EVENT_INGEST_TOKEN`. The control room can send al
 
 ## Chaturbate event feed
 
-When `CB_EVENTS_URL` is configured, the Durable Object long-polls the Chaturbate Events API while an OBS WebSocket client is connected. Currently converted events include tips, user arrivals, broadcast start/stop, Three Doors selections, and Caption Clash entries. Exact automatic state for all 11 games still requires game-specific publishers/adapters and Testbed verification.
+When `CB_EVENTS_URL` is configured, the Durable Object long-polls the Chaturbate Events API while an OBS WebSocket client is connected. The Worker converts tips, arrivals/departures, follows, fan-club joins, media purchases, broadcast start/stop, room subject changes, Three Doors selections, and safe submission acknowledgements for 10 modern/standard game command families. It intentionally does not mirror viewer-submitted answers. The Events API does not expose the app's private KV state, so authoritative game prompts, scores, and winners still require operator-published lifecycle/results events or a separately supported state-export mechanism. Higher or Lower's legacy command contract still needs a dedicated audit.
 
 ## Security
 
