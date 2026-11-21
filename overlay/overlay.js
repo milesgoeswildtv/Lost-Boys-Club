@@ -5,7 +5,7 @@
   root.dataset.initialized = "true";
 
   var $ = function (id) { return document.getElementById(id); };
-  var eventTimer = null;
+  var eventTimer = null;\n  var gameHideTimer = null;\n  var gameClockTimer = null;\n  var gameRemaining = null;
   var socket = null;
   var retryTimer = null;
   var state = {
@@ -36,11 +36,127 @@
     clearTimeout(eventTimer);
     eventTimer = setTimeout(function () { card.classList.remove("visible"); }, Math.max(2500, Math.min(15000, Number(payload.duration) || 6500)));
   }
+
+  function gameNode(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = String(text);
+    return node;
+  }
+  function renderGame(data, starting) {
+    var panel = $("game-window");
+    panel.hidden = false;
+    panel.classList.add("visible");
+    $("game-status-label").textContent = safeText(data.statusLabel, starting ? "GAME STARTED" : "LIVE GAME", 30);
+    $("game-title").textContent = safeText(data.title, "BROTHERHOOD GAME", 54);
+    $("game-subtitle").textContent = safeText(data.subtitle, "", 90);
+    $("game-prompt").textContent = safeText(data.prompt, "", 220);
+    $("game-instructions").textContent = safeText(data.instructions, "", 180);
+    $("game-round").textContent = data.round ? "ROUND " + safeText(data.round, "", 12) + (data.totalRounds ? " / " + safeText(data.totalRounds, "", 12) : "") : "";
+    $("game-meta").textContent = safeText(data.meta || data.detail, "", 100);
+    $("game-footer").textContent = safeText(data.footer, "PLAY ALONG IN CHAT", 64);
+    var timer = $("game-timer");
+    if (data.remainingSeconds != null && isFinite(Number(data.remainingSeconds))) {
+      gameRemaining = Math.max(0, Math.floor(Number(data.remainingSeconds)));
+      timer.hidden = false;
+      updateGameClock();
+      clearInterval(gameClockTimer);
+      gameClockTimer = setInterval(function () {
+        if (gameRemaining > 0) gameRemaining--;
+        updateGameClock();
+        if (gameRemaining <= 0) clearInterval(gameClockTimer);
+      }, 1000);
+    } else if (data.timer != null) {
+      timer.hidden = false;
+      timer.textContent = safeText(data.timer, "", 20);
+    } else {
+      timer.hidden = true;
+      clearInterval(gameClockTimer);
+    }
+    var content = $("game-content");
+    content.replaceChildren();
+    var choices = Array.isArray(data.choices) ? data.choices.slice(0, 8) : [];
+    var players = Array.isArray(data.players) ? data.players.slice(0, 12) : [];
+    var results = Array.isArray(data.results) ? data.results.slice(0, 8) : [];
+    if (choices.length) {
+      var choiceList = gameNode("div", "game-choice-grid");
+      choices.forEach(function (choice, index) {
+        var label = typeof choice === "object" ? choice.label || choice.text || choice.name : choice;
+        var detail = typeof choice === "object" ? choice.detail : "";
+        var item = gameNode("div", "game-choice");
+        item.appendChild(gameNode("span", "game-choice-number", String(index + 1).padStart(2, "0")));
+        var copy = gameNode("span", "game-choice-copy");
+        copy.appendChild(gameNode("strong", "", safeText(label, "OPTION " + (index + 1), 55)));
+        if (detail) copy.appendChild(gameNode("small", "", safeText(detail, "", 65)));
+        item.appendChild(copy);
+        if (typeof choice === "object" && choice.selected) item.classList.add("selected");
+        choiceList.appendChild(item);
+      });
+      content.appendChild(choiceList);
+    }
+    if (players.length) {
+      content.appendChild(gameNode("div", "game-section-label", "PLAYERS IN THE ROUND"));
+      var playerList = gameNode("div", "game-player-list");
+      players.forEach(function (player) {
+        var name = typeof player === "object" ? player.name || player.username : player;
+        var detail = typeof player === "object" ? player.detail || player.status : "";
+        var row = gameNode("div", "game-player");
+        row.appendChild(gameNode("span", "", safeText(name, "PLAYER", 32)));
+        if (detail) row.appendChild(gameNode("small", "", safeText(detail, "", 36)));
+        playerList.appendChild(row);
+      });
+      content.appendChild(playerList);
+    }
+    if (results.length) {
+      content.appendChild(gameNode("div", "game-section-label", "ROUND RESULTS"));
+      var resultList = gameNode("div", "game-result-list");
+      results.forEach(function (result, index) {
+        var label = typeof result === "object" ? result.name || result.label : result;
+        var score = typeof result === "object" ? result.score || result.detail || result.status : "";
+        var row = gameNode("div", "game-result");
+        row.appendChild(gameNode("span", "", (index + 1) + ". " + safeText(label, "RESULT", 42)));
+        if (score) row.appendChild(gameNode("strong", "", safeText(score, "", 32)));
+        resultList.appendChild(row);
+      });
+      content.appendChild(resultList);
+    }
+    if (!choices.length && !players.length && !results.length && data.content) {
+      content.appendChild(gameNode("div", "game-freeform", safeText(data.content, "", 240)));
+    }
+    if (data.winner) {
+      var winner = gameNode("div", "game-winner", "✦ WINNER · " + safeText(data.winner, "", 45) + " ✦");
+      content.appendChild(winner);
+    }
+  }
+  function updateGameClock() {
+    $("game-timer").textContent = "⏱ " + Math.floor(gameRemaining / 60) + ":" + String(gameRemaining % 60).padStart(2, "0");
+  }
+  function closeGame() {
+    clearTimeout(gameHideTimer);
+    clearInterval(gameClockTimer);
+    $("game-window").classList.remove("visible");
+    gameHideTimer = setTimeout(function () { $("game-window").hidden = true; }, 300);
+    state.activity = { title: "NO GAME RUNNING", detail: "THE FLOOR IS YOURS" };
+    render();
+  }
   function applyEvent(message) {
     if (!message || typeof message !== "object") return;
     var type = safeText(message.type, "", 40).toLowerCase();
     var data = message.data && typeof message.data === "object" ? message.data : message;
-    if (type === "goal" || type === "goal_update") {
+
+    if (type === "game_start" || type === "game_update" || type === "game_round" || type === "game_results") {
+      clearTimeout(gameHideTimer);
+      var gameData = data;
+      renderGame(gameData, type === "game_start");
+      state.activity = { title: safeText(data.title, "LIVE GAME", 42), detail: safeText(data.detail || data.statusLabel, "GAME IN PROGRESS", 72) };
+      render();
+    } else if (type === "game_end") {
+      clearTimeout(gameHideTimer);
+      renderGame(Object.assign({}, data, { statusLabel: data.statusLabel || "GAME COMPLETE" }), false);
+      state.activity = { title: safeText(data.title, "GAME COMPLETE", 42), detail: safeText(data.detail, "ROUND FINISHED", 72) };
+      render();
+      gameHideTimer = setTimeout(closeGame, Math.max(2500, Math.min(8000, Number(data.displayMs) || 5000)));
+    } else if (type === "goal" || type === "goal_update") {
       state.goal = {
         title: safeText(data.title, "ROOM GOAL", 42),
         percent: Math.max(0, Math.min(100, Number(data.percent) || 0)),
@@ -118,8 +234,8 @@
       var type = event.target && event.target.getAttribute("data-demo");
       if (type === "tip") applyEvent({ type: "tip", data: { eyebrow: "BROTHERHOOD SUPPORT", title: "✦ A TIP JUST LANDED ✦", message: "Protocol sent 250 tokens into the afterdark. The room feels that one." } });
       if (type === "goal") applyEvent({ type: "goal", data: { title: "THE MIDNIGHT GOAL", percent: 72, detail: "720 / 1,000 TOKENS · 72% COMPLETE" } });
-      if (type === "game") applyEvent({ type: "game_reveal", data: { eyebrow: "THREE DOORS", title: "🚪 DOOR TWO REVEALED", message: "A mystery couple challenge has been selected." } });
-      if (type === "clear") $("event-card").classList.remove("visible");
+      if (type === "game") applyEvent({ type: "game_start", data: { title: "THREE DOORS", subtitle: "THE BROTHERHOOD CHALLENGE", prompt: "Choose the door you think hides the prize.", instructions: "Type 1, 2, or 3 in chat to lock in your choice.", choices: [{label:"DOOR ONE",detail:"A little mystery"},{label:"DOOR TWO",detail:"Unknown consequences"},{label:"DOOR THREE",detail:"Fortune favors the bold"}], remainingSeconds: 45, round: 1, totalRounds: 3, footer: "CAST YOUR CHOICE IN CHAT" } });
+      if (type === "clear") { $("event-card").classList.remove("visible"); closeGame(); }
     });
     applyEvent({ type: "goal", data: { title: "THE MIDNIGHT GOAL", percent: 72, detail: "720 / 1,000 TOKENS · 72% COMPLETE", announce: false } });
     applyEvent({ type: "activity", data: { title: "THREE DOORS", detail: "ENTRY OPEN · CHOOSE YOUR DOOR", announce: false } });
